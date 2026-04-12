@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="prism-icon-title prism-icon-desc">
+  <title id="prism-icon-title">Prism icon</title>
+  <desc id="prism-icon-desc">A rounded square dark icon featuring a white prism splitting light into two monochrome beams.</desc>
+
+  <rect width="64" height="64" rx="16" fill="#000000" />
+  <path d="M20 16L38 32L20 48Z" fill="#FFFFFF" />
+  <path d="M38 32L51 26" fill="none" stroke="#565656" stroke-linecap="round" stroke-width="3.2" />
+  <path d="M38 32L51 38" fill="none" stroke="#E4E4E4" stroke-linecap="round" stroke-width="3.2" />
+</svg>

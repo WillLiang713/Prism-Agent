@@ -1,0 +1,31 @@
+[package]
+name = "prism_desktop"
+version = "0.5.5"
+description = "Prism desktop client powered by Tauri"
+authors = ["Prism"]
+edition = "2021"
+default-run = "prism_desktop"
+
+[lib]
+name = "prism_desktop"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2.5.6", features = [] }
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tauri = { version = "2.10.3", features = ["tray-icon"] }
+tauri-plugin-dialog = "2.7.0"
+tauri-plugin-fs = "2.4.5"
+tauri-plugin-shell = "2.3.5"
+tauri-plugin-single-instance = "2"
+tokio = { version = "1", features = ["full"] }
+
+[target.'cfg(windows)'.dependencies]
+windows = { version = "0.61.3", features = [
+  "Win32_Foundation",
+  "Win32_UI_Shell",
+  "Win32_UI_WindowsAndMessaging",
+] }
