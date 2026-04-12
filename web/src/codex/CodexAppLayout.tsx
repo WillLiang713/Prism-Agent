@@ -59,7 +59,7 @@ export function CodexAppLayout() {
                 Backend: codex
               </span>
             </div>
-            <div className="flex items-center justify-end gap-1">
+            <div className="flex items-center justify-end gap-1" data-tauri-drag-region>
               <div className="flex items-center gap-1 no-drag mr-2">
                 <Button size="icon" variant="ghost" onClick={toggleTheme} className={headerIconButtonClass}>
                   {theme === 'dark' ? <SunMedium className="h-5 w-5" /> : <MoonStar className="h-5 w-5" />}
