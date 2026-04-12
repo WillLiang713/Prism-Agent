@@ -154,7 +154,7 @@ async function main() {
   }
 
   console.log('[dev] starting tauri desktop');
-  startProcess('tauri', npmCommand, ['run', 'tauri:dev'], {
+  startProcess('tauri', 'tauri', ['dev'], {
     env,
   });
 }

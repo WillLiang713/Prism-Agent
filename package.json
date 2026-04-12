@@ -9,16 +9,7 @@
   ],
   "scripts": {
     "dev": "node scripts/dev-desktop.mjs",
-    "sidecar:dev": "npm --workspace agent-sidecar run dev",
-    "sidecar:build": "npm --workspace agent-sidecar run build",
-    "web:install": "npm --prefix web install",
-    "web:dev": "npm --prefix web run dev",
-    "web:build": "npm --prefix web run build",
-    "desktop:dev": "npm run dev",
-    "desktop:rebuild-dev": "npm run dev",
-    "tauri:dev": "tauri dev",
-    "tauri:build": "npm run sidecar:build && tauri build",
-    "desktop:build": "npm run tauri:build"
+    "build": "npm --prefix web run build && npm --workspace agent-sidecar run build && tauri build"
   },
   "dependencies": {
     "@tauri-apps/api": "2.10.1",
