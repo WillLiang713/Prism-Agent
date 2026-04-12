@@ -79,6 +79,17 @@ export interface CodexSessionMessage {
   role: 'user' | 'assistant';
   text: string;
   createdAt: number;
+  thinking?: string;
+  toolEvents?: CodexSessionToolEvent[];
+}
+
+export interface CodexSessionToolEvent {
+  id: string;
+  name: string;
+  status: string;
+  args: unknown;
+  output: string;
+  ok: boolean | null;
 }
 
 export interface SessionBootstrapResult {

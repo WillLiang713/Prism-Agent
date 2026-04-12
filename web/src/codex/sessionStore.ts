@@ -89,9 +89,16 @@ function normalizeBootstrapMessages(messages: CodexSessionBootstrap['messages'])
     id: message.id,
     role: message.role,
     text: message.text,
-    thinking: '',
+    thinking: message.thinking || '',
     createdAt: message.createdAt || Date.now(),
-    toolEvents: [],
+    toolEvents: (message.toolEvents || []).map((event) => ({
+      id: event.id,
+      name: event.name,
+      status: event.status,
+      args: event.args,
+      output: event.output,
+      ok: event.ok,
+    })),
   }));
 }
 

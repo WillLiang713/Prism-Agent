@@ -5,8 +5,15 @@ import type {
   AppServerThreadItem,
   AppServerTurn,
   CodexSessionMessage,
+  CodexSessionToolEvent,
   CodexUsage,
 } from './types.js';
+
+type ToolLikeThreadItem =
+  | Extract<AppServerThreadItem, { type: 'commandExecution' }>
+  | Extract<AppServerThreadItem, { type: 'fileChange' }>
+  | Extract<AppServerThreadItem, { type: 'mcpToolCall' }>
+  | Extract<AppServerThreadItem, { type: 'dynamicToolCall' }>;
 
 export interface SessionRecord {
   sessionId: string;
@@ -100,6 +107,10 @@ export class SessionRegistry {
 
   private turnToMessages(turn: AppServerTurn) {
     const messages: CodexSessionMessage[] = [];
+    const toolEvents: CodexSessionToolEvent[] = [];
+    const thinkingParts: string[] = [];
+    const assistantTextParts: string[] = [];
+
     for (const item of turn.items ?? []) {
       if (item.type === 'userMessage') {
         const content = Array.isArray((item as { content?: unknown }).content)
@@ -122,15 +133,43 @@ export class SessionRegistry {
           text,
           createdAt: Date.now(),
         });
+      } else if (item.type === 'reasoning') {
+        const fragments = [
+          ...(Array.isArray(item.summary) ? item.summary : []),
+          ...(Array.isArray(item.content) ? item.content : []),
+        ]
+          .map((part) => String(part || '').trim())
+          .filter(Boolean);
+        if (fragments.length > 0) {
+          thinkingParts.push(fragments.join('\n\n'));
+        }
       } else if (isAgentMessage(item)) {
-        messages.push({
+        if (item.text.trim()) {
+          assistantTextParts.push(item.text);
+        }
+      } else if (isToolLikeItem(item)) {
+        toolEvents.push({
           id: item.id,
-          role: 'assistant',
-          text: item.text,
-          createdAt: Date.now(),
+          name: item.type,
+          status: readToolStatus(item),
+          args: extractToolArgs(item),
+          output: summarizeToolItem(item),
+          ok: inferToolOk(item),
         });
       }
     }
+
+    if (thinkingParts.length > 0 || assistantTextParts.length > 0 || toolEvents.length > 0) {
+      messages.push({
+        id: `assistant-${turn.id}`,
+        role: 'assistant',
+        text: assistantTextParts.join('\n\n'),
+        thinking: thinkingParts.join('\n\n'),
+        createdAt: Date.now(),
+        toolEvents,
+      });
+    }
+
     return messages;
   }
 }
@@ -139,4 +178,92 @@ function isAgentMessage(
   item: AppServerThreadItem,
 ): item is Extract<AppServerThreadItem, { type: 'agentMessage' }> {
   return item.type === 'agentMessage';
+}
+
+function isToolLikeItem(
+  item: AppServerThreadItem,
+): item is ToolLikeThreadItem {
+  return ['commandExecution', 'fileChange', 'mcpToolCall', 'dynamicToolCall'].includes(item.type);
+}
+
+function readToolStatus(item: ToolLikeThreadItem) {
+  return item.status;
+}
+
+function extractToolArgs(item: ToolLikeThreadItem) {
+  if (item.type === 'commandExecution') {
+    return {
+      command: item.command,
+      cwd: item.cwd,
+      exitCode: item.exitCode,
+      commandActions: item.commandActions ?? [],
+    };
+  }
+
+  if (item.type === 'fileChange') {
+    return {
+      changes: item.changes,
+    };
+  }
+
+  if (item.type === 'mcpToolCall') {
+    return {
+      server: item.server,
+      tool: item.tool,
+      arguments: item.arguments,
+    };
+  }
+
+  if (item.type === 'dynamicToolCall') {
+    return {
+      tool: item.tool,
+      arguments: item.arguments,
+    };
+  }
+
+  return item;
+}
+
+function inferToolOk(item: ToolLikeThreadItem) {
+  if (item.type === 'commandExecution' || item.type === 'fileChange' || item.type === 'mcpToolCall') {
+    return !['failed', 'declined'].includes(readToolStatus(item));
+  }
+
+  if (item.type === 'dynamicToolCall') {
+    return typeof item.success === 'boolean' ? item.success : !['failed', 'declined'].includes(readToolStatus(item));
+  }
+
+  return null;
+}
+
+function summarizeToolItem(item: ToolLikeThreadItem) {
+  if (item.type === 'commandExecution' && typeof item.aggregatedOutput === 'string' && item.aggregatedOutput.trim()) {
+    return item.aggregatedOutput;
+  }
+
+  if (item.type === 'fileChange') {
+    return item.changes
+      .map((change: { path: string; diff?: string }) => {
+        const header = `--- ${change.path}\n+++ ${change.path}`;
+        return `${header}\n${change.diff || '(no changes)'}`;
+      })
+      .join('\n\n');
+  }
+
+  if (item.type === 'mcpToolCall') {
+    if (item.result) {
+      return typeof item.result === 'string' ? item.result : JSON.stringify(item.result, null, 2);
+    }
+    if (item.error) {
+      return typeof item.error === 'string' ? item.error : JSON.stringify(item.error, null, 2);
+    }
+  }
+
+  if (item.type === 'dynamicToolCall') {
+    if (Array.isArray(item.contentItems) && item.contentItems.length > 0) {
+      return JSON.stringify(item.contentItems, null, 2);
+    }
+  }
+
+  return '';
 }

@@ -16,6 +16,15 @@ export interface CodexSessionMessage {
   role: 'user' | 'assistant';
   text: string;
   createdAt: number;
+  thinking?: string;
+  toolEvents?: Array<{
+    id: string;
+    name: string;
+    status: string;
+    args: unknown;
+    output: string;
+    ok: boolean | null;
+  }>;
 }
 
 export interface CodexSessionBootstrap {

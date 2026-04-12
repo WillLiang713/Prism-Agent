@@ -119,7 +119,7 @@ export function CodexChatInput({
         onKeyDown={handleTextareaKeyDown}
         rows={1}
         disabled={disabled || isStreaming}
-        placeholder="输入给 Codex 的任务…"
+        placeholder="输入你的需求…"
         className="min-h-[48px] resize-none border-0 bg-transparent px-3 py-1.5 text-base leading-6 shadow-none focus-visible:ring-0"
       />
 
@@ -137,17 +137,6 @@ export function CodexChatInput({
           >
             <Paperclip className="h-4 w-4" />
           </Button>
-          <Select value="codex" disabled>
-            <SelectTrigger className="h-10 w-[108px] px-4 text-sm">
-              <SelectValue placeholder="codex">codex</SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="codex">codex</SelectItem>
-            </SelectContent>
-          </Select>
-          <span className="inline-flex h-10 items-center rounded-full bg-card px-4 text-xs text-mutedForeground shadow-sm">
-            Backend: codex
-          </span>
           <Select value={reasoningEffort} onValueChange={(value) => setReasoningEffort(value as CodexReasoningEffort)}>
             <SelectTrigger className="h-10 w-[132px] px-4 text-sm">
               <div className="flex items-center gap-2">

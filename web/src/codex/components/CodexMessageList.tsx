@@ -17,10 +17,10 @@ export function CodexMessageList({
       <div className="flex min-h-full w-full flex-1 items-start justify-center pt-[18vh]">
         <div className="max-w-md text-center">
           <h2 className="font-display text-3xl font-medium tracking-tight text-foreground">
-            直接把任务交给 Codex
+            想做什么？
           </h2>
           <p className="mt-3 text-sm leading-7 text-mutedForeground">
-            输入需求、附一张图片，或者恢复一个历史会话，然后让它继续做下去。
+            输入需求、发送图片或恢复历史记录。
           </p>
         </div>
       </div>

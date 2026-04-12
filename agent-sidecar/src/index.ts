@@ -80,6 +80,7 @@ const bridge = createBridge(
         sessionId: session.sessionId,
         threadId: response.thread.id,
         messages: sessionRegistry.toMessages(response.thread),
+        thread: toThreadMeta(response.thread),
       } satisfies OuterMethods['resumeSession'];
     },
 

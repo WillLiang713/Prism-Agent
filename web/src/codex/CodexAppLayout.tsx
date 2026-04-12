@@ -51,14 +51,7 @@ export function CodexAppLayout() {
                  </div>
                ) : null}
             </div>
-            <div className="flex items-center gap-3 rounded-full bg-card px-4 py-1.5 text-sm text-foreground no-drag shadow-sm">
-              <span className="opacity-60">模型</span>
-              <span className="opacity-20">/</span>
-              <span>codex</span>
-              <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-mutedForeground">
-                Backend: codex
-              </span>
-            </div>
+            <div />
             <div className="flex items-center justify-end gap-1" data-tauri-drag-region>
               <div className="flex items-center gap-1 no-drag mr-2">
                 <Button size="icon" variant="ghost" onClick={toggleTheme} className={headerIconButtonClass}>
