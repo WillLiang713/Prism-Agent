@@ -1,22 +1,37 @@
 import { create } from 'zustand';
 
 import type {
-  CodexEvent,
-  CodexSessionBootstrap,
-  CodexThreadMeta,
-  CodexUsage,
+  AgentEvent,
+  AgentSessionBootstrap,
+  AgentThreadMeta,
+  AgentUsage,
 } from './client';
 
-export interface CodexToolEvent {
+export interface AgentToolEvent {
   id: string;
   name: string;
   status: string;
   args: unknown;
   output: string;
   ok: boolean | null;
+  diff?: string;
+  exitCode?: number | null;
+  summary?: string;
+  skillName?: string | null;
 }
 
-export interface CodexApproval {
+export interface AgentSkillsSnapshot {
+  items: Array<{
+    id: string;
+    name: string;
+    description: string;
+    status: 'loaded' | 'error';
+    source: string;
+  }>;
+  diagnostics: string[];
+}
+
+export interface AgentApproval {
   approvalId: string;
   requestId: string;
   toolCallId: string;
@@ -25,25 +40,26 @@ export interface CodexApproval {
   reason?: string;
 }
 
-export interface CodexMessage {
+export interface AgentMessage {
   id: string;
   role: 'user' | 'assistant';
   text: string;
   thinking: string;
   createdAt: number;
-  toolEvents: CodexToolEvent[];
+  toolEvents: AgentToolEvent[];
   error?: string;
 }
 
-export interface CodexSession {
+export interface AgentSession {
   sessionId: string;
   threadId: string;
   workspaceRoot: string;
-  messages: CodexMessage[];
-  approvals: CodexApproval[];
+  messages: AgentMessage[];
+  skills: AgentSkillsSnapshot;
+  approvals: AgentApproval[];
   isStreaming: boolean;
   pendingRequestId: string | null;
-  lastUsage?: CodexUsage;
+  lastUsage?: AgentUsage;
   lastError?: string;
 }
 
@@ -52,28 +68,28 @@ type RequestBinding = {
   assistantMessageId: string;
 };
 
-type CodexSessionState = {
+type AgentSessionState = {
   initialized: boolean;
   backendReady: boolean;
   backendError: string;
-  threadList: CodexThreadMeta[];
+  threadList: AgentThreadMeta[];
   sessionOrder: string[];
-  sessionsById: Record<string, CodexSession>;
+  sessionsById: Record<string, AgentSession>;
   activeSessionId: string | null;
   requestBindings: Record<string, RequestBinding>;
   setInitialized: (initialized: boolean) => void;
   setBackendReady: (ready: boolean, error?: string) => void;
-  setThreadList: (threads: CodexThreadMeta[]) => void;
+  setThreadList: (threads: AgentThreadMeta[]) => void;
   activateSession: (sessionId: string) => void;
-  upsertSession: (session: CodexSession) => void;
+  upsertSession: (session: AgentSession) => void;
   findSessionByThreadId: (threadId: string) => string | null;
   createPendingMessage: (sessionId: string, text: string, requestId: string) => void;
   clearApproval: (approvalId: string) => void;
-  applyEvent: (event: CodexEvent) => void;
+  applyEvent: (event: AgentEvent) => void;
   removeThread: (threadId: string) => void;
 };
 
-function createAssistantMessage(id: string): CodexMessage {
+function createAssistantMessage(id: string): AgentMessage {
   return {
     id,
     role: 'assistant',
@@ -84,7 +100,7 @@ function createAssistantMessage(id: string): CodexMessage {
   };
 }
 
-function normalizeBootstrapMessages(messages: CodexSessionBootstrap['messages']): CodexMessage[] {
+function normalizeBootstrapMessages(messages: AgentSessionBootstrap['messages']): AgentMessage[] {
   return messages.map((message) => ({
     id: message.id,
     role: message.role,
@@ -98,11 +114,15 @@ function normalizeBootstrapMessages(messages: CodexSessionBootstrap['messages'])
       args: event.args,
       output: event.output,
       ok: event.ok,
+      diff: event.diff,
+      exitCode: event.exitCode,
+      summary: event.summary,
+      skillName: event.skillName,
     })),
   }));
 }
 
-export const useCodexSessionStore = create<CodexSessionState>((set, get) => ({
+export const useAgentSessionStore = create<AgentSessionState>((set, get) => ({
   initialized: false,
   backendReady: false,
   backendError: '',
@@ -189,6 +209,23 @@ export const useCodexSessionStore = create<CodexSessionState>((set, get) => ({
     }),
   applyEvent: (event) =>
     set((state) => {
+      if (event.type === 'skills_snapshot') {
+        const session = state.sessionsById[event.sessionId];
+        if (!session) {
+          return state;
+        }
+
+        return {
+          sessionsById: {
+            ...state.sessionsById,
+            [event.sessionId]: {
+              ...session,
+              skills: event.skills,
+            },
+          },
+        };
+      }
+
       const binding = state.requestBindings[event.requestId];
       const sessionId = binding?.sessionId || event.sessionId;
       const session = state.sessionsById[sessionId];
@@ -199,7 +236,7 @@ export const useCodexSessionStore = create<CodexSessionState>((set, get) => ({
       const assistantMessageId = binding?.assistantMessageId;
       const nextSessions = { ...state.sessionsById };
       const nextBindings = { ...state.requestBindings };
-      const nextSession: CodexSession = {
+      const nextSession: AgentSession = {
         ...session,
         approvals: [...session.approvals],
         messages: session.messages.map((message) => ({
@@ -229,6 +266,8 @@ export const useCodexSessionStore = create<CodexSessionState>((set, get) => ({
           args: event.args,
           output: '',
           ok: null,
+          summary: event.summary,
+          skillName: event.skillName,
         });
       }
 
@@ -238,6 +277,10 @@ export const useCodexSessionStore = create<CodexSessionState>((set, get) => ({
           existing.status = event.status;
           existing.output = event.output;
           existing.ok = event.ok;
+          existing.diff = event.diff;
+          existing.exitCode = event.exitCode;
+          existing.summary = event.summary;
+          existing.skillName = event.skillName;
         } else {
           assistantMessage.toolEvents.push({
             id: event.toolCallId,
@@ -246,6 +289,10 @@ export const useCodexSessionStore = create<CodexSessionState>((set, get) => ({
             args: {},
             output: event.output,
             ok: event.ok,
+            diff: event.diff,
+            exitCode: event.exitCode,
+            summary: event.summary,
+            skillName: event.skillName,
           });
         }
       }
@@ -315,14 +362,15 @@ export const useCodexSessionStore = create<CodexSessionState>((set, get) => ({
 }));
 
 export function createSessionFromBootstrap(
-  bootstrap: CodexSessionBootstrap,
+  bootstrap: AgentSessionBootstrap,
   workspaceRoot: string,
-): CodexSession {
+): AgentSession {
   return {
     sessionId: bootstrap.sessionId,
     threadId: bootstrap.threadId,
     workspaceRoot,
     messages: normalizeBootstrapMessages(bootstrap.messages),
+    skills: bootstrap.skills,
     approvals: [],
     isStreaming: false,
     pendingRequestId: null,

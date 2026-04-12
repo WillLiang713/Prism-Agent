@@ -4,12 +4,12 @@ import { useState } from 'react';
 import { SettingsDialog } from '../components/config/SettingsDialog';
 import { Button } from '../components/ui/button';
 import { useUIStore } from '../store/uiStore';
-import { CodexChatPanel } from './CodexChatPanel';
-import { useCodexChat } from './useCodexChat';
+import { AgentChatPanel } from './AgentChatPanel';
+import { useAgentChat } from './useAgentChat';
 import { WindowControls } from '../components/layout/WindowControls';
 import { isDesktopRuntime } from '../lib/runtime';
 
-export function CodexAppLayout() {
+export function AgentAppLayout() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const theme = useUIStore((state) => state.theme);
   const toggleTheme = useUIStore((state) => state.toggleTheme);
@@ -26,7 +26,7 @@ export function CodexAppLayout() {
     stop,
     respondApproval,
     archiveThread,
-  } = useCodexChat();
+  } = useAgentChat();
 
   const isDesktop = isDesktopRuntime();
   const headerIconButtonClass =
@@ -65,7 +65,7 @@ export function CodexAppLayout() {
             </div>
           </header>
           <div className="flex-1 overflow-hidden select-text">
-            <CodexChatPanel
+            <AgentChatPanel
               initialized={initialized}
               backendReady={backendReady}
               backendError={backendError}

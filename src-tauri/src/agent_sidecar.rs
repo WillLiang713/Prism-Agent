@@ -15,14 +15,14 @@ use tokio::time::{timeout, Duration};
 type PendingSender = oneshot::Sender<Result<Value, String>>;
 const SIDECAR_RESPONSE_TIMEOUT_SECS: u64 = 10;
 
-pub struct CodexBridge {
+pub struct AgentBridge {
     child: Mutex<Child>,
     stdin: Mutex<ChildStdin>,
     pending: Mutex<HashMap<u64, PendingSender>>,
     next_id: AtomicU64,
 }
 
-impl CodexBridge {
+impl AgentBridge {
     pub async fn spawn(app: &AppHandle) -> Result<Arc<Self>, String> {
         let mut command = build_sidecar_command(app)?;
         command.stdin(std::process::Stdio::piped());
@@ -31,7 +31,7 @@ impl CodexBridge {
 
         let mut child = command
             .spawn()
-            .map_err(|error| format!("启动 codex sidecar 失败: {error}"))?;
+            .map_err(|error| format!("启动 agent sidecar 失败: {error}"))?;
 
         let stdin = child
             .stdin
@@ -106,7 +106,7 @@ impl CodexBridge {
     }
 }
 
-fn spawn_stdout_task(app: AppHandle, bridge: Arc<CodexBridge>, stdout: tokio::process::ChildStdout) {
+fn spawn_stdout_task(app: AppHandle, bridge: Arc<AgentBridge>, stdout: tokio::process::ChildStdout) {
     tokio::spawn(async move {
         let mut lines = BufReader::new(stdout).lines();
         while let Ok(Some(line)) = lines.next_line().await {
@@ -137,7 +137,7 @@ fn spawn_stdout_task(app: AppHandle, bridge: Arc<CodexBridge>, stdout: tokio::pr
                 continue;
             }
 
-            let _ = app.emit("codex://event", parsed);
+            let _ = app.emit("agent://event", parsed);
         }
     });
 }
@@ -146,13 +146,17 @@ fn spawn_stderr_task(stderr: tokio::process::ChildStderr) {
     tokio::spawn(async move {
         let mut lines = BufReader::new(stderr).lines();
         while let Ok(Some(line)) = lines.next_line().await {
-            eprintln!("[codex-sidecar] {line}");
+            eprintln!("[agent-sidecar] {line}");
         }
     });
 }
 
 fn build_sidecar_command(app: &AppHandle) -> Result<Command, String> {
     let repo_root = repo_root()?;
+    let app_data_dir = app
+        .path()
+        .app_data_dir()
+        .map_err(|error| format!("解析应用数据目录失败: {error}"))?;
 
     if cfg!(debug_assertions) {
         let tsx_path = repo_root.join("node_modules").join(".bin").join("tsx");
@@ -161,6 +165,7 @@ fn build_sidecar_command(app: &AppHandle) -> Result<Command, String> {
         command.current_dir(&repo_root);
         command.arg(script_path);
         command.arg("--stdio");
+        command.env("PRISM_AGENT_DATA_DIR", &app_data_dir);
         return Ok(command);
     }
 
@@ -168,6 +173,7 @@ fn build_sidecar_command(app: &AppHandle) -> Result<Command, String> {
     let mut command = Command::new("node");
     command.arg(release_script);
     command.arg("--stdio");
+    command.env("PRISM_AGENT_DATA_DIR", &app_data_dir);
     Ok(command)
 }
 

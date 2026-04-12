@@ -1,4 +1,4 @@
-mod codex_sidecar;
+mod agent_sidecar;
 
 use std::sync::{Arc, Mutex};
 #[cfg(windows)]
@@ -7,7 +7,7 @@ use std::sync::{
     Arc as StdArc,
 };
 
-use codex_sidecar::CodexBridge;
+use agent_sidecar::AgentBridge;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use tauri::webview::Color;
@@ -41,7 +41,7 @@ struct DesktopPreferencesState(Mutex<DesktopPreferences>);
 #[derive(Default)]
 struct ExitIntentState(Mutex<bool>);
 
-struct CodexBridgeState(Arc<CodexBridge>);
+struct AgentBridgeState(Arc<AgentBridge>);
 
 #[cfg(windows)]
 struct WindowsSessionEndState(StdArc<AtomicBool>);
@@ -300,17 +300,17 @@ fn create_tray(app: &tauri::AppHandle) -> Result<(), String> {
         .map_err(|error| format!("创建托盘图标失败: {error}"))
 }
 
-async fn call_codex(
+async fn call_agent(
     app: &tauri::AppHandle,
     method: &str,
     params: Value,
 ) -> Result<Value, String> {
-    let bridge = &app.state::<CodexBridgeState>().0;
+    let bridge = &app.state::<AgentBridgeState>().0;
     bridge.call(method, params).await
 }
 
-async fn shutdown_codex(app: &tauri::AppHandle) {
-    if let Some(state) = app.try_state::<CodexBridgeState>() {
+async fn shutdown_agent(app: &tauri::AppHandle) {
+    if let Some(state) = app.try_state::<AgentBridgeState>() {
         state.0.shutdown().await;
     }
 }
@@ -330,16 +330,16 @@ fn update_desktop_preferences(
 }
 
 #[tauri::command]
-async fn codex_health(app: tauri::AppHandle) -> Result<Value, String> {
-    call_codex(&app, "health", Value::Null).await
+async fn agent_health(app: tauri::AppHandle) -> Result<Value, String> {
+    call_agent(&app, "health", Value::Null).await
 }
 
 #[tauri::command]
-async fn codex_start_session(
+async fn agent_start_session(
     app: tauri::AppHandle,
     payload: StartSessionPayload,
 ) -> Result<Value, String> {
-    call_codex(
+    call_agent(
         &app,
         "startSession",
         json!({
@@ -350,11 +350,11 @@ async fn codex_start_session(
 }
 
 #[tauri::command]
-async fn codex_resume_session(
+async fn agent_resume_session(
     app: tauri::AppHandle,
     payload: ResumeSessionPayload,
 ) -> Result<Value, String> {
-    call_codex(
+    call_agent(
         &app,
         "resumeSession",
         json!({
@@ -366,7 +366,7 @@ async fn codex_resume_session(
 }
 
 #[tauri::command]
-async fn codex_send_message(
+async fn agent_send_message(
     app: tauri::AppHandle,
     payload: SendMessagePayload,
 ) -> Result<Value, String> {
@@ -383,7 +383,7 @@ async fn codex_send_message(
         })
         .collect::<Vec<_>>();
 
-    call_codex(
+    call_agent(
         &app,
         "sendMessage",
         json!({
@@ -398,8 +398,8 @@ async fn codex_send_message(
 }
 
 #[tauri::command]
-async fn codex_cancel(app: tauri::AppHandle, payload: CancelPayload) -> Result<Value, String> {
-    call_codex(
+async fn agent_cancel(app: tauri::AppHandle, payload: CancelPayload) -> Result<Value, String> {
+    call_agent(
         &app,
         "cancel",
         json!({
@@ -410,11 +410,11 @@ async fn codex_cancel(app: tauri::AppHandle, payload: CancelPayload) -> Result<V
 }
 
 #[tauri::command]
-async fn codex_respond_approval(
+async fn agent_respond_approval(
     app: tauri::AppHandle,
     payload: ApprovalPayload,
 ) -> Result<Value, String> {
-    call_codex(
+    call_agent(
         &app,
         "respondApproval",
         json!({
@@ -426,16 +426,16 @@ async fn codex_respond_approval(
 }
 
 #[tauri::command]
-async fn codex_list_threads(app: tauri::AppHandle) -> Result<Value, String> {
-    call_codex(&app, "listThreads", Value::Null).await
+async fn agent_list_sessions(app: tauri::AppHandle) -> Result<Value, String> {
+    call_agent(&app, "listThreads", Value::Null).await
 }
 
 #[tauri::command]
-async fn codex_archive_thread(
+async fn agent_delete_session(
     app: tauri::AppHandle,
     payload: ArchiveThreadPayload,
 ) -> Result<Value, String> {
-    call_codex(
+    call_agent(
         &app,
         "archiveThread",
         json!({
@@ -465,14 +465,14 @@ pub fn run() {
     let app = builder
         .invoke_handler(tauri::generate_handler![
             update_desktop_preferences,
-            codex_health,
-            codex_start_session,
-            codex_resume_session,
-            codex_send_message,
-            codex_cancel,
-            codex_respond_approval,
-            codex_list_threads,
-            codex_archive_thread
+            agent_health,
+            agent_start_session,
+            agent_resume_session,
+            agent_send_message,
+            agent_cancel,
+            agent_respond_approval,
+            agent_list_sessions,
+            agent_delete_session
         ])
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
@@ -487,9 +487,9 @@ pub fn run() {
         })
         .setup(|app| {
             let runtime = prepare_runtime();
-            let bridge = tauri::async_runtime::block_on(CodexBridge::spawn(app.handle()))
+            let bridge = tauri::async_runtime::block_on(AgentBridge::spawn(app.handle()))
                 .map_err(std::io::Error::other)?;
-            app.manage(CodexBridgeState(bridge));
+            app.manage(AgentBridgeState(bridge));
 
             let init_script =
                 build_runtime_script(&runtime).map_err(std::io::Error::other)?;
@@ -528,7 +528,7 @@ pub fn run() {
             event,
             tauri::RunEvent::Exit | tauri::RunEvent::ExitRequested { .. }
         ) {
-            tauri::async_runtime::block_on(shutdown_codex(app_handle));
+            tauri::async_runtime::block_on(shutdown_agent(app_handle));
         }
     });
 }

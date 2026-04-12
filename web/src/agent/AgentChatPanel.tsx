@@ -3,16 +3,16 @@ import { useEffect, useMemo, useRef } from 'react';
 
 import { ScrollArea } from '../components/ui/scroll-area';
 import { ApprovalDialog } from './components/ApprovalDialog';
-import { CodexChatInput } from './components/CodexChatInput';
-import { CodexMessageList } from './components/CodexMessageList';
-import { CodexSessionList } from './components/CodexSessionList';
+import { AgentChatInput } from './components/AgentChatInput';
+import { AgentMessageList } from './components/AgentMessageList';
+import { AgentSessionList } from './components/AgentSessionList';
 import { Button } from '../components/ui/button';
-import type { CodexThreadMeta } from './client';
-import type { CodexSession } from './sessionStore';
+import type { AgentThreadMeta } from './client';
+import type { AgentSession } from './sessionStore';
 
 const CHAT_SIDE_PADDING = 'calc(1.5rem + 10px)';
 
-export function CodexChatPanel({
+export function AgentChatPanel({
   initialized,
   backendReady,
   backendError,
@@ -29,9 +29,9 @@ export function CodexChatPanel({
   initialized: boolean;
   backendReady: boolean;
   backendError: string;
-  threadList: CodexThreadMeta[];
-  sessions: CodexSession[];
-  activeSession: CodexSession | null;
+  threadList: AgentThreadMeta[];
+  sessions: AgentSession[];
+  activeSession: AgentSession | null;
   onCreateSession: (workspaceRoot?: string) => void;
   onResumeThread: (threadId: string, cwd: string) => void;
   onSendMessage: (payload: {
@@ -57,7 +57,7 @@ export function CodexChatPanel({
 
   return (
     <div className="flex h-full min-h-0 flex-1 overflow-hidden">
-      <CodexSessionList
+      <AgentSessionList
         sessions={sessions}
         threadList={threadList}
         activeSessionId={activeSession?.sessionId || null}
@@ -99,9 +99,10 @@ export function CodexChatPanel({
             <ScrollArea ref={scrollRef} className="h-full">
               <div className="flex min-h-full py-8" style={{ paddingInline: CHAT_SIDE_PADDING }}>
                 <div className="mx-auto flex min-h-full w-full max-w-3xl">
-                  <CodexMessageList
+                  <AgentMessageList
                     messages={activeSession?.messages || []}
                     isStreaming={activeSession?.isStreaming || false}
+                    skills={activeSession?.skills || { items: [], diagnostics: [] }}
                   />
                 </div>
               </div>
@@ -111,7 +112,7 @@ export function CodexChatPanel({
         
         <div className="py-5" style={{ paddingInline: CHAT_SIDE_PADDING }}>
           <div className="mx-auto max-w-3xl">
-            <CodexChatInput
+            <AgentChatInput
               disabled={!backendReady || !activeSession}
               isStreaming={activeSession?.isStreaming || false}
               onStop={onStop}

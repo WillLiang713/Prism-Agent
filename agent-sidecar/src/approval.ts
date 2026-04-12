@@ -13,10 +13,8 @@ function isPathInside(root: string, target: string) {
   );
 }
 
-function hasSensitivePath(command: string) {
-  return /(~\/\.ssh|~\/\.aws|~\/\.codex\/auth\.json|\/\.ssh\b|\/\.aws\b|\/\.codex\/auth\.json\b)/.test(
-    command,
-  );
+function hasSensitivePath(value: string) {
+  return /(~\/\.ssh|~\/\.aws|~\/\.pi\/agent|\/\.ssh\b|\/\.aws\b|\/\.pi\/agent\b)/.test(value);
 }
 
 function hasDangerousShellPattern(command: string) {
@@ -31,7 +29,7 @@ export function classifyCommandRisk(command: string, workspaceRoot: string): 'lo
   }
 
   if (
-    /\b(cat|sed\s+-n|head|tail|pwd|ls|find|rg|git\s+status|git\s+diff|git\s+show)\b/.test(command) &&
+    /\b(cat|sed\s+-n|head|tail|pwd|ls|find|rg|grep|git\s+status|git\s+diff|git\s+show)\b/.test(command) &&
     !/\b(>|>>|tee|mv|cp|rm|touch|mkdir|chmod|chown)\b/.test(command)
   ) {
     return 'low';
@@ -45,22 +43,17 @@ export function classifyCommandRisk(command: string, workspaceRoot: string): 'lo
   return 'high';
 }
 
-export function classifyFileChangeRisk(
-  changes: Array<{ path: string }>,
-  workspaceRoot: string,
-): 'low' | 'high' {
-  if (changes.length === 0) {
+export function classifyPathRisk(targetPath: string, workspaceRoot: string): 'low' | 'high' {
+  if (!targetPath) {
     return 'high';
   }
-
-  if (
-    changes.every((change) => isPathInside(workspaceRoot, change.path)) &&
-    changes.every((change) => !hasSensitivePath(change.path))
-  ) {
-    return 'low';
+  if (!isPathInside(workspaceRoot, targetPath)) {
+    return 'high';
   }
-
-  return 'high';
+  if (hasSensitivePath(targetPath)) {
+    return 'high';
+  }
+  return 'low';
 }
 
 export function shouldAutoApproveCommand(command: string, workspaceRoot: string) {

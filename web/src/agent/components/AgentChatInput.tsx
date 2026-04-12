@@ -13,9 +13,9 @@ import { ContentImage } from '../../components/ui/content-image';
 import { FileInput } from '../../components/ui/file-input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { Textarea } from '../../components/ui/textarea';
-import type { CodexReasoningEffort } from '../client';
+import type { AgentReasoningEffort } from '../client';
 
-export function CodexChatInput({
+export function AgentChatInput({
   disabled,
   isStreaming,
   onSubmit,
@@ -26,12 +26,12 @@ export function CodexChatInput({
   onSubmit: (payload: {
     text: string;
     images: Array<{ name: string; mediaType: string; dataUrl: string }>;
-    reasoningEffort: CodexReasoningEffort;
+    reasoningEffort: AgentReasoningEffort;
   }) => void;
   onStop: () => void;
 }) {
   const [text, setText] = useState('');
-  const [reasoningEffort, setReasoningEffort] = useState<CodexReasoningEffort>('high');
+  const [reasoningEffort, setReasoningEffort] = useState<AgentReasoningEffort>('high');
   const [images, setImages] = useState<Array<{ name: string; mediaType: string; dataUrl: string }>>(
     [],
   );
@@ -137,7 +137,7 @@ export function CodexChatInput({
           >
             <Paperclip className="h-4 w-4" />
           </Button>
-          <Select value={reasoningEffort} onValueChange={(value) => setReasoningEffort(value as CodexReasoningEffort)}>
+          <Select value={reasoningEffort} onValueChange={(value) => setReasoningEffort(value as AgentReasoningEffort)}>
             <SelectTrigger className="h-10 w-[132px] px-4 text-sm">
               <div className="flex items-center gap-2">
                 <Lightbulb className="h-4 w-4" />

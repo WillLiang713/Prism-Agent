@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 
-import { CodexAppLayout } from './codex/CodexAppLayout';
+import { AgentAppLayout } from './agent/AgentAppLayout';
 import { useUIStore } from './store/uiStore';
 
 export default function App() {
@@ -10,5 +10,5 @@ export default function App() {
     document.documentElement.classList.toggle('dark', theme === 'dark');
   }, [theme]);
 
-  return <CodexAppLayout />;
+  return <AgentAppLayout />;
 }

@@ -1,134 +1,125 @@
-import fs from 'node:fs/promises';
-import path from 'node:path';
 import os from 'node:os';
+import path from 'node:path';
+import { randomUUID } from 'node:crypto';
 
-import { AppServerClient } from './appServer.js';
-import { classifyCommandRisk, classifyFileChangeRisk, shouldAutoApproveCommand } from './approval.js';
+import {
+  AuthStorage,
+  createAgentSession,
+  createBashTool,
+  createEditTool,
+  createFindTool,
+  createGrepTool,
+  createLsTool,
+  createReadTool,
+  createWriteTool,
+  DefaultResourceLoader,
+  ModelRegistry,
+  SessionManager,
+  type ToolCallEvent,
+  type ToolResultEvent,
+} from '@mariozechner/pi-coding-agent';
+
+import { classifyCommandRisk, classifyPathRisk, shouldAutoApproveCommand } from './approval.js';
 import { createBridge } from './bridge.js';
-import { SessionRegistry } from './sessions.js';
+import { SessionRegistry, type PersistedSessionSnapshot, type RuntimeSessionRecord } from './sessions.js';
 import type {
-  AppServerNotification,
-  AppServerServerRequest,
-  AppServerThread,
-  CodexEvent,
-  CodexSessionMessage,
-  CodexThreadMeta,
-  CodexUsage,
+  CancelParams,
+  AgentEvent,
+  AgentReasoningEffort,
+  AgentSessionToolEvent,
   OuterMethods,
   RespondApprovalParams,
-  SendMessageImagePayload,
+  ResumeSessionParams,
   SendMessageParams,
+  SidecarHealth,
+  SkillStatusItem,
   StartSessionParams,
 } from './types.js';
 
+const SIDECAR_VERSION = '0.2.0';
+const AGENT_VERSION = '0.66.1';
+
 type PendingApproval = {
+  sessionId: string;
+  requestId: string;
   resolve: (decision: 'allow' | 'deny') => void;
 };
 
-const sessionRegistry = new SessionRegistry();
+const authStorage = AuthStorage.create();
+const modelRegistry = ModelRegistry.create(authStorage);
 const pendingApprovals = new Map<string, PendingApproval>();
+const sessionRegistry = new SessionRegistry(resolveDataDir());
 
 const bridge = createBridge(
   {
     async health() {
-      await appServer.waitUntilReady();
-      const auth = await appServer.call<{ authMethod: string | null }>('getAuthStatus', {});
+      await sessionRegistry.ensureReady();
       return {
-        sidecarVersion: '0.1.0',
-        codexVersion: await appServer.codexVersion(),
-        loggedIn: appServer.isLoggedIn() || Boolean(auth.authMethod),
-      } satisfies OuterMethods['health'];
+        sidecarVersion: SIDECAR_VERSION,
+        agentVersion: AGENT_VERSION,
+        loggedIn: authStorage.list().length > 0,
+      } satisfies SidecarHealth;
     },
 
     async startSession(params) {
       const { workspaceRoot } = params as StartSessionParams;
-      const resolvedWorkspaceRoot = resolveWorkspaceRoot(workspaceRoot);
-      const response = await appServer.call<{
-        thread: AppServerThread;
-      }>('thread/start', {
-        cwd: resolvedWorkspaceRoot,
-        approvalPolicy: 'untrusted',
-        sandbox: 'workspace-write',
-        experimentalRawEvents: false,
-        persistExtendedHistory: true,
+      const runtime = await createRuntimeSession({
+        workspaceRoot,
       });
-
-      const session = sessionRegistry.createSession(response.thread.id, resolvedWorkspaceRoot);
-      return {
-        sessionId: session.sessionId,
-        threadId: response.thread.id,
-        messages: [] satisfies CodexSessionMessage[],
-        thread: toThreadMeta(response.thread),
-      } satisfies OuterMethods['startSession'];
+      return sessionRegistry.toBootstrap(runtime.snapshot) satisfies OuterMethods['startSession'];
     },
 
     async resumeSession(params) {
-      const { workspaceRoot, threadId } = params as { workspaceRoot: string; threadId: string };
-      const resolvedWorkspaceRoot = resolveWorkspaceRoot(workspaceRoot);
-      const response = await appServer.call<{
-        thread: AppServerThread;
-      }>('thread/resume', {
-        threadId,
-        cwd: resolvedWorkspaceRoot,
-        approvalPolicy: 'untrusted',
-        sandbox: 'workspace-write',
-        persistExtendedHistory: true,
-      });
+      const { workspaceRoot, threadId } = params as ResumeSessionParams;
+      const existing = sessionRegistry.getRuntimeSessionByThreadId(threadId);
+      if (existing) {
+        return sessionRegistry.toBootstrap(existing.snapshot) satisfies OuterMethods['resumeSession'];
+      }
 
-      const session = sessionRegistry.createSession(response.thread.id, resolvedWorkspaceRoot);
-      return {
-        sessionId: session.sessionId,
-        threadId: response.thread.id,
-        messages: sessionRegistry.toMessages(response.thread),
-        thread: toThreadMeta(response.thread),
-      } satisfies OuterMethods['resumeSession'];
+      const snapshot = await sessionRegistry.loadSnapshot(threadId);
+      const runtime = await createRuntimeSession({
+        workspaceRoot: workspaceRoot || snapshot.workspaceRoot,
+        existingSnapshot: snapshot,
+      });
+      return sessionRegistry.toBootstrap(runtime.snapshot) satisfies OuterMethods['resumeSession'];
     },
 
     async sendMessage(params) {
       const payload = params as SendMessageParams;
-      const session = sessionRegistry.getSession(payload.sessionId);
-      const input = await buildInput(payload.text, payload.images ?? []);
-      const response = await appServer.call<{
-        turn: {
-          id: string;
-        };
-      }>('turn/start', {
-        threadId: session.threadId,
-        input,
-        cwd: session.workspaceRoot,
-        approvalPolicy: 'untrusted',
-        sandboxPolicy: {
-          type: 'workspaceWrite',
-          writableRoots: [session.workspaceRoot],
-          readOnlyAccess: { type: 'fullAccess' },
-          networkAccess: false,
-          excludeTmpdirEnvVar: false,
-          excludeSlashTmp: false,
-        },
-        effort: normalizeEffort(payload.reasoningEffort),
+      const runtime = sessionRegistry.getRuntimeSession(payload.sessionId);
+      const requestId = payload.requestId || randomUUID();
+      sessionRegistry.markRequestStarted(runtime.sessionId, requestId, payload.text);
+      await sessionRegistry.saveSnapshot(runtime.snapshot);
+
+      void runPrompt(runtime, requestId, payload).catch((error) => {
+        emit({
+          type: 'error',
+          requestId,
+          sessionId: runtime.sessionId,
+          message: error instanceof Error ? error.message : String(error),
+        });
       });
 
-      const request = sessionRegistry.createRequest(
-        session.sessionId,
-        session.threadId,
-        response.turn.id,
-        payload.requestId,
-      );
       return {
-        requestId: request.requestId,
+        requestId,
       } satisfies OuterMethods['sendMessage'];
     },
 
     async cancel(params) {
-      const payload = params as { requestId: string };
-      const request = sessionRegistry.getRequestByRequestId(payload.requestId);
-      if (!request) {
-        return null;
+      const payload = params as CancelParams;
+      for (const [approvalId, approval] of pendingApprovals.entries()) {
+        if (approval.requestId === payload.requestId) {
+          pendingApprovals.delete(approvalId);
+          approval.resolve('deny');
+        }
       }
-      await appServer.call('turn/interrupt', {
-        threadId: request.threadId,
-        turnId: request.turnId,
-      });
+
+      for (const runtime of getRuntimeSessions()) {
+        if (runtime.currentRequestId === payload.requestId) {
+          sessionRegistry.markRequestCancelled(payload.requestId);
+          await runtime.session.abort();
+        }
+      }
       return null;
     },
 
@@ -144,21 +135,15 @@ const bridge = createBridge(
     },
 
     async listThreads() {
-      const response = await appServer.call<{ data: AppServerThread[] }>('thread/list', {
-        limit: 20,
-        archived: false,
-      });
-
+      const threads = await sessionRegistry.listThreads();
       return {
-        threads: response.data
-          .map(toThreadMeta)
-          .sort((left, right) => right.updatedAt - left.updatedAt),
+        threads,
       } satisfies OuterMethods['listThreads'];
     },
 
     async archiveThread(params) {
       const { threadId } = params as { threadId: string };
-      await appServer.call('thread/archive', { threadId });
+      await sessionRegistry.archiveThread(threadId);
       return null;
     },
   },
@@ -167,320 +152,553 @@ const bridge = createBridge(
   },
 );
 
-const appServer = new AppServerClient({
-  onNotification: handleNotification,
-  onServerRequest: handleServerRequest,
-});
-
 process.on('SIGINT', () => {
-  void appServer.shutdown().finally(() => process.exit(0));
+  disposeAll();
+  process.exit(0);
 });
 
 process.on('SIGTERM', () => {
-  void appServer.shutdown().finally(() => process.exit(0));
+  disposeAll();
+  process.exit(0);
 });
 
-async function buildInput(text: string, images: SendMessageImagePayload[]) {
-  const input: Array<Record<string, unknown>> = [];
-  if (text.trim()) {
-    input.push({
-      type: 'text',
-      text,
-      text_elements: [],
-    });
-  }
+async function createRuntimeSession(options: {
+  workspaceRoot: string;
+  existingSnapshot?: PersistedSessionSnapshot;
+}) {
+  const resolvedWorkspaceRoot = resolveWorkspaceRoot(options.workspaceRoot);
+  await sessionRegistry.ensureReady();
 
-  for (const image of images) {
-    input.push({
-      type: 'localImage',
-      path: await persistImage(image),
-    });
-  }
+  const provisionalSessionId = options.existingSnapshot?.sessionId || randomUUID();
+  const context = {
+    sessionId: provisionalSessionId,
+    threadId: options.existingSnapshot?.threadId || provisionalSessionId,
+  };
 
-  return input;
+  const loader = new DefaultResourceLoader({
+    cwd: resolvedWorkspaceRoot,
+    extensionFactories: [createBridgeExtension(context)],
+  });
+  await loader.reload();
+
+  const sessionDir = sessionRegistry.createWorkspaceSessionDir(resolvedWorkspaceRoot);
+  const sessionManager = options.existingSnapshot?.sessionFile
+    ? SessionManager.open(options.existingSnapshot.sessionFile, sessionDir, resolvedWorkspaceRoot)
+    : SessionManager.create(resolvedWorkspaceRoot, sessionDir);
+
+  const { session } = await createAgentSession({
+    cwd: resolvedWorkspaceRoot,
+    authStorage,
+    modelRegistry,
+    resourceLoader: loader,
+    sessionManager,
+    tools: [
+      createReadTool(resolvedWorkspaceRoot),
+      createBashTool(resolvedWorkspaceRoot),
+      createEditTool(resolvedWorkspaceRoot),
+      createWriteTool(resolvedWorkspaceRoot),
+      createGrepTool(resolvedWorkspaceRoot),
+      createFindTool(resolvedWorkspaceRoot),
+      createLsTool(resolvedWorkspaceRoot),
+    ],
+  });
+  await session.bindExtensions({});
+
+  context.threadId = session.sessionId;
+  const skills = collectSkills(loader);
+  const snapshot =
+    options.existingSnapshot ??
+    sessionRegistry.createSnapshot({
+      threadId: session.sessionId,
+      workspaceRoot: resolvedWorkspaceRoot,
+      sessionFile: session.sessionFile ?? null,
+      skills,
+      modelProvider: session.model?.provider || 'pi',
+    });
+
+  snapshot.threadId = session.sessionId;
+  snapshot.sessionId = provisionalSessionId;
+  snapshot.workspaceRoot = resolvedWorkspaceRoot;
+  snapshot.sessionFile = session.sessionFile ?? snapshot.sessionFile;
+  snapshot.skills = skills;
+  snapshot.modelProvider = session.model?.provider || snapshot.modelProvider || 'pi';
+
+  const runtime = sessionRegistry.registerRuntime({
+    sessionId: snapshot.sessionId,
+    threadId: snapshot.threadId,
+    workspaceRoot: resolvedWorkspaceRoot,
+    session,
+    loader,
+    snapshot,
+  });
+  bindSessionEvents(runtime);
+  await sessionRegistry.saveSnapshot(snapshot);
+  emit({
+    type: 'skills_snapshot',
+    sessionId: runtime.sessionId,
+    skills,
+  });
+  return runtime;
 }
 
-async function persistImage(image: SendMessageImagePayload) {
-  const [header, base64] = image.dataUrl.split(',', 2);
-  if (!header || !base64) {
-    throw new Error(`Invalid image payload: ${image.name}`);
-  }
+function bindSessionEvents(runtime: RuntimeSessionRecord) {
+  runtime.session.subscribe((event) => {
+    const requestId = runtime.currentRequestId;
+    if (!requestId) {
+      return;
+    }
 
-  const extension = mimeToExtension(image.mediaType);
-  const imageDir = path.join(os.tmpdir(), 'prism-codex-images');
-  await fs.mkdir(imageDir, { recursive: true });
-  const filePath = path.join(
-    imageDir,
-    `${Date.now()}-${Math.random().toString(36).slice(2)}${extension}`,
+    const assistantMessage = sessionRegistry.getAssistantMessage(runtime.sessionId);
+    switch (event.type) {
+      case 'message_update': {
+        if (!assistantMessage) {
+          return;
+        }
+        if (event.assistantMessageEvent.type === 'text_delta') {
+          assistantMessage.text += event.assistantMessageEvent.delta;
+          emit({
+            type: 'delta',
+            requestId,
+            sessionId: runtime.sessionId,
+            itemId: assistantMessage.id,
+            kind: 'text',
+            text: event.assistantMessageEvent.delta,
+          });
+        }
+        if (event.assistantMessageEvent.type === 'thinking_delta') {
+          assistantMessage.thinking = `${assistantMessage.thinking || ''}${event.assistantMessageEvent.delta}`;
+          emit({
+            type: 'delta',
+            requestId,
+            sessionId: runtime.sessionId,
+            itemId: assistantMessage.id,
+            kind: 'thinking',
+            text: event.assistantMessageEvent.delta,
+          });
+        }
+        persistSnapshot(runtime);
+        return;
+      }
+      case 'tool_execution_start': {
+        ensureToolEvent(runtime, {
+          id: event.toolCallId,
+          name: event.toolName,
+          status: 'running',
+          args: event.args,
+          output: '',
+          ok: null,
+          summary: summarizeTool(event.toolName, event.args),
+        });
+        emit({
+          type: 'tool_call',
+          requestId,
+          sessionId: runtime.sessionId,
+          toolCallId: event.toolCallId,
+          name: event.toolName,
+          args: event.args,
+          status: 'started',
+          summary: summarizeTool(event.toolName, event.args),
+        });
+        persistSnapshot(runtime);
+        return;
+      }
+      case 'tool_execution_update': {
+        const existing = ensureToolEvent(runtime, {
+          id: event.toolCallId,
+          name: event.toolName,
+          status: 'running',
+          args: event.args,
+          output: '',
+          ok: null,
+          summary: summarizeTool(event.toolName, event.args),
+        });
+        existing.status = 'running';
+        existing.output = mergeToolOutput(existing.output, stringifyUnknown(event.partialResult));
+        emit({
+          type: 'tool_result',
+          requestId,
+          sessionId: runtime.sessionId,
+          toolCallId: event.toolCallId,
+          ok: true,
+          output: existing.output,
+          status: 'running',
+          summary: existing.summary,
+        });
+        persistSnapshot(runtime);
+        return;
+      }
+      default:
+        return;
+    }
+  });
+}
+
+async function runPrompt(runtime: RuntimeSessionRecord, requestId: string, payload: SendMessageParams) {
+  try {
+    runtime.session.setThinkingLevel(normalizeThinking(payload.reasoningEffort));
+    await runtime.session.prompt(payload.text, {
+      images: normalizeImages(payload.images ?? []),
+    });
+
+    if (!sessionRegistry.isCancelled(runtime.sessionId, requestId)) {
+      emit({
+        type: 'done',
+        requestId,
+        sessionId: runtime.sessionId,
+        threadId: runtime.threadId,
+        usage: runtime.snapshot.lastUsage,
+      });
+    } else {
+      emit({
+        type: 'done',
+        requestId,
+        sessionId: runtime.sessionId,
+        threadId: runtime.threadId,
+      });
+    }
+  } catch (error) {
+    if (!sessionRegistry.isCancelled(runtime.sessionId, requestId)) {
+      runtime.snapshot.status = 'error';
+      persistSnapshot(runtime);
+      emit({
+        type: 'error',
+        requestId,
+        sessionId: runtime.sessionId,
+        message: error instanceof Error ? error.message : String(error),
+      });
+    } else {
+      emit({
+        type: 'done',
+        requestId,
+        sessionId: runtime.sessionId,
+        threadId: runtime.threadId,
+      });
+    }
+  } finally {
+    sessionRegistry.clearRequest(runtime.sessionId, requestId);
+    await sessionRegistry.saveSnapshot(runtime.snapshot);
+  }
+}
+
+function createBridgeExtension(context: { sessionId: string; threadId: string }) {
+  return (pi: any) => {
+    pi.on('tool_call', async (event: ToolCallEvent) => {
+      const runtime = sessionRegistry.getRuntimeSession(context.sessionId);
+      const requestId = runtime.currentRequestId;
+      if (!requestId) {
+        return undefined;
+      }
+
+      if (event.toolName === 'bash') {
+        const command = typeof event.input.command === 'string' ? event.input.command : '';
+        if (shouldAutoApproveCommand(command, runtime.workspaceRoot)) {
+          return undefined;
+        }
+
+        const approvalId = randomUUID();
+        emit({
+          type: 'approval_request',
+          requestId,
+          sessionId: runtime.sessionId,
+          approvalId,
+          toolCallId: event.toolCallId,
+          command,
+          risk: classifyCommandRisk(command, runtime.workspaceRoot),
+          reason: '命令执行需要确认',
+        });
+
+        const decision = await waitForApproval(runtime.sessionId, requestId, approvalId);
+        if (decision === 'deny') {
+          finalizeToolEvent(runtime, event.toolCallId, event.toolName, {
+            ok: false,
+            output: '已拒绝执行该命令。',
+            status: 'blocked',
+            summary: summarizeTool(event.toolName, event.input),
+          });
+          emit({
+            type: 'tool_result',
+            requestId,
+            sessionId: runtime.sessionId,
+            toolCallId: event.toolCallId,
+            ok: false,
+            output: '已拒绝执行该命令。',
+            status: 'blocked',
+            summary: summarizeTool(event.toolName, event.input),
+          });
+          persistSnapshot(runtime);
+          return {
+            block: true,
+            reason: 'Blocked by user',
+          };
+        }
+      }
+
+      if (event.toolName === 'edit' || event.toolName === 'write') {
+        const targetPath = typeof event.input.path === 'string' ? event.input.path : '';
+        const approvalId = randomUUID();
+        emit({
+          type: 'approval_request',
+          requestId,
+          sessionId: runtime.sessionId,
+          approvalId,
+          toolCallId: event.toolCallId,
+          command: targetPath || '文件修改',
+          risk: classifyPathRisk(targetPath, runtime.workspaceRoot),
+          reason: '文件修改需要确认',
+        });
+        const decision = await waitForApproval(runtime.sessionId, requestId, approvalId);
+        if (decision === 'deny') {
+          finalizeToolEvent(runtime, event.toolCallId, event.toolName, {
+            ok: false,
+            output: '已拒绝应用文件修改。',
+            status: 'blocked',
+            summary: summarizeTool(event.toolName, event.input),
+          });
+          emit({
+            type: 'tool_result',
+            requestId,
+            sessionId: runtime.sessionId,
+            toolCallId: event.toolCallId,
+            ok: false,
+            output: '已拒绝应用文件修改。',
+            status: 'blocked',
+            summary: summarizeTool(event.toolName, event.input),
+          });
+          persistSnapshot(runtime);
+          return {
+            block: true,
+            reason: 'Blocked by user',
+          };
+        }
+      }
+
+      return undefined;
+    });
+
+    pi.on('tool_result', (event: ToolResultEvent) => {
+      const runtime = sessionRegistry.getRuntimeSession(context.sessionId);
+      const requestId = runtime.currentRequestId;
+      if (!requestId) {
+        return;
+      }
+
+      const output = contentToText(event.content);
+      const diff = extractDiff(event.toolName, event.details);
+      const exitCode = extractExitCode(event.details);
+      finalizeToolEvent(runtime, event.toolCallId, event.toolName, {
+        ok: !event.isError,
+        output,
+        status: event.isError ? 'error' : 'completed',
+        diff,
+        exitCode,
+        summary: summarizeTool(event.toolName, event.input),
+      });
+
+      emit({
+        type: 'tool_result',
+        requestId,
+        sessionId: runtime.sessionId,
+        toolCallId: event.toolCallId,
+        ok: !event.isError,
+        output,
+        status: event.isError ? 'error' : 'completed',
+        diff,
+        exitCode,
+        summary: summarizeTool(event.toolName, event.input),
+      });
+      persistSnapshot(runtime);
+    });
+  };
+}
+
+function collectSkills(loader: DefaultResourceLoader) {
+  const skillResult = loader.getSkills();
+  const items: SkillStatusItem[] = skillResult.skills.map((skill) => ({
+    id: skill.name,
+    name: skill.name,
+    description: skill.description || '',
+    status: 'loaded',
+    source: skill.filePath,
+  }));
+  return sessionRegistry.buildSkillsSnapshot(
+    items,
+    skillResult.diagnostics.map((diagnostic) =>
+      String((diagnostic as { message?: unknown }).message ?? ''),
+    ).filter(Boolean),
   );
-  await fs.writeFile(filePath, Buffer.from(base64, 'base64'));
-  return filePath;
 }
 
-function mimeToExtension(mediaType: string) {
-  if (mediaType === 'image/jpeg') return '.jpg';
-  if (mediaType === 'image/webp') return '.webp';
-  if (mediaType === 'image/gif') return '.gif';
-  return '.png';
+function normalizeImages(images: SendMessageParams['images']) {
+  return (images ?? []).map((image) => {
+    const [, base64 = ''] = image.dataUrl.split(',', 2);
+    return {
+      type: 'image' as const,
+      data: base64,
+      mimeType: image.mediaType,
+    };
+  });
+}
+
+function normalizeThinking(reasoning: AgentReasoningEffort | undefined) {
+  if (!reasoning || reasoning === 'none') {
+    return 'off';
+  }
+  return reasoning;
+}
+
+function ensureToolEvent(runtime: RuntimeSessionRecord, seed: AgentSessionToolEvent) {
+  const assistantMessage = sessionRegistry.getAssistantMessage(runtime.sessionId)
+    ?? sessionRegistry.getLatestAssistantMessage(runtime.sessionId);
+  if (!assistantMessage) {
+    throw new Error('No assistant message available for tool event.');
+  }
+
+  assistantMessage.toolEvents = assistantMessage.toolEvents || [];
+  let existing = assistantMessage.toolEvents.find((event) => event.id === seed.id);
+  if (!existing) {
+    existing = { ...seed };
+    assistantMessage.toolEvents.push(existing);
+  }
+  return existing;
+}
+
+function finalizeToolEvent(
+  runtime: RuntimeSessionRecord,
+  toolCallId: string,
+  toolName: string,
+  result: {
+    ok: boolean;
+    output: string;
+    status: string;
+    diff?: string;
+    exitCode?: number | null;
+    summary?: string;
+  },
+) {
+  const existing = ensureToolEvent(runtime, {
+    id: toolCallId,
+    name: toolName,
+    status: result.status,
+    args: {},
+    output: result.output,
+    ok: result.ok,
+    diff: result.diff,
+    exitCode: result.exitCode,
+    summary: result.summary,
+  });
+  existing.status = result.status;
+  existing.output = result.output;
+  existing.ok = result.ok;
+  existing.diff = result.diff;
+  existing.exitCode = result.exitCode;
+  existing.summary = result.summary;
+}
+
+function summarizeTool(toolName: string, args: unknown) {
+  if (toolName === 'bash' && typeof args === 'object' && args && 'command' in args) {
+    return String((args as { command?: unknown }).command ?? '');
+  }
+  if ((toolName === 'edit' || toolName === 'write' || toolName === 'read') && typeof args === 'object' && args && 'path' in args) {
+    return String((args as { path?: unknown }).path ?? '');
+  }
+  if ((toolName === 'grep' || toolName === 'find') && typeof args === 'object' && args && 'pattern' in args) {
+    return String((args as { pattern?: unknown }).pattern ?? '');
+  }
+  return toolName;
+}
+
+function contentToText(content: unknown) {
+  if (!Array.isArray(content)) {
+    return stringifyUnknown(content);
+  }
+  return content
+    .map((item) => {
+      if (item && typeof item === 'object' && 'type' in item && item.type === 'text' && 'text' in item) {
+        return String((item as { text?: unknown }).text ?? '');
+      }
+      return '';
+    })
+    .filter(Boolean)
+    .join('\n');
+}
+
+function stringifyUnknown(value: unknown) {
+  if (typeof value === 'string') {
+    return value;
+  }
+  if (value === null || value === undefined) {
+    return '';
+  }
+  try {
+    return JSON.stringify(value, null, 2);
+  } catch {
+    return String(value);
+  }
+}
+
+function mergeToolOutput(current: string, next: string) {
+  if (!next.trim()) {
+    return current;
+  }
+  if (!current.trim()) {
+    return next;
+  }
+  return `${current}\n${next}`;
+}
+
+function extractDiff(toolName: string, details: unknown) {
+  if (toolName !== 'edit') {
+    return undefined;
+  }
+  if (details && typeof details === 'object' && 'diff' in details) {
+    return String((details as { diff?: unknown }).diff ?? '');
+  }
+  return undefined;
+}
+
+function extractExitCode(details: unknown) {
+  if (!details || typeof details !== 'object') {
+    return null;
+  }
+  if ('exitCode' in details) {
+    const value = (details as { exitCode?: unknown }).exitCode;
+    return typeof value === 'number' ? value : null;
+  }
+  return null;
+}
+
+function waitForApproval(sessionId: string, requestId: string, approvalId: string) {
+  return new Promise<'allow' | 'deny'>((resolve) => {
+    pendingApprovals.set(approvalId, {
+      sessionId,
+      requestId,
+      resolve,
+    });
+  });
+}
+
+function emit(event: AgentEvent) {
+  bridge.emit(event);
 }
 
 function resolveWorkspaceRoot(workspaceRoot: string) {
   return workspaceRoot.trim() || process.cwd();
 }
 
-function normalizeEffort(effort: SendMessageParams['reasoningEffort']) {
-  if (!effort || effort === 'none') {
-    return 'medium';
-  }
-  return effort;
+function resolveDataDir() {
+  return process.env.PRISM_AGENT_DATA_DIR?.trim() || path.join(os.homedir(), '.prism-agent');
 }
 
-function toThreadMeta(thread: AppServerThread): CodexThreadMeta {
-  return {
-    threadId: thread.id,
-    preview: thread.preview,
-    name: thread.name,
-    cwd: thread.cwd,
-    createdAt: thread.createdAt,
-    updatedAt: thread.updatedAt,
-    status: thread.status.type,
-    modelProvider: thread.modelProvider,
-    path: thread.path,
-  };
-}
-
-function emit(event: CodexEvent) {
-  bridge.emit(event);
-}
-
-function handleNotification(notification: AppServerNotification) {
-  const params = notification.params;
-  const threadId = String(params.threadId ?? '');
-  const turnId = getTurnId(params);
-  const request = turnId ? sessionRegistry.getRequestByTurnId(turnId) : null;
-
-  switch (notification.method) {
-    case 'item/agentMessage/delta': {
-      if (!request) return;
-      emit({
-        type: 'delta',
-        requestId: request.requestId,
-        sessionId: request.sessionId,
-        itemId: String(params.itemId),
-        kind: 'text',
-        text: String(params.delta ?? ''),
-      });
-      return;
-    }
-    case 'item/reasoning/textDelta':
-    case 'item/reasoning/summaryTextDelta': {
-      if (!request) return;
-      emit({
-        type: 'delta',
-        requestId: request.requestId,
-        sessionId: request.sessionId,
-        itemId: String(params.itemId),
-        kind: 'thinking',
-        text: String(params.delta ?? ''),
-      });
-      return;
-    }
-    case 'item/started': {
-      if (!request) return;
-      const item = params.item as Record<string, unknown>;
-      const type = String(item.type ?? '');
-      if (!isToolLikeItem(type)) {
-        return;
-      }
-      emit({
-        type: 'tool_call',
-        requestId: request.requestId,
-        sessionId: request.sessionId,
-        toolCallId: String(item.id),
-        name: type,
-        args: item,
-        status: 'started',
-      });
-      return;
-    }
-    case 'item/completed': {
-      if (!request) return;
-      const item = params.item as Record<string, unknown>;
-      const type = String(item.type ?? '');
-      if (type === 'agentMessage' || type === 'reasoning') {
-        return;
-      }
-      if (isToolLikeItem(type)) {
-        emit({
-          type: 'tool_result',
-          requestId: request.requestId,
-          sessionId: request.sessionId,
-          toolCallId: String(item.id),
-          ok: !['failed', 'declined'].includes(String(item.status ?? '')),
-          output: summarizeToolItem(item),
-          status: String(item.status ?? ''),
-        });
-      }
-      return;
-    }
-    case 'thread/tokenUsage/updated': {
-      if (!turnId) return;
-      sessionRegistry.updateUsage(turnId, toUsage(params.tokenUsage as Record<string, unknown>));
-      return;
-    }
-    case 'turn/completed': {
-      if (!request) return;
-      const finished = sessionRegistry.finishRequest(turnId) ?? request;
-      emit({
-        type: 'done',
-        requestId: finished.requestId,
-        sessionId: finished.sessionId,
-        threadId,
-        usage: finished.usage,
-      });
-      return;
-    }
-    case 'error': {
-      if (!request) return;
-      const error = params.error as Record<string, unknown> | undefined;
-      emit({
-        type: 'error',
-        requestId: request.requestId,
-        sessionId: request.sessionId,
-        message: String(error?.message ?? 'Unknown Codex error'),
-      });
-      return;
-    }
-    default:
-      return;
-  }
-}
-
-function getTurnId(params: Record<string, unknown>) {
-  if (typeof params.turnId === 'string' && params.turnId) {
-    return params.turnId;
-  }
-
-  const turn = params.turn as Record<string, unknown> | undefined;
-  if (typeof turn?.id === 'string' && turn.id) {
-    return turn.id;
-  }
-
-  return '';
-}
-
-async function handleServerRequest(request: AppServerServerRequest) {
-  if (
-    request.method !== 'item/commandExecution/requestApproval' &&
-    request.method !== 'item/fileChange/requestApproval'
-  ) {
-    throw new Error(`Unsupported server request: ${request.method}`);
-  }
-
-  const params = request.params;
-  const turnId = String(params.turnId ?? '');
-  const requestRecord = sessionRegistry.getRequestByTurnId(turnId);
-  if (!requestRecord) {
-    return { decision: 'decline' };
-  }
-  const session = sessionRegistry.getSession(requestRecord.sessionId);
-
-  if (request.method === 'item/commandExecution/requestApproval') {
-    const command = String(params.command ?? '');
-    if (shouldAutoApproveCommand(command, session.workspaceRoot)) {
-      return {
-        decision: 'accept',
-      };
-    }
-
-    const approvalId = String(request.id);
-    emit({
-      type: 'approval_request',
-      requestId: requestRecord.requestId,
-      sessionId: requestRecord.sessionId,
-      approvalId,
-      toolCallId: String(params.itemId ?? approvalId),
-      command,
-      risk: classifyCommandRisk(command, session.workspaceRoot),
-      reason: params.reason ? String(params.reason) : undefined,
-    });
-
-    const decision = await waitForApproval(approvalId);
-    return {
-      decision: decision === 'allow' ? 'accept' : 'decline',
-    };
-  }
-
-  const approvalId = String(request.id);
-  const changes = [
-    {
-      path: String(params.grantRoot ?? session.workspaceRoot),
-    },
-  ];
-
-  emit({
-    type: 'approval_request',
-    requestId: requestRecord.requestId,
-    sessionId: requestRecord.sessionId,
-    approvalId,
-    toolCallId: String(params.itemId ?? approvalId),
-    command: params.reason ? String(params.reason) : '文件改动审批',
-    risk: classifyFileChangeRisk(changes, session.workspaceRoot),
-    reason: params.reason ? String(params.reason) : undefined,
-  });
-
-  const decision = await waitForApproval(approvalId);
-  return {
-    decision: decision === 'allow' ? 'accept' : 'decline',
-  };
-}
-
-function waitForApproval(approvalId: string) {
-  return new Promise<'allow' | 'deny'>((resolve) => {
-    pendingApprovals.set(approvalId, { resolve });
+function persistSnapshot(runtime: RuntimeSessionRecord) {
+  void sessionRegistry.saveSnapshot(runtime.snapshot).catch((error) => {
+    console.error('Failed to persist session snapshot:', error);
   });
 }
 
-function isToolLikeItem(type: string) {
-  return ['commandExecution', 'fileChange', 'mcpToolCall', 'dynamicToolCall'].includes(type);
+function getRuntimeSessions() {
+  return sessionRegistry.listRuntimeSessions();
 }
 
-function summarizeToolItem(item: Record<string, unknown>) {
-  if (typeof item.aggregatedOutput === 'string' && item.aggregatedOutput.trim()) {
-    return item.aggregatedOutput;
-  }
-
-  if (item.type === 'fileChange' && Array.isArray(item.changes)) {
-    return item.changes
-      .map((change: any) => {
-        const header = `--- ${change.path}\n+++ ${change.path}`;
-        return `${header}\n${change.diff || '(no changes)'}`;
-      })
-      .join('\n\n');
-  }
-
-  if (Array.isArray(item.changes) && item.changes.length > 0) {
-    return JSON.stringify(item.changes);
-  }
-
-  if (item.result) {
-    return typeof item.result === 'string' ? item.result : JSON.stringify(item.result);
-  }
-
-  if (item.error) {
-    return typeof item.error === 'string' ? item.error : JSON.stringify(item.error);
-  }
-
-  return JSON.stringify(item);
-}
-
-function toUsage(tokenUsage: Record<string, unknown>): CodexUsage {
-  const total = tokenUsage.total as Record<string, unknown> | undefined;
-  return {
-    input: Number(total?.inputTokens ?? 0),
-    output: Number(total?.outputTokens ?? 0),
-    cachedInput: Number(total?.cachedInputTokens ?? 0),
-    reasoningOutput: Number(total?.reasoningOutputTokens ?? 0),
-    total: Number(total?.totalTokens ?? 0),
-  };
+function disposeAll() {
+  sessionRegistry.disposeAll();
 }

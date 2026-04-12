@@ -1,43 +1,43 @@
 import { useEffect, useMemo, useState } from 'react';
 
 import {
-  codexCancel,
-  codexHealth,
-  codexListThreads,
-  codexRespondApproval,
-  codexResumeSession,
-  codexSendMessage,
-  codexStartSession,
-  codexArchiveThread,
-  listenCodexEvents,
-  type CodexReasoningEffort,
+  agentArchiveThread,
+  agentCancel,
+  agentHealth,
+  agentListThreads,
+  agentRespondApproval,
+  agentResumeSession,
+  agentSendMessage,
+  agentStartSession,
+  listenAgentEvents,
+  type AgentReasoningEffort,
 } from './client';
 import {
   createSessionFromBootstrap,
-  useCodexSessionStore,
+  useAgentSessionStore,
 } from './sessionStore';
 
 const HEALTH_CHECK_TIMEOUT_MS = 5_000;
 const BOOTSTRAP_CALL_TIMEOUT_MS = 8_000;
 const MAX_HEALTH_RETRIES = 6;
 
-export function useCodexChat() {
-  const initialized = useCodexSessionStore((state) => state.initialized);
-  const backendReady = useCodexSessionStore((state) => state.backendReady);
-  const backendError = useCodexSessionStore((state) => state.backendError);
-  const threadList = useCodexSessionStore((state) => state.threadList);
-  const sessionOrder = useCodexSessionStore((state) => state.sessionOrder);
-  const sessionsById = useCodexSessionStore((state) => state.sessionsById);
-  const activeSessionId = useCodexSessionStore((state) => state.activeSessionId);
-  const setInitialized = useCodexSessionStore((state) => state.setInitialized);
-  const setBackendReady = useCodexSessionStore((state) => state.setBackendReady);
-  const setThreadList = useCodexSessionStore((state) => state.setThreadList);
-  const upsertSession = useCodexSessionStore((state) => state.upsertSession);
-  const activateSession = useCodexSessionStore((state) => state.activateSession);
-  const findSessionByThreadId = useCodexSessionStore((state) => state.findSessionByThreadId);
-  const createPendingMessage = useCodexSessionStore((state) => state.createPendingMessage);
-  const clearApproval = useCodexSessionStore((state) => state.clearApproval);
-  const applyEvent = useCodexSessionStore((state) => state.applyEvent);
+export function useAgentChat() {
+  const initialized = useAgentSessionStore((state) => state.initialized);
+  const backendReady = useAgentSessionStore((state) => state.backendReady);
+  const backendError = useAgentSessionStore((state) => state.backendError);
+  const threadList = useAgentSessionStore((state) => state.threadList);
+  const sessionOrder = useAgentSessionStore((state) => state.sessionOrder);
+  const sessionsById = useAgentSessionStore((state) => state.sessionsById);
+  const activeSessionId = useAgentSessionStore((state) => state.activeSessionId);
+  const setInitialized = useAgentSessionStore((state) => state.setInitialized);
+  const setBackendReady = useAgentSessionStore((state) => state.setBackendReady);
+  const setThreadList = useAgentSessionStore((state) => state.setThreadList);
+  const upsertSession = useAgentSessionStore((state) => state.upsertSession);
+  const activateSession = useAgentSessionStore((state) => state.activateSession);
+  const findSessionByThreadId = useAgentSessionStore((state) => state.findSessionByThreadId);
+  const createPendingMessage = useAgentSessionStore((state) => state.createPendingMessage);
+  const clearApproval = useAgentSessionStore((state) => state.clearApproval);
+  const applyEvent = useAgentSessionStore((state) => state.applyEvent);
   const [workspaceRoot] = useState('');
 
   useEffect(() => {
@@ -50,7 +50,7 @@ export function useCodexChat() {
 
       while (retries < maxRetries) {
         try {
-          await withTimeout(codexHealth(), HEALTH_CHECK_TIMEOUT_MS, '后端健康检查超时');
+          await withTimeout(agentHealth(), HEALTH_CHECK_TIMEOUT_MS, '后端健康检查超时');
           break;
         } catch (error) {
           retries++;
@@ -74,7 +74,7 @@ export function useCodexChat() {
         setBackendReady(true);
 
         const listener = await withTimeout(
-          listenCodexEvents((event) => {
+          listenAgentEvents((event) => {
             applyEvent(event);
           }),
           BOOTSTRAP_CALL_TIMEOUT_MS,
@@ -87,7 +87,7 @@ export function useCodexChat() {
         disposeEvents = listener;
 
         const threadResponse = await withTimeout(
-          codexListThreads(),
+          agentListThreads(),
           BOOTSTRAP_CALL_TIMEOUT_MS,
           '读取会话列表超时',
         );
@@ -115,7 +115,7 @@ export function useCodexChat() {
 
     async function createSession() {
       const bootstrap = await withTimeout(
-        codexStartSession(workspaceRoot),
+        agentStartSession(workspaceRoot),
         BOOTSTRAP_CALL_TIMEOUT_MS,
         '创建会话超时',
       );
@@ -129,7 +129,7 @@ export function useCodexChat() {
 
     async function resumeThread(threadId: string, cwd = workspaceRoot) {
       const bootstrap = await withTimeout(
-        codexResumeSession(threadId, cwd),
+        agentResumeSession(threadId, cwd),
         BOOTSTRAP_CALL_TIMEOUT_MS,
         '恢复会话超时',
       );
@@ -164,7 +164,7 @@ export function useCodexChat() {
 
   async function startNewSession(customWorkspaceRoot?: string) {
     const root = customWorkspaceRoot || workspaceRoot;
-    const bootstrap = await codexStartSession(root);
+    const bootstrap = await agentStartSession(root);
     const session = createSessionFromBootstrap(bootstrap, root);
     upsertSession(session);
     activateSession(session.sessionId);
@@ -182,7 +182,7 @@ export function useCodexChat() {
       return;
     }
 
-    const bootstrap = await codexResumeSession(threadId, cwd);
+    const bootstrap = await agentResumeSession(threadId, cwd);
     const session = createSessionFromBootstrap(bootstrap, cwd);
     upsertSession(session);
     activateSession(session.sessionId);
@@ -191,14 +191,14 @@ export function useCodexChat() {
   async function sendMessage(payload: {
     text: string;
     images: Array<{ name: string; mediaType: string; dataUrl: string }>;
-    reasoningEffort: CodexReasoningEffort;
+    reasoningEffort: AgentReasoningEffort;
   }) {
     if (!activeSession) {
       return;
     }
     const requestId = crypto.randomUUID();
     createPendingMessage(activeSession.sessionId, payload.text, requestId);
-    const response = await codexSendMessage({
+    const response = await agentSendMessage({
       requestId,
       sessionId: activeSession.sessionId,
       text: payload.text,
@@ -206,7 +206,7 @@ export function useCodexChat() {
       reasoningEffort: payload.reasoningEffort,
     });
     if (response.requestId !== requestId) {
-      console.warn('codex request id mismatch', { requestId, responseRequestId: response.requestId });
+      console.warn('agent request id mismatch', { requestId, responseRequestId: response.requestId });
     }
   }
 
@@ -214,12 +214,12 @@ export function useCodexChat() {
     if (!activeSession?.pendingRequestId) {
       return;
     }
-    await codexCancel(activeSession.pendingRequestId);
+    await agentCancel(activeSession.pendingRequestId);
   }
 
   async function respondApproval(approvalId: string, decision: 'allow' | 'deny') {
     clearApproval(approvalId);
-    await codexRespondApproval(approvalId, decision);
+    await agentRespondApproval(approvalId, decision);
   }
 
   return {
@@ -236,9 +236,9 @@ export function useCodexChat() {
     respondApproval,
     archiveThread: async (threadId: string) => {
       // 乐观更新：立即在前端移除
-      useCodexSessionStore.getState().removeThread(threadId);
+      useAgentSessionStore.getState().removeThread(threadId);
       // 在后台异步通知后端，不阻塞 UI
-      void codexArchiveThread(threadId).catch((err) => {
+      void agentArchiveThread(threadId).catch((err) => {
         console.error('Archive thread failed:', err);
       });
     },

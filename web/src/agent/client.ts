@@ -3,15 +3,15 @@ import { listen } from '@tauri-apps/api/event';
 
 import { isDesktopRuntime } from '../lib/runtime';
 
-export type CodexReasoningEffort = 'none' | 'minimal' | 'low' | 'medium' | 'high' | 'xhigh';
+export type AgentReasoningEffort = 'none' | 'minimal' | 'low' | 'medium' | 'high' | 'xhigh';
 
-export interface CodexHealth {
+export interface AgentHealth {
   sidecarVersion: string;
-  codexVersion: string;
+  agentVersion: string;
   loggedIn: boolean;
 }
 
-export interface CodexSessionMessage {
+export interface AgentSessionMessage {
   id: string;
   role: 'user' | 'assistant';
   text: string;
@@ -24,17 +24,31 @@ export interface CodexSessionMessage {
     args: unknown;
     output: string;
     ok: boolean | null;
+    diff?: string;
+    exitCode?: number | null;
+    summary?: string;
+    skillName?: string | null;
   }>;
 }
 
-export interface CodexSessionBootstrap {
+export interface AgentSessionBootstrap {
   sessionId: string;
   threadId: string;
-  messages: CodexSessionMessage[];
-  thread?: CodexThreadMeta;
+  messages: AgentSessionMessage[];
+  thread?: AgentThreadMeta;
+  skills: {
+    items: Array<{
+      id: string;
+      name: string;
+      description: string;
+      status: 'loaded' | 'error';
+      source: string;
+    }>;
+    diagnostics: string[];
+  };
 }
 
-export interface CodexThreadMeta {
+export interface AgentThreadMeta {
   threadId: string;
   preview: string;
   name: string | null;
@@ -46,7 +60,7 @@ export interface CodexThreadMeta {
   path: string | null;
 }
 
-export interface CodexUsage {
+export interface AgentUsage {
   input: number;
   output: number;
   cachedInput?: number;
@@ -54,7 +68,7 @@ export interface CodexUsage {
   total?: number;
 }
 
-export type CodexEvent =
+export type AgentEvent =
   | {
       type: 'delta';
       requestId: string;
@@ -71,6 +85,8 @@ export type CodexEvent =
       name: string;
       args: unknown;
       status: 'started';
+      summary?: string;
+      skillName?: string | null;
     }
   | {
       type: 'tool_result';
@@ -80,6 +96,15 @@ export type CodexEvent =
       ok: boolean;
       output: string;
       status: string;
+      diff?: string;
+      exitCode?: number | null;
+      summary?: string;
+      skillName?: string | null;
+    }
+  | {
+      type: 'skills_snapshot';
+      sessionId: string;
+      skills: AgentSessionBootstrap['skills'];
     }
   | {
       type: 'approval_request';
@@ -96,7 +121,7 @@ export type CodexEvent =
       requestId: string;
       sessionId: string;
       threadId: string;
-      usage?: CodexUsage;
+      usage?: AgentUsage;
     }
   | {
       type: 'error';
@@ -113,69 +138,69 @@ export interface UploadImagePayload {
 
 function assertDesktopRuntime() {
   if (!isDesktopRuntime()) {
-    throw new Error('Codex backend 仅支持桌面模式');
+    throw new Error('Agent backend 仅支持桌面模式');
   }
 }
 
-export async function codexHealth() {
+export async function agentHealth() {
   assertDesktopRuntime();
-  return invoke<CodexHealth>('codex_health');
+  return invoke<AgentHealth>('agent_health');
 }
 
-export async function codexStartSession(workspaceRoot = '') {
+export async function agentStartSession(workspaceRoot = '') {
   assertDesktopRuntime();
-  return invoke<CodexSessionBootstrap>('codex_start_session', {
+  return invoke<AgentSessionBootstrap>('agent_start_session', {
     payload: { workspaceRoot },
   });
 }
 
-export async function codexResumeSession(threadId: string, workspaceRoot = '') {
+export async function agentResumeSession(threadId: string, workspaceRoot = '') {
   assertDesktopRuntime();
-  return invoke<CodexSessionBootstrap>('codex_resume_session', {
+  return invoke<AgentSessionBootstrap>('agent_resume_session', {
     payload: { threadId, workspaceRoot },
   });
 }
 
-export async function codexSendMessage(payload: {
+export async function agentSendMessage(payload: {
   requestId: string;
   sessionId: string;
   text: string;
   images: UploadImagePayload[];
-  reasoningEffort: CodexReasoningEffort;
+  reasoningEffort: AgentReasoningEffort;
 }) {
   assertDesktopRuntime();
-  return invoke<{ requestId: string }>('codex_send_message', {
+  return invoke<{ requestId: string }>('agent_send_message', {
     payload,
   });
 }
 
-export async function codexCancel(requestId: string) {
+export async function agentCancel(requestId: string) {
   assertDesktopRuntime();
-  return invoke('codex_cancel', {
+  return invoke('agent_cancel', {
     payload: { requestId },
   });
 }
 
-export async function codexRespondApproval(approvalId: string, decision: 'allow' | 'deny') {
+export async function agentRespondApproval(approvalId: string, decision: 'allow' | 'deny') {
   assertDesktopRuntime();
-  return invoke('codex_respond_approval', {
+  return invoke('agent_respond_approval', {
     payload: { approvalId, decision },
   });
 }
 
-export async function codexListThreads() {
+export async function agentListThreads() {
   assertDesktopRuntime();
-  return invoke<{ threads: CodexThreadMeta[] }>('codex_list_threads');
+  return invoke<{ threads: AgentThreadMeta[] }>('agent_list_sessions');
 }
 
-export async function codexArchiveThread(threadId: string) {
+export async function agentArchiveThread(threadId: string) {
   assertDesktopRuntime();
-  return invoke('codex_archive_thread', {
+  return invoke('agent_delete_session', {
     payload: { threadId },
   });
 }
 
-export async function listenCodexEvents(callback: (event: CodexEvent) => void) {
+export async function listenAgentEvents(callback: (event: AgentEvent) => void) {
   assertDesktopRuntime();
-  return listen<CodexEvent>('codex://event', (event) => callback(event.payload));
+  return listen<AgentEvent>('agent://event', (event) => callback(event.payload));
 }

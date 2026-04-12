@@ -3,18 +3,37 @@ import rehypeHighlight from 'rehype-highlight';
 
 import { ToolCallCard } from './ToolCallCard';
 import { ThinkingBlock } from './ThinkingBlock';
-import type { CodexMessage } from '../sessionStore';
+import type { AgentMessage, AgentSkillsSnapshot } from '../sessionStore';
 
-export function CodexMessageList({
+export function AgentMessageList({
   messages,
   isStreaming,
+  skills,
 }: {
-  messages: CodexMessage[];
+  messages: AgentMessage[];
   isStreaming: boolean;
+  skills: AgentSkillsSnapshot;
 }) {
   if (messages.length === 0) {
     return (
-      <div className="flex min-h-full w-full flex-1 items-start justify-center pt-[18vh]">
+      <div className="flex min-h-full w-full flex-1 flex-col items-center pt-12">
+        {skills.items.length > 0 || skills.diagnostics.length > 0 ? (
+          <div className="mb-12 w-full max-w-3xl">
+            <section className="rounded-xl border border-border bg-card px-4 py-3 text-sm text-mutedForeground">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="font-medium text-foreground">Skills</span>
+                <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] text-foreground">
+                  {skills.items.length} 已加载
+                </span>
+                {skills.diagnostics.length > 0 ? (
+                  <span className="rounded-full border border-border px-2 py-0.5 text-[11px]">
+                    {skills.diagnostics.length} 条诊断
+                  </span>
+                ) : null}
+              </div>
+            </section>
+          </div>
+        ) : null}
         <div className="max-w-md text-center">
           <h2 className="font-display text-3xl font-medium tracking-tight text-foreground">
             想做什么？
@@ -29,6 +48,39 @@ export function CodexMessageList({
 
   return (
     <div className="w-full space-y-8 pb-10">
+      {skills.items.length > 0 || skills.diagnostics.length > 0 ? (
+        <section className="rounded-xl border border-border bg-card px-4 py-3 text-sm text-mutedForeground">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="font-medium text-foreground">Skills</span>
+            <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] text-foreground">
+              {skills.items.length} 已加载
+            </span>
+            {skills.diagnostics.length > 0 ? (
+              <span className="rounded-full border border-border px-2 py-0.5 text-[11px]">
+                {skills.diagnostics.length} 条诊断
+              </span>
+            ) : null}
+          </div>
+          {skills.items.length > 0 ? (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {skills.items.map((skill) => (
+                <span
+                  key={skill.id}
+                  className="rounded-full border border-border px-3 py-1 text-[11px] text-foreground"
+                  title={`${skill.description}\n${skill.source}`}
+                >
+                  {skill.name}
+                </span>
+              ))}
+            </div>
+          ) : null}
+          {skills.diagnostics.length > 0 ? (
+            <div className="mt-3 whitespace-pre-wrap break-words text-xs leading-6">
+              {skills.diagnostics.join('\n')}
+            </div>
+          ) : null}
+        </section>
+      ) : null}
       {messages.map((message, index) => {
         const generating = isStreaming && index === messages.length - 1;
         if (message.role === 'user') {

@@ -1,14 +1,14 @@
 import * as Dialog from '@radix-ui/react-dialog';
 
 import { Button } from '../../components/ui/button';
-import type { CodexApproval } from '../sessionStore';
+import type { AgentApproval } from '../sessionStore';
 
 export function ApprovalDialog({
   approval,
   open,
   onDecision,
 }: {
-  approval: CodexApproval | null;
+  approval: AgentApproval | null;
   open: boolean;
   onDecision: (decision: 'allow' | 'deny') => void;
 }) {

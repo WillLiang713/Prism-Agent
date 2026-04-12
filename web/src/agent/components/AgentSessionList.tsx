@@ -4,10 +4,10 @@ import { open, ask } from '@tauri-apps/plugin-dialog';
 
 import { Button } from '../../components/ui/button';
 import { ScrollArea } from '../../components/ui/scroll-area';
-import type { CodexThreadMeta } from '../client';
-import type { CodexSession } from '../sessionStore';
+import type { AgentThreadMeta } from '../client';
+import type { AgentSession } from '../sessionStore';
 
-function previewLabel(thread: CodexThreadMeta) {
+function previewLabel(thread: AgentThreadMeta) {
   return thread.name || thread.preview || '未命名会话';
 }
 
@@ -19,7 +19,7 @@ function getBasename(path: string) {
   return parts[parts.length - 1];
 }
 
-export function CodexSessionList({
+export function AgentSessionList({
   sessions,
   threadList,
   activeSessionId,
@@ -28,8 +28,8 @@ export function CodexSessionList({
   onResume,
   onDelete,
 }: {
-  sessions: CodexSession[];
-  threadList: CodexThreadMeta[];
+  sessions: AgentSession[];
+  threadList: AgentThreadMeta[];
   activeSessionId: string | null;
   activeThreadId: string | null;
   onCreate: (workspaceRoot?: string) => void;
@@ -45,7 +45,7 @@ export function CodexSessionList({
   }, [activeThreadId, activeSessionId, threadList, sessions]);
 
   const groupedThreads = useMemo(() => {
-    const groups: Record<string, CodexThreadMeta[]> = {};
+    const groups: Record<string, AgentThreadMeta[]> = {};
     threadList.forEach((thread) => {
       const key = thread.cwd || '';
       if (!groups[key]) groups[key] = [];
@@ -96,7 +96,7 @@ export function CodexSessionList({
     onDelete(threadId);
   };
 
-  const handleDeleteGroup = (threads: CodexThreadMeta[]) => {
+  const handleDeleteGroup = (threads: AgentThreadMeta[]) => {
     setPendingDeleteGroup(null);
     threads.forEach((t) => onDelete(t.threadId));
   };

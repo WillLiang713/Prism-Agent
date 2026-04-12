@@ -18,7 +18,7 @@ export interface JsonRpcResponse<T = unknown> {
 
 export interface SidecarHealth {
   sidecarVersion: string;
-  codexVersion: string;
+  agentVersion: string;
   loggedIn: boolean;
 }
 
@@ -42,7 +42,7 @@ export interface SendMessageParams {
   sessionId: string;
   text: string;
   images?: SendMessageImagePayload[];
-  reasoningEffort?: CodexReasoningEffort;
+  reasoningEffort?: AgentReasoningEffort;
 }
 
 export interface CancelParams {
@@ -54,7 +54,20 @@ export interface RespondApprovalParams {
   decision: 'allow' | 'deny';
 }
 
-export interface CodexUsage {
+export interface SkillStatusItem {
+  id: string;
+  name: string;
+  description: string;
+  status: 'loaded' | 'error';
+  source: string;
+}
+
+export interface SkillsSnapshot {
+  items: SkillStatusItem[];
+  diagnostics: string[];
+}
+
+export interface AgentUsage {
   input: number;
   output: number;
   cachedInput?: number;
@@ -62,7 +75,7 @@ export interface CodexUsage {
   total?: number;
 }
 
-export interface CodexThreadMeta {
+export interface AgentThreadMeta {
   threadId: string;
   preview: string;
   name: string | null;
@@ -74,34 +87,39 @@ export interface CodexThreadMeta {
   path: string | null;
 }
 
-export interface CodexSessionMessage {
-  id: string;
-  role: 'user' | 'assistant';
-  text: string;
-  createdAt: number;
-  thinking?: string;
-  toolEvents?: CodexSessionToolEvent[];
-}
-
-export interface CodexSessionToolEvent {
+export interface AgentSessionToolEvent {
   id: string;
   name: string;
   status: string;
   args: unknown;
   output: string;
   ok: boolean | null;
+  diff?: string;
+  exitCode?: number | null;
+  summary?: string;
+  skillName?: string | null;
+}
+
+export interface AgentSessionMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  text: string;
+  createdAt: number;
+  thinking?: string;
+  toolEvents?: AgentSessionToolEvent[];
 }
 
 export interface SessionBootstrapResult {
   sessionId: string;
   threadId: string;
-  messages: CodexSessionMessage[];
-  thread?: CodexThreadMeta;
+  messages: AgentSessionMessage[];
+  thread?: AgentThreadMeta;
+  skills: SkillsSnapshot;
 }
 
-export type CodexReasoningEffort = 'minimal' | 'low' | 'medium' | 'high' | 'xhigh' | 'none';
+export type AgentReasoningEffort = 'minimal' | 'low' | 'medium' | 'high' | 'xhigh' | 'none';
 
-export type CodexEvent =
+export type AgentEvent =
   | {
       type: 'delta';
       requestId: string;
@@ -118,6 +136,8 @@ export type CodexEvent =
       name: string;
       args: unknown;
       status: 'started';
+      summary?: string;
+      skillName?: string | null;
     }
   | {
       type: 'tool_result';
@@ -127,6 +147,15 @@ export type CodexEvent =
       ok: boolean;
       output: string;
       status: string;
+      diff?: string;
+      exitCode?: number | null;
+      summary?: string;
+      skillName?: string | null;
+    }
+  | {
+      type: 'skills_snapshot';
+      sessionId: string;
+      skills: SkillsSnapshot;
     }
   | {
       type: 'approval_request';
@@ -143,7 +172,7 @@ export type CodexEvent =
       requestId: string;
       sessionId: string;
       threadId: string;
-      usage?: CodexUsage;
+      usage?: AgentUsage;
     }
   | {
       type: 'error';
@@ -159,98 +188,6 @@ export interface OuterMethods {
   sendMessage: { requestId: string };
   cancel: null;
   respondApproval: null;
-  listThreads: { threads: CodexThreadMeta[] };
+  listThreads: { threads: AgentThreadMeta[] };
   archiveThread: null;
-}
-
-export interface AppServerThread {
-  id: string;
-  preview: string;
-  name: string | null;
-  cwd: string;
-  createdAt: number;
-  updatedAt: number;
-  path: string | null;
-  modelProvider: string;
-  status: { type: string };
-  turns: AppServerTurn[];
-}
-
-export interface AppServerTurn {
-  id: string;
-  status: string;
-  items: AppServerThreadItem[];
-}
-
-export type AppServerThreadItem =
-  | {
-      type: 'userMessage';
-      id: string;
-      content: Array<{ type: 'text'; text: string }>;
-    }
-  | {
-      type: 'agentMessage';
-      id: string;
-      text: string;
-    }
-  | {
-      type: 'reasoning';
-      id: string;
-      summary?: string[];
-      content?: string[];
-    }
-  | {
-      type: 'commandExecution';
-      id: string;
-      command: string;
-      cwd: string;
-      status: string;
-      aggregatedOutput: string | null;
-      exitCode: number | null;
-      commandActions?: unknown[];
-    }
-  | {
-      type: 'fileChange';
-      id: string;
-      status: string;
-      changes: Array<{
-        path: string;
-        kind: unknown;
-        diff?: string;
-      }>;
-    }
-  | {
-      type: 'mcpToolCall';
-      id: string;
-      server: string;
-      tool: string;
-      status: string;
-      arguments: unknown;
-      result?: unknown;
-      error?: { message?: string } | null;
-    }
-  | {
-      type: 'dynamicToolCall';
-      id: string;
-      tool: string;
-      status: string;
-      arguments: unknown;
-      success?: boolean | null;
-      contentItems?: unknown[] | null;
-    }
-  | {
-      type: string;
-      id: string;
-      [key: string]: unknown;
-    };
-
-export interface AppServerNotification {
-  method: string;
-  params: Record<string, unknown>;
-}
-
-export interface AppServerServerRequest {
-  method: string;
-  id: number;
-  params: Record<string, unknown>;
 }
