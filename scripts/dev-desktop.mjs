@@ -17,6 +17,14 @@ function resolveNpmCommand() {
   return isWindows ? 'npm.cmd' : 'npm';
 }
 
+function resolveTauriCommand() {
+  return isWindows ? 'tauri.cmd' : 'tauri';
+}
+
+function shouldUseShell(command) {
+  return isWindows && /\.(cmd|bat)$/i.test(command);
+}
+
 async function ensureCargoPath(env) {
   const cargoBin = path.join(os.homedir(), '.cargo', 'bin');
   const cargoExecutable = path.join(cargoBin, isWindows ? 'cargo.exe' : 'cargo');
@@ -42,12 +50,23 @@ function startProcess(name, command, args, extra = {}) {
   const child = spawn(command, args, {
     cwd: projectRoot,
     stdio: 'inherit',
-    shell: false,
+    shell: shouldUseShell(command),
     detached: !isWindows,
     ...extra,
   });
 
   children.set(name, child);
+  child.on('error', (error) => {
+    children.delete(name);
+    if (shuttingDown) {
+      return;
+    }
+
+    const detail = error instanceof Error ? error.message : String(error);
+    console.error(`[${name}] failed to start: ${detail}`);
+    void shutdown(1);
+  });
+
   child.on('exit', (code, signal) => {
     children.delete(name);
     if (shuttingDown) {
@@ -134,6 +153,7 @@ process.on('SIGTERM', () => {
 
 async function main() {
   const npmCommand = resolveNpmCommand();
+  const tauriCommand = resolveTauriCommand();
   const env = await ensureCargoPath({ ...process.env });
   const webUrl = 'http://127.0.0.1:5183/?platform=desktop';
 
@@ -154,7 +174,7 @@ async function main() {
   }
 
   console.log('[dev] starting tauri desktop');
-  startProcess('tauri', 'tauri', ['dev'], {
+  startProcess('tauri', tauriCommand, ['dev'], {
     env,
   });
 }
