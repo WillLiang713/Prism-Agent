@@ -126,10 +126,10 @@ export function AgentChatPanel({
             {activeSession?.skills && (
               <SkillsDisplay skills={activeSession.skills} />
             )}
-            {runtimeStatusMessage && submitDisabled ? (
+            {activeSession && runtimeStatusMessage && submitDisabled ? (
               <div
                 aria-live="polite"
-                className="mb-3 flex items-center justify-between gap-3 px-1 text-sm text-amber-500"
+                className="mb-3 flex items-center justify-between gap-1 px-1 text-sm text-amber-500 font-medium"
               >
                 <div className="flex items-center gap-2">
                   <AlertCircle className="h-4 w-4" />
@@ -138,21 +138,23 @@ export function AgentChatPanel({
                 {!agentConfigValidating && !agentRuntimeStatus.configured && (
                   <button
                     onClick={onOpenSettings}
-                    className="font-medium underline underline-offset-2 hover:text-amber-500 transition-colors"
+                    className="underline underline-offset-4 hover:opacity-80 transition-opacity"
                   >
                     前往设置
                   </button>
                 )}
               </div>
             ) : null}
-            <AgentChatInput
-              inputDisabled={inputDisabled}
-              submitDisabled={submitDisabled}
-              submitHint={runtimeStatusMessage}
-              isStreaming={activeSession?.isStreaming || false}
-              onStop={onStop}
-              onSubmit={onSendMessage}
-            />
+            {activeSession && (
+              <AgentChatInput
+                inputDisabled={inputDisabled}
+                submitDisabled={submitDisabled}
+                submitHint={runtimeStatusMessage}
+                isStreaming={activeSession?.isStreaming || false}
+                onStop={onStop}
+                onSubmit={onSendMessage}
+              />
+            )}
           </div>
         </div>
       </div>

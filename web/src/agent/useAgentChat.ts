@@ -129,8 +129,6 @@ export function useAgentChat() {
 
         if (threadResponse.threads[0]) {
           await resumeThread(threadResponse.threads[0].threadId, threadResponse.threads[0].cwd);
-        } else {
-          await createSession();
         }
 
         if (!disposed) {
