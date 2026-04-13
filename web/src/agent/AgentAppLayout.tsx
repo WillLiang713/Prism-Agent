@@ -20,6 +20,8 @@ export function AgentAppLayout() {
     threadList,
     sessions,
     activeSession,
+    agentRuntimeStatus,
+    agentConfigValidating,
     startNewSession,
     resumeThread,
     sendMessage,
@@ -72,6 +74,9 @@ export function AgentAppLayout() {
               threadList={threadList}
               sessions={sessions}
               activeSession={activeSession}
+              agentRuntimeStatus={agentRuntimeStatus}
+              agentConfigValidating={agentConfigValidating}
+              onOpenSettings={() => setSettingsOpen(true)}
               onCreateSession={(workspaceRoot) => {
                 void startNewSession(workspaceRoot);
               }}

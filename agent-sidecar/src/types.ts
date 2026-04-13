@@ -22,6 +22,24 @@ export interface SidecarHealth {
   loggedIn: boolean;
 }
 
+export interface AgentRuntimeConfig {
+  provider: string;
+  model: string;
+  apiKey?: string;
+  apiUrl?: string;
+  systemPrompt?: string;
+  serviceName?: string;
+}
+
+export interface AgentRuntimeStatus {
+  configured: boolean;
+  ready: boolean;
+  reason: string;
+  provider?: string;
+  model?: string;
+  serviceName?: string;
+}
+
 export interface StartSessionParams {
   workspaceRoot: string;
 }
@@ -43,6 +61,7 @@ export interface SendMessageParams {
   text: string;
   images?: SendMessageImagePayload[];
   reasoningEffort?: AgentReasoningEffort;
+  config?: AgentRuntimeConfig;
 }
 
 export interface CancelParams {
@@ -186,6 +205,7 @@ export interface OuterMethods {
   startSession: SessionBootstrapResult;
   resumeSession: SessionBootstrapResult;
   sendMessage: { requestId: string };
+  validateConfig: AgentRuntimeStatus;
   cancel: null;
   respondApproval: null;
   listThreads: { threads: AgentThreadMeta[] };

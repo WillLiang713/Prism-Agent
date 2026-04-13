@@ -16,12 +16,16 @@ import { Textarea } from '../../components/ui/textarea';
 import type { AgentReasoningEffort } from '../client';
 
 export function AgentChatInput({
-  disabled,
+  inputDisabled,
+  submitDisabled,
+  submitHint,
   isStreaming,
   onSubmit,
   onStop,
 }: {
-  disabled?: boolean;
+  inputDisabled?: boolean;
+  submitDisabled?: boolean;
+  submitHint?: string;
   isStreaming: boolean;
   onSubmit: (payload: {
     text: string;
@@ -38,6 +42,10 @@ export function AgentChatInput({
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   function submitCurrentMessage() {
+    if (submitDisabled) {
+      return false;
+    }
+
     if (!text.trim() && images.length === 0) {
       return false;
     }
@@ -118,7 +126,7 @@ export function AgentChatInput({
         onChange={(event) => setText(event.currentTarget.value)}
         onKeyDown={handleTextareaKeyDown}
         rows={1}
-        disabled={disabled || isStreaming}
+        disabled={inputDisabled || isStreaming}
         placeholder="输入你的需求…"
         className="min-h-[48px] resize-none border-0 bg-transparent px-3 py-1.5 text-base leading-6 shadow-none focus-visible:ring-0"
       />
@@ -130,7 +138,7 @@ export function AgentChatInput({
             type="button"
             variant="secondary"
             onClick={() => fileInputRef.current?.click()}
-            disabled={disabled || isStreaming}
+            disabled={inputDisabled || isStreaming}
             title="上传图片"
             className="h-10 w-10 shrink-0 bg-card p-0 shadow-sm"
             aria-label="上传图片"
@@ -160,7 +168,13 @@ export function AgentChatInput({
             停止
           </Button>
         ) : (
-          <Button type="submit" variant="primary" disabled={disabled} className="h-9 gap-1.5 px-4 text-sm">
+          <Button
+            type="submit"
+            variant="primary"
+            disabled={submitDisabled}
+            title={submitHint || undefined}
+            className="h-9 gap-1.5 px-4 text-sm"
+          >
             <ArrowUp className="h-4 w-4" />
             发送
           </Button>

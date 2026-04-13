@@ -25,6 +25,8 @@ import { SessionRegistry, type PersistedSessionSnapshot, type RuntimeSessionReco
 import type {
   CancelParams,
   AgentEvent,
+  AgentRuntimeConfig,
+  AgentRuntimeStatus,
   AgentReasoningEffort,
   AgentSessionToolEvent,
   OuterMethods,
@@ -38,6 +40,7 @@ import type {
 
 const SIDECAR_VERSION = '0.2.0';
 const AGENT_VERSION = '0.66.1';
+const SUPPORTED_PROVIDERS = ['openai', 'anthropic', 'gemini'] as const;
 
 type PendingApproval = {
   sessionId: string;
@@ -103,6 +106,11 @@ const bridge = createBridge(
       return {
         requestId,
       } satisfies OuterMethods['sendMessage'];
+    },
+
+    async validateConfig(params) {
+      const payload = params as { config?: AgentRuntimeConfig };
+      return resolveRuntimeConfigStatus(payload.config) satisfies OuterMethods['validateConfig'];
     },
 
     async cancel(params) {
@@ -230,6 +238,7 @@ async function createRuntimeSession(options: {
     session,
     loader,
     snapshot,
+    baseSystemPrompt: session.agent.state.systemPrompt,
   });
   bindSessionEvents(runtime);
   await sessionRegistry.saveSnapshot(snapshot);
@@ -335,6 +344,7 @@ function bindSessionEvents(runtime: RuntimeSessionRecord) {
 
 async function runPrompt(runtime: RuntimeSessionRecord, requestId: string, payload: SendMessageParams) {
   try {
+    await applyRuntimeConfig(runtime, payload.config);
     runtime.session.setThinkingLevel(normalizeThinking(payload.reasoningEffort));
     await runtime.session.prompt(payload.text, {
       images: normalizeImages(payload.images ?? []),
@@ -544,6 +554,144 @@ function normalizeThinking(reasoning: AgentReasoningEffort | undefined) {
     return 'off';
   }
   return reasoning;
+}
+
+function normalizeRuntimeConfig(config?: AgentRuntimeConfig | null) {
+  if (!config) {
+    return null;
+  }
+
+  const provider = config.provider?.trim() || '';
+  const model = config.model?.trim() || '';
+  const apiKey = config.apiKey?.trim() || '';
+  const apiUrl = config.apiUrl?.trim() || '';
+  const systemPrompt = config.systemPrompt?.trim() || '';
+  const serviceName = config.serviceName?.trim() || '';
+
+  if (!provider && !model && !apiKey && !apiUrl && !systemPrompt && !serviceName) {
+    return null;
+  }
+
+  return {
+    provider,
+    model,
+    apiKey,
+    apiUrl,
+    systemPrompt,
+    serviceName,
+  };
+}
+
+function resetProviderOverrides() {
+  for (const provider of SUPPORTED_PROVIDERS) {
+    authStorage.removeRuntimeApiKey(provider);
+    modelRegistry.unregisterProvider(provider);
+  }
+  modelRegistry.refresh();
+}
+
+function applyProviderOverrides(config: NonNullable<ReturnType<typeof normalizeRuntimeConfig>>) {
+  resetProviderOverrides();
+
+  if (!config.apiKey && !config.apiUrl) {
+    return;
+  }
+
+  if (config.apiKey) {
+    authStorage.setRuntimeApiKey(config.provider, config.apiKey);
+  }
+
+  modelRegistry.registerProvider(config.provider, {
+    baseUrl: config.apiUrl || undefined,
+    apiKey: config.apiKey || undefined,
+  });
+}
+
+function resolveRuntimeConfigStatus(config?: AgentRuntimeConfig | null): AgentRuntimeStatus {
+  const normalized = normalizeRuntimeConfig(config);
+  if (!normalized?.provider) {
+    resetProviderOverrides();
+    return {
+      configured: false,
+      ready: false,
+      reason: '未配置主模型服务，请前往设置进行配置。',
+    };
+  }
+
+  if (!SUPPORTED_PROVIDERS.includes(normalized.provider as typeof SUPPORTED_PROVIDERS[number])) {
+    resetProviderOverrides();
+    return {
+      configured: true,
+      ready: false,
+      reason: `当前 agent 暂不支持 ${normalized.provider} 提供方。`,
+      provider: normalized.provider,
+      serviceName: normalized.serviceName || undefined,
+    };
+  }
+
+  if (!normalized.model) {
+    applyProviderOverrides(normalized);
+    return {
+      configured: false,
+      ready: false,
+      reason: '未指定主模型，请在设置中选择或输入模型名称。',
+      provider: normalized.provider,
+      serviceName: normalized.serviceName || undefined,
+    };
+  }
+
+  applyProviderOverrides(normalized);
+  const model = modelRegistry.find(normalized.provider, normalized.model);
+  if (!model) {
+    return {
+      configured: true,
+      ready: false,
+      reason: `找不到模型 ${normalized.provider}/${normalized.model}。`,
+      provider: normalized.provider,
+      model: normalized.model,
+      serviceName: normalized.serviceName || undefined,
+    };
+  }
+
+  if (!modelRegistry.hasConfiguredAuth(model)) {
+    return {
+      configured: true,
+      ready: false,
+      reason: '当前服务缺少可用的 API Key 或登录态。',
+      provider: model.provider,
+      model: model.id,
+      serviceName: normalized.serviceName || undefined,
+    };
+  }
+
+  return {
+    configured: true,
+    ready: true,
+    reason: '',
+    provider: model.provider,
+    model: model.id,
+    serviceName: normalized.serviceName || undefined,
+  };
+}
+
+async function applyRuntimeConfig(runtime: RuntimeSessionRecord, config?: AgentRuntimeConfig | null) {
+  const normalized = normalizeRuntimeConfig(config);
+  const status = resolveRuntimeConfigStatus(normalized);
+  if (!status.ready || !status.provider || !status.model) {
+    throw new Error(status.reason || '模型配置不可用。');
+  }
+
+  const model = modelRegistry.find(status.provider, status.model);
+  if (!model) {
+    throw new Error(`找不到模型 ${status.provider}/${status.model}。`);
+  }
+
+  if (!runtime.session.model || runtime.session.model.provider !== model.provider || runtime.session.model.id !== model.id) {
+    await runtime.session.setModel(model);
+  }
+
+  runtime.session.agent.state.systemPrompt = normalized?.systemPrompt || runtime.baseSystemPrompt;
+  runtime.snapshot.modelProvider = runtime.session.model?.provider || status.provider;
 }
 
 function ensureToolEvent(runtime: RuntimeSessionRecord, seed: AgentSessionToolEvent) {

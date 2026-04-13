@@ -135,12 +135,12 @@ process.on('SIGTERM', () => {
 async function main() {
   const npmCommand = resolveNpmCommand();
   const env = await ensureCargoPath({ ...process.env });
-  const webUrl = 'http://127.0.0.1:5173/?platform=desktop';
+  const webUrl = 'http://127.0.0.1:5183/?platform=desktop';
 
   if (await isServerReady(webUrl)) {
-    console.log('[dev] reusing existing web frontend on http://127.0.0.1:5173');
+    console.log('[dev] reusing existing web frontend on http://127.0.0.1:5183');
   } else {
-    console.log('[dev] starting web frontend on http://127.0.0.1:5173');
+    console.log('[dev] starting web frontend on http://127.0.0.1:5183');
     startProcess(
       'web',
       npmCommand,

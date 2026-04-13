@@ -9,6 +9,9 @@ import {
   agentResumeSession,
   agentSendMessage,
   agentStartSession,
+  agentValidateConfig,
+  type AgentRuntimeConfig,
+  type AgentRuntimeStatus,
   listenAgentEvents,
   type AgentReasoningEffort,
 } from './client';
@@ -16,6 +19,7 @@ import {
   createSessionFromBootstrap,
   useAgentSessionStore,
 } from './sessionStore';
+import { resolveRuntimeRequestConfig, useConfigStore } from '../store/configStore';
 
 const HEALTH_CHECK_TIMEOUT_MS = 5_000;
 const BOOTSTRAP_CALL_TIMEOUT_MS = 8_000;
@@ -38,7 +42,34 @@ export function useAgentChat() {
   const createPendingMessage = useAgentSessionStore((state) => state.createPendingMessage);
   const clearApproval = useAgentSessionStore((state) => state.clearApproval);
   const applyEvent = useAgentSessionStore((state) => state.applyEvent);
+  const services = useConfigStore((state) => state.services);
+  const runtimeModelConfig = useConfigStore((state) => state.runtimeModelConfig);
+  const serviceManagerSelectedId = useConfigStore((state) => state.serviceManagerSelectedId);
   const [workspaceRoot] = useState('');
+  const [agentRuntimeStatus, setAgentRuntimeStatus] = useState<AgentRuntimeStatus>({
+    configured: false,
+    ready: false,
+    reason: '正在检查模型配置…',
+  });
+  const [agentConfigValidating, setAgentConfigValidating] = useState(false);
+
+  const agentRuntimeConfig = useMemo<AgentRuntimeConfig>(() => {
+    const runtimeRequestConfig = resolveRuntimeRequestConfig(
+      services,
+      runtimeModelConfig,
+      serviceManagerSelectedId,
+      'main',
+    );
+
+    return {
+      provider: runtimeRequestConfig.provider,
+      model: runtimeRequestConfig.model,
+      apiKey: runtimeRequestConfig.apiKey,
+      apiUrl: runtimeRequestConfig.apiUrl,
+      systemPrompt: runtimeRequestConfig.systemPrompt,
+      serviceName: runtimeRequestConfig.serviceName,
+    };
+  }, [runtimeModelConfig, serviceManagerSelectedId, services]);
 
   useEffect(() => {
     let disposed = false;
@@ -157,6 +188,56 @@ export function useAgentChat() {
     workspaceRoot,
   ]);
 
+  useEffect(() => {
+    let disposed = false;
+
+    async function validateRuntimeConfig() {
+      if (!backendReady) {
+        setAgentConfigValidating(false);
+        setAgentRuntimeStatus({
+          configured: false,
+          ready: false,
+          reason: '后端尚未就绪。',
+        });
+        return;
+      }
+
+      setAgentConfigValidating(true);
+      try {
+        const status = await agentValidateConfig(agentRuntimeConfig);
+        if (!disposed) {
+          setAgentRuntimeStatus(status);
+        }
+      } catch (error) {
+        if (!disposed) {
+          setAgentRuntimeStatus({
+            configured: false,
+            ready: false,
+            reason: error instanceof Error ? error.message : String(error),
+          });
+        }
+      } finally {
+        if (!disposed) {
+          setAgentConfigValidating(false);
+        }
+      }
+    }
+
+    void validateRuntimeConfig();
+
+    return () => {
+      disposed = true;
+    };
+  }, [
+    agentRuntimeConfig.apiKey,
+    agentRuntimeConfig.apiUrl,
+    agentRuntimeConfig.model,
+    agentRuntimeConfig.provider,
+    agentRuntimeConfig.serviceName,
+    agentRuntimeConfig.systemPrompt,
+    backendReady,
+  ]);
+
   const activeSession = useMemo(
     () => (activeSessionId ? sessionsById[activeSessionId] || null : null),
     [activeSessionId, sessionsById],
@@ -193,20 +274,31 @@ export function useAgentChat() {
     images: Array<{ name: string; mediaType: string; dataUrl: string }>;
     reasoningEffort: AgentReasoningEffort;
   }) {
-    if (!activeSession) {
+    if (!activeSession || !agentRuntimeStatus.ready) {
       return;
     }
+
     const requestId = crypto.randomUUID();
     createPendingMessage(activeSession.sessionId, payload.text, requestId);
-    const response = await agentSendMessage({
-      requestId,
-      sessionId: activeSession.sessionId,
-      text: payload.text,
-      images: payload.images,
-      reasoningEffort: payload.reasoningEffort,
-    });
-    if (response.requestId !== requestId) {
-      console.warn('agent request id mismatch', { requestId, responseRequestId: response.requestId });
+    try {
+      const response = await agentSendMessage({
+        requestId,
+        sessionId: activeSession.sessionId,
+        text: payload.text,
+        images: payload.images,
+        reasoningEffort: payload.reasoningEffort,
+        config: agentRuntimeConfig,
+      });
+      if (response.requestId !== requestId) {
+        console.warn('agent request id mismatch', { requestId, responseRequestId: response.requestId });
+      }
+    } catch (error) {
+      applyEvent({
+        type: 'error',
+        requestId,
+        sessionId: activeSession.sessionId,
+        message: error instanceof Error ? error.message : String(error),
+      });
     }
   }
 
@@ -229,6 +321,8 @@ export function useAgentChat() {
     threadList,
     sessions: sessionOrder.map((sessionId) => sessionsById[sessionId]).filter(Boolean),
     activeSession,
+    agentRuntimeStatus,
+    agentConfigValidating,
     startNewSession,
     resumeThread,
     sendMessage,

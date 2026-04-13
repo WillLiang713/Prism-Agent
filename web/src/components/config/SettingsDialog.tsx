@@ -29,6 +29,7 @@ type SettingsSectionMeta = {
 };
 
 const FOLLOW_MAIN_SERVICE_VALUE = '__follow_main_service__';
+const FOLLOW_SELECTED_SERVICE_VALUE = '__follow_selected_service__';
 
 function SettingsNavButton({
   active,
@@ -94,6 +95,16 @@ export function SettingsDialog({
   const hasTitleServiceOverride = services.some(
     (service) => service.id === runtimeModelConfig.titleModelServiceId,
   );
+  const hasMainServiceOverride = services.some(
+    (service) => service.id === runtimeModelConfig.modelServiceId,
+  );
+  const fallbackMainServiceName =
+    services.find((service) => service.id === serviceManagerSelectedId)?.name ||
+    services[0]?.name ||
+    '未命名服务';
+  const mainServiceValue = hasMainServiceOverride
+    ? runtimeModelConfig.modelServiceId
+    : FOLLOW_SELECTED_SERVICE_VALUE;
   const titleServiceValue = hasTitleServiceOverride
     ? runtimeModelConfig.titleModelServiceId
     : FOLLOW_MAIN_SERVICE_VALUE;
@@ -137,6 +148,32 @@ export function SettingsDialog({
       <div className="space-y-8">
         <SettingsSectionCard title="模型来源">
           <div className="grid gap-4 md:grid-cols-2">
+            <label className="grid gap-2 text-xs">
+              <span className="text-mutedForeground">主模型服务</span>
+              <Select
+                value={mainServiceValue}
+                onValueChange={(value) =>
+                  updateRuntimeModelConfig({
+                    modelServiceId: value === FOLLOW_SELECTED_SERVICE_VALUE ? '' : value,
+                  })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="选择主模型服务" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={FOLLOW_SELECTED_SERVICE_VALUE}>
+                    跟随当前服务（{fallbackMainServiceName}）
+                  </SelectItem>
+                  {services.map((service) => (
+                    <SelectItem key={service.id} value={service.id}>
+                      {service.name || '未命名服务'}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </label>
+
             <label className="grid gap-2 text-xs">
               <span className="text-mutedForeground">标题模型服务</span>
               <Select

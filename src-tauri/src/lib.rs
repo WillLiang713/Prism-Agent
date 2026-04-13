@@ -88,6 +88,17 @@ struct StartSessionPayload {
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
+struct AgentConfigPayload {
+    provider: String,
+    model: String,
+    api_key: Option<String>,
+    api_url: Option<String>,
+    system_prompt: Option<String>,
+    service_name: Option<String>,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 struct ResumeSessionPayload {
     workspace_root: String,
     thread_id: String,
@@ -109,6 +120,13 @@ struct SendMessagePayload {
     text: String,
     images: Option<Vec<SendImagePayload>>,
     reasoning_effort: Option<String>,
+    config: Option<AgentConfigPayload>,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct ValidateConfigPayload {
+    config: Option<AgentConfigPayload>,
 }
 
 #[derive(Deserialize)]
@@ -392,6 +410,36 @@ async fn agent_send_message(
             "text": payload.text,
             "images": images,
             "reasoningEffort": payload.reasoning_effort,
+            "config": payload.config.as_ref().map(|config| json!({
+                "provider": config.provider.as_str(),
+                "model": config.model.as_str(),
+                "apiKey": config.api_key.as_deref(),
+                "apiUrl": config.api_url.as_deref(),
+                "systemPrompt": config.system_prompt.as_deref(),
+                "serviceName": config.service_name.as_deref(),
+            })),
+        }),
+    )
+    .await
+}
+
+#[tauri::command]
+async fn agent_validate_config(
+    app: tauri::AppHandle,
+    payload: ValidateConfigPayload,
+) -> Result<Value, String> {
+    call_agent(
+        &app,
+        "validateConfig",
+        json!({
+            "config": payload.config.as_ref().map(|config| json!({
+                "provider": config.provider.as_str(),
+                "model": config.model.as_str(),
+                "apiKey": config.api_key.as_deref(),
+                "apiUrl": config.api_url.as_deref(),
+                "systemPrompt": config.system_prompt.as_deref(),
+                "serviceName": config.service_name.as_deref(),
+            })),
         }),
     )
     .await
@@ -469,6 +517,7 @@ pub fn run() {
             agent_start_session,
             agent_resume_session,
             agent_send_message,
+            agent_validate_config,
             agent_cancel,
             agent_respond_approval,
             agent_list_sessions,

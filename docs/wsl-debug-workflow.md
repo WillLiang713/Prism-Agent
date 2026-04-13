@@ -83,7 +83,7 @@ npm run desktop:dev:wslg
 1. **检查环境**：确认 Node、Cargo、Tauri CLI 都在
 2. **装前端依赖**：如果 `web/node_modules` 不存在，自动 `npm install`
 3. **后台启动 sidecar**：跑 `node agent-sidecar/dist/agent-sidecar.js`，日志写到 `logs/sidecar.log`
-4. **后台启动 Vite 开发服务器**：监听 `http://127.0.0.1:5173`
+4. **后台启动 Vite 开发服务器**：监听 `http://127.0.0.1:5183`
 5. **等到两个都就绪**（最多 15 秒），都没起来就报错退出
 6. **前台启动 Tauri**：`cargo tauri dev --config src-tauri/tauri.linux.conf.json`，WSLg 弹窗
 7. **Ctrl+C 时清理**：把后台的 sidecar 和 Vite 进程都干掉，不留残余
@@ -124,8 +124,8 @@ npm run desktop:dev:wslg
    - 跑 `apt list --installed | grep webkit2gtk` 确认版本
 
 3. **窗口弹出来但白屏**
-   - 检查 Vite 那边是不是真起来了（终端有没有 `Local: http://localhost:5173`）
-   - 浏览器（Edge 或 Chrome）打开 `http://localhost:5173` 看能不能直接访问，不能的话是前端的问题，跟 Tauri 无关
+   - 检查 Vite 那边是不是真起来了（终端有没有 `Local: http://localhost:5183`）
+   - 浏览器（Edge 或 Chrome）打开 `http://localhost:5183` 看能不能直接访问，不能的话是前端的问题，跟 Tauri 无关
 
 4. **字体看着怪**
    - 这是正常的，Linux 没有 Windows 那些字体

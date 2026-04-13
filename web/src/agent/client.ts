@@ -11,6 +11,24 @@ export interface AgentHealth {
   loggedIn: boolean;
 }
 
+export interface AgentRuntimeConfig {
+  provider: string;
+  model: string;
+  apiKey?: string;
+  apiUrl?: string;
+  systemPrompt?: string;
+  serviceName?: string;
+}
+
+export interface AgentRuntimeStatus {
+  configured: boolean;
+  ready: boolean;
+  reason: string;
+  provider?: string;
+  model?: string;
+  serviceName?: string;
+}
+
 export interface AgentSessionMessage {
   id: string;
   role: 'user' | 'assistant';
@@ -167,10 +185,18 @@ export async function agentSendMessage(payload: {
   text: string;
   images: UploadImagePayload[];
   reasoningEffort: AgentReasoningEffort;
+  config: AgentRuntimeConfig;
 }) {
   assertDesktopRuntime();
   return invoke<{ requestId: string }>('agent_send_message', {
     payload,
+  });
+}
+
+export async function agentValidateConfig(config: AgentRuntimeConfig) {
+  assertDesktopRuntime();
+  return invoke<AgentRuntimeStatus>('agent_validate_config', {
+    payload: { config },
   });
 }
 

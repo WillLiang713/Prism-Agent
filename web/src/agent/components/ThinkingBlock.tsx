@@ -54,7 +54,7 @@ export function ThinkingBlock({
           <span
             className={
               isThinking
-                ? 'animate-custom-shimmer inline-block bg-[length:200%_100%] bg-clip-text text-transparent bg-gradient-to-r from-mutedForeground/60 via-foreground/90 to-mutedForeground/60'
+                ? 'animate-custom-shimmer inline-block bg-[length:200%_100%] bg-clip-text text-transparent bg-gradient-to-r from-mutedForeground/40 via-foreground/70 to-mutedForeground/40'
                 : ''
             }
           >
@@ -65,7 +65,7 @@ export function ThinkingBlock({
           ) : null}
           <ChevronRight className="h-4 w-4 transition-transform group-open:rotate-90" />
         </summary>
-        <div className="prose prose-sm prose-neutral mt-2 max-w-none text-mutedForeground prose-pre:rounded-xl prose-pre:border prose-pre:border-border prose-pre:bg-[#111111] prose-pre:text-[#fafafa] [&_pre]:overflow-x-auto [&_pre]:whitespace-pre-wrap [&_pre]:break-all break-words [&_pre]:px-4 [&_pre]:py-4 dark:prose-invert">
+        <div className="prose prose-sm prose-neutral mt-2 max-w-none text-mutedForeground prose-pre:rounded-xl prose-pre:border prose-pre:border-border prose-pre:bg-muted/50 prose-pre:text-foreground [&_pre]:overflow-x-auto [&_pre]:whitespace-pre-wrap [&_pre]:break-all break-words [&_pre]:px-4 [&_pre]:py-4 dark:prose-invert">
           <ReactMarkdown rehypePlugins={[rehypeHighlight]}>{text}</ReactMarkdown>
         </div>
       </details>

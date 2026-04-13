@@ -6,8 +6,9 @@ import { ApprovalDialog } from './components/ApprovalDialog';
 import { AgentChatInput } from './components/AgentChatInput';
 import { AgentMessageList } from './components/AgentMessageList';
 import { AgentSessionList } from './components/AgentSessionList';
+import { SkillsDisplay } from './components/SkillsDisplay';
 import { Button } from '../components/ui/button';
-import type { AgentThreadMeta } from './client';
+import type { AgentRuntimeStatus, AgentThreadMeta } from './client';
 import type { AgentSession } from './sessionStore';
 
 const CHAT_SIDE_PADDING = 'calc(1.5rem + 10px)';
@@ -19,6 +20,9 @@ export function AgentChatPanel({
   threadList,
   sessions,
   activeSession,
+  agentRuntimeStatus,
+  agentConfigValidating,
+  onOpenSettings,
   onCreateSession,
   onResumeThread,
   onSendMessage,
@@ -32,6 +36,9 @@ export function AgentChatPanel({
   threadList: AgentThreadMeta[];
   sessions: AgentSession[];
   activeSession: AgentSession | null;
+  agentRuntimeStatus: AgentRuntimeStatus;
+  agentConfigValidating: boolean;
+  onOpenSettings: () => void;
   onCreateSession: (workspaceRoot?: string) => void;
   onResumeThread: (threadId: string, cwd: string) => void;
   onSendMessage: (payload: {
@@ -45,6 +52,11 @@ export function AgentChatPanel({
 }) {
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const activeApproval = useMemo(() => activeSession?.approvals[0] || null, [activeSession]);
+  const inputDisabled = !backendReady || !activeSession;
+  const submitDisabled = inputDisabled || agentConfigValidating || !agentRuntimeStatus.ready;
+  const runtimeStatusMessage = agentConfigValidating
+    ? '正在检查模型配置…'
+    : agentRuntimeStatus.reason;
 
   useEffect(() => {
     const root = scrollRef.current;
@@ -102,7 +114,6 @@ export function AgentChatPanel({
                   <AgentMessageList
                     messages={activeSession?.messages || []}
                     isStreaming={activeSession?.isStreaming || false}
-                    skills={activeSession?.skills || { items: [], diagnostics: [] }}
                   />
                 </div>
               </div>
@@ -112,8 +123,34 @@ export function AgentChatPanel({
         
         <div className="py-5" style={{ paddingInline: CHAT_SIDE_PADDING }}>
           <div className="mx-auto max-w-3xl">
+            {activeSession?.skills && (
+              <SkillsDisplay skills={activeSession.skills} />
+            )}
+            {runtimeStatusMessage && submitDisabled ? (
+              <div
+                aria-live="polite"
+                className="mb-4 flex items-center justify-between gap-4 rounded-xl border border-amber-500/20 bg-amber-500/5 px-4 py-3 text-sm leading-6 text-amber-500/90"
+              >
+                <div className="flex items-center gap-2.5">
+                  <AlertCircle className="h-4 w-4 shrink-0" />
+                  <span>{runtimeStatusMessage}</span>
+                </div>
+                {!agentConfigValidating && !agentRuntimeStatus.configured && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={onOpenSettings}
+                    className="h-7 rounded-lg bg-amber-500/10 px-3 text-[11px] font-medium text-amber-500 hover:bg-amber-500/20"
+                  >
+                    前往设置
+                  </Button>
+                )}
+              </div>
+            ) : null}
             <AgentChatInput
-              disabled={!backendReady || !activeSession}
+              inputDisabled={inputDisabled}
+              submitDisabled={submitDisabled}
+              submitHint={runtimeStatusMessage}
               isStreaming={activeSession?.isStreaming || false}
               onStop={onStop}
               onSubmit={onSendMessage}

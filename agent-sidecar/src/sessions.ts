@@ -36,6 +36,7 @@ export interface RuntimeSessionRecord {
   session: AgentSession;
   loader: DefaultResourceLoader;
   snapshot: PersistedSessionSnapshot;
+  baseSystemPrompt: string;
   currentRequestId: string | null;
   currentAssistantMessageId: string | null;
   cancelledRequestIds: Set<string>;
