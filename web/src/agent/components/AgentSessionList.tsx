@@ -175,8 +175,11 @@ export function AgentSessionList({
                   return (
                     <div
                       key={thread.threadId}
-                      className={`group grid w-full grid-cols-[1fr_auto] items-center gap-1 rounded-lg px-2 py-1.5 transition-all ${active ? 'bg-card shadow-sm' : 'hover:bg-muted/50'
-                        }`}
+                      className={`group grid w-full grid-cols-[1fr_auto] items-center gap-1 rounded-xl border px-2 py-1.5 transition-colors ${
+                        active
+                          ? 'border-border/70 bg-muted'
+                          : 'border-transparent hover:border-border/40 hover:bg-foreground/[0.04]'
+                      }`}
                     >
                       <div
                         role="button"
