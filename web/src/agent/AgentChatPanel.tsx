@@ -129,21 +129,19 @@ export function AgentChatPanel({
             {runtimeStatusMessage && submitDisabled ? (
               <div
                 aria-live="polite"
-                className="mb-4 flex items-center justify-between gap-4 rounded-xl border border-amber-500/20 bg-amber-500/5 px-4 py-3 text-sm leading-6 text-amber-500/90"
+                className="mb-3 flex items-center justify-between gap-3 px-1 text-sm text-amber-500"
               >
-                <div className="flex items-center gap-2.5">
-                  <AlertCircle className="h-4 w-4 shrink-0" />
+                <div className="flex items-center gap-2">
+                  <AlertCircle className="h-4 w-4" />
                   <span>{runtimeStatusMessage}</span>
                 </div>
                 {!agentConfigValidating && !agentRuntimeStatus.configured && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
+                  <button
                     onClick={onOpenSettings}
-                    className="h-7 rounded-lg bg-amber-500/10 px-3 text-[11px] font-medium text-amber-500 hover:bg-amber-500/20"
+                    className="font-medium underline underline-offset-2 hover:text-amber-500 transition-colors"
                   >
                     前往设置
-                  </Button>
+                  </button>
                 )}
               </div>
             ) : null}

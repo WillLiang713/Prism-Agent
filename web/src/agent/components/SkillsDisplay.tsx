@@ -10,49 +10,41 @@ export function SkillsDisplay({ skills }: { skills: AgentSkillsSnapshot }) {
   }
 
   return (
-    <section className="mb-3 rounded-[12px] border border-border bg-card px-4 py-2 text-sm text-mutedForeground transition-all">
+    <div className="mb-3 flex flex-col gap-1.5 px-1">
       <div 
-        className="flex cursor-pointer items-center justify-between py-1"
+        className="flex cursor-pointer items-center gap-2 text-sm text-mutedForeground/80 hover:text-mutedForeground transition-colors"
         onClick={() => setIsExpanded(!isExpanded)}
       >
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="font-medium text-foreground">Skills</span>
-          <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] text-foreground">
-            {skills.items.length} 已加载
-          </span>
-          {skills.diagnostics.length > 0 ? (
-            <span className="rounded-full border border-border px-2 py-0.5 text-[11px] text-danger">
+        <div className="flex items-center gap-1.5">
+          <span>已加载 {skills.items.length} 个技能</span>
+          {skills.diagnostics.length > 0 && (
+            <span className="flex items-center gap-1 text-danger/70">
+              <span className="h-1 w-1 rounded-full bg-danger animate-pulse" />
               {skills.diagnostics.length} 条诊断
             </span>
-          ) : null}
+          )}
         </div>
-        <div className="flex items-center gap-1 text-[11px]">
-          {isExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-        </div>
+        {isExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
       </div>
       
       {isExpanded && (
-        <div className="mt-2 space-y-3 pb-2 border-t border-border pt-3">
-          {skills.items.length > 0 && (
-            <div className="flex flex-wrap gap-2">
-              {skills.items.map((skill) => (
-                <span
-                  key={skill.id}
-                  className="rounded-full border border-border bg-background/50 px-2 py-0.5 text-[11px] text-foreground"
-                  title={`${skill.description}\n${skill.source}`}
-                >
-                  {skill.name}
-                </span>
-              ))}
-            </div>
-          )}
+        <div className="flex flex-wrap gap-2">
+          {skills.items.map((skill) => (
+            <span
+              key={skill.id}
+              className="rounded-lg border border-border/40 bg-muted/30 px-2.5 py-1 text-[12px] text-mutedForeground transition-colors hover:border-border hover:bg-muted/50"
+              title={`${skill.description}\n${skill.source}`}
+            >
+              {skill.name}
+            </span>
+          ))}
           {skills.diagnostics.length > 0 && (
-            <div className="whitespace-pre-wrap break-words rounded bg-danger/5 p-2 text-[11px] leading-5 text-danger/80">
+            <div className="w-full whitespace-pre-wrap break-words rounded-lg bg-danger/5 p-3 text-[12px] leading-5 text-danger/70 border border-danger/10">
               {skills.diagnostics.join('\n')}
             </div>
           )}
         </div>
       )}
-    </section>
+    </div>
   );
 }
