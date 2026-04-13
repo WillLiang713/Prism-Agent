@@ -13,16 +13,111 @@ const isWindows = process.platform === 'win32';
 const children = new Map();
 let shuttingDown = false;
 
-function resolveNpmCommand() {
-  return isWindows ? 'npm.cmd' : 'npm';
+async function pathExists(filePath) {
+  try {
+    await access(filePath);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
-function resolveTauriCommand() {
-  return isWindows ? 'tauri.cmd' : 'tauri';
+async function findOnPath(names, env) {
+  const pathEntries = (env.PATH ?? '').split(path.delimiter).filter(Boolean);
+
+  for (const directory of pathEntries) {
+    for (const name of names) {
+      const candidate = path.join(directory, name);
+      if (await pathExists(candidate)) {
+        return candidate;
+      }
+    }
+  }
+
+  return null;
 }
 
-function shouldUseShell(command) {
-  return isWindows && /\.(cmd|bat)$/i.test(command);
+async function resolveNodeCommand(env) {
+  if (process.execPath && (await pathExists(process.execPath))) {
+    return process.execPath;
+  }
+
+  const fallback = await findOnPath([isWindows ? 'node.exe' : 'node'], env);
+  if (fallback) {
+    return fallback;
+  }
+
+  throw new Error('Node.js executable was not found.');
+}
+
+async function resolveNpmInvocation(env) {
+  const nodeCommand = await resolveNodeCommand(env);
+  const candidates = [
+    process.env.npm_execpath,
+    path.join(path.dirname(nodeCommand), 'node_modules', 'npm', 'bin', 'npm-cli.js'),
+  ].filter(Boolean);
+
+  for (const candidate of candidates) {
+    if (await pathExists(candidate)) {
+      return {
+        command: nodeCommand,
+        args: [candidate],
+      };
+    }
+  }
+
+  const fallback = await findOnPath(isWindows ? ['npm.cmd', 'npm.exe', 'npm'] : ['npm'], env);
+  if (fallback) {
+    return {
+      command: fallback,
+      args: [],
+      shell: isWindows && /\.(cmd|bat)$/i.test(fallback),
+    };
+  }
+
+  throw new Error('npm executable was not found.');
+}
+
+async function resolveTauriInvocation(env) {
+  const nodeCommand = await resolveNodeCommand(env);
+  const localCli = path.join(projectRoot, 'node_modules', '@tauri-apps', 'cli', 'tauri.js');
+
+  if (await pathExists(localCli)) {
+    return {
+      command: nodeCommand,
+      args: [localCli],
+    };
+  }
+
+  const fallback = await findOnPath(isWindows ? ['tauri.cmd', 'tauri.exe', 'tauri'] : ['tauri'], env);
+  if (fallback) {
+    return {
+      command: fallback,
+      args: [],
+      shell: isWindows && /\.(cmd|bat)$/i.test(fallback),
+    };
+  }
+
+  throw new Error('Tauri CLI was not found.');
+}
+
+async function resolveWebInvocation(env) {
+  const nodeCommand = await resolveNodeCommand(env);
+  const localCliCandidates = [
+    path.join(projectRoot, 'node_modules', 'vite', 'bin', 'vite.js'),
+    path.join(projectRoot, 'web', 'node_modules', 'vite', 'bin', 'vite.js'),
+  ];
+
+  for (const candidate of localCliCandidates) {
+    if (await pathExists(candidate)) {
+      return {
+        command: nodeCommand,
+        args: [candidate],
+      };
+    }
+  }
+
+  return resolveNpmInvocation(env);
 }
 
 async function ensureCargoPath(env) {
@@ -46,11 +141,11 @@ async function ensureCargoPath(env) {
   };
 }
 
-function startProcess(name, command, args, extra = {}) {
-  const child = spawn(command, args, {
+function startProcess(name, invocation, extra = {}) {
+  const child = spawn(invocation.command, invocation.args, {
     cwd: projectRoot,
     stdio: 'inherit',
-    shell: shouldUseShell(command),
+    shell: invocation.shell ?? false,
     detached: !isWindows,
     ...extra,
   });
@@ -152,9 +247,14 @@ process.on('SIGTERM', () => {
 });
 
 async function main() {
-  const npmCommand = resolveNpmCommand();
-  const tauriCommand = resolveTauriCommand();
   const env = await ensureCargoPath({ ...process.env });
+  const nodeCommand = await resolveNodeCommand(env);
+  const runtimeEnv = {
+    ...env,
+    PRISM_NODE_PATH: nodeCommand,
+  };
+  const webInvocation = await resolveWebInvocation(runtimeEnv);
+  const tauriInvocation = await resolveTauriInvocation(runtimeEnv);
   const webUrl = 'http://127.0.0.1:5183/?platform=desktop';
 
   if (await isServerReady(webUrl)) {
@@ -163,10 +263,18 @@ async function main() {
     console.log('[dev] starting web frontend on http://127.0.0.1:5183');
     startProcess(
       'web',
-      npmCommand,
-      ['--prefix', 'web', 'run', 'dev', '--', '--host', '127.0.0.1', '--strictPort'],
       {
-        env,
+        ...webInvocation,
+        args: [
+          ...webInvocation.args,
+          '--host',
+          '127.0.0.1',
+          '--strictPort',
+        ],
+      },
+      {
+        cwd: path.join(projectRoot, 'web'),
+        env: runtimeEnv,
       },
     );
 
@@ -174,9 +282,16 @@ async function main() {
   }
 
   console.log('[dev] starting tauri desktop');
-  startProcess('tauri', tauriCommand, ['dev'], {
-    env,
-  });
+  startProcess(
+    'tauri',
+    {
+      ...tauriInvocation,
+      args: [...tauriInvocation.args, 'dev'],
+    },
+    {
+      env: runtimeEnv,
+    },
+  );
 }
 
 main().catch(async (error) => {

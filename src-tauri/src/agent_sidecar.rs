@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::env;
 use std::path::{Path, PathBuf};
 use std::sync::{
     atomic::{AtomicU64, Ordering},
@@ -106,7 +107,11 @@ impl AgentBridge {
     }
 }
 
-fn spawn_stdout_task(app: AppHandle, bridge: Arc<AgentBridge>, stdout: tokio::process::ChildStdout) {
+fn spawn_stdout_task(
+    app: AppHandle,
+    bridge: Arc<AgentBridge>,
+    stdout: tokio::process::ChildStdout,
+) {
     tokio::spawn(async move {
         let mut lines = BufReader::new(stdout).lines();
         while let Ok(Some(line)) = lines.next_line().await {
@@ -157,12 +162,18 @@ fn build_sidecar_command(app: &AppHandle) -> Result<Command, String> {
         .path()
         .app_data_dir()
         .map_err(|error| format!("解析应用数据目录失败: {error}"))?;
+    let node_path = resolve_node_executable()?;
 
     if cfg!(debug_assertions) {
-        let tsx_path = repo_root.join("node_modules").join(".bin").join("tsx");
+        let tsx_cli_path = repo_root
+            .join("node_modules")
+            .join("tsx")
+            .join("dist")
+            .join("cli.mjs");
         let script_path = repo_root.join("agent-sidecar").join("src").join("index.ts");
-        let mut command = Command::new(tsx_path);
+        let mut command = Command::new(node_path);
         command.current_dir(&repo_root);
+        command.arg(tsx_cli_path);
         command.arg(script_path);
         command.arg("--stdio");
         command.env("PRISM_AGENT_DATA_DIR", &app_data_dir);
@@ -170,11 +181,81 @@ fn build_sidecar_command(app: &AppHandle) -> Result<Command, String> {
     }
 
     let release_script = find_release_sidecar_script(app)?;
-    let mut command = Command::new("node");
+    let mut command = Command::new(node_path);
+    command.current_dir(&repo_root);
     command.arg(release_script);
     command.arg("--stdio");
     command.env("PRISM_AGENT_DATA_DIR", &app_data_dir);
     Ok(command)
+}
+
+fn resolve_node_executable() -> Result<PathBuf, String> {
+    if let Some(explicit_path) = env::var_os("PRISM_NODE_PATH") {
+        let explicit_path = PathBuf::from(explicit_path);
+        if explicit_path.is_file() {
+            return Ok(explicit_path);
+        }
+
+        return Err(format!(
+            "环境变量 PRISM_NODE_PATH 指向的 Node 不存在: {}",
+            explicit_path.display()
+        ));
+    }
+
+    if let Some(from_path) = find_in_path(node_candidate_names()) {
+        return Ok(from_path);
+    }
+
+    #[cfg(windows)]
+    {
+        let windows_candidates = [
+            PathBuf::from(r"C:\Program Files\nodejs\node.exe"),
+            PathBuf::from(r"C:\Program Files (x86)\nodejs\node.exe"),
+        ];
+
+        for candidate in windows_candidates {
+            if candidate.is_file() {
+                return Ok(candidate);
+            }
+        }
+
+        if let Some(local_app_data) = env::var_os("LOCALAPPDATA") {
+            let candidate = PathBuf::from(local_app_data)
+                .join("Programs")
+                .join("nodejs")
+                .join("node.exe");
+            if candidate.is_file() {
+                return Ok(candidate);
+            }
+        }
+    }
+
+    Err("未找到 Node.js 可执行文件；请确认已安装 Node，或设置 PRISM_NODE_PATH".to_string())
+}
+
+fn find_in_path(names: &[&str]) -> Option<PathBuf> {
+    let path_var = env::var_os("PATH")?;
+
+    for directory in env::split_paths(&path_var) {
+        for name in names {
+            let candidate = directory.join(name);
+            if candidate.is_file() {
+                return Some(candidate);
+            }
+        }
+    }
+
+    None
+}
+
+#[cfg(windows)]
+fn node_candidate_names() -> &'static [&'static str] {
+    &["node.exe", "node"]
+}
+
+#[cfg(not(windows))]
+fn node_candidate_names() -> &'static [&'static str] {
+    &["node"]
 }
 
 fn repo_root() -> Result<PathBuf, String> {

@@ -115,11 +115,11 @@ export function AgentSessionList({
         </Button>
         <Button
           type="button"
-          variant="ghost"
+          variant="secondary"
           onClick={handleOpenDirectory}
-          className="h-10 w-full justify-center gap-2 rounded-xl text-sm border border-dashed border-border/60 hover:border-border"
+          className="h-10 w-full justify-center gap-2 rounded-xl border border-dashed border-border/70 bg-muted/70 text-sm text-foreground hover:bg-muted hover:border-border"
         >
-          <FolderOpen className="h-4 w-4" />
+          <FolderOpen className="h-4 w-4" aria-hidden="true" />
           <span>添加目录</span>
         </Button>
       </div>

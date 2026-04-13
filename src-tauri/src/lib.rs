@@ -1,11 +1,11 @@
 mod agent_sidecar;
 
-use std::sync::{Arc, Mutex};
 #[cfg(windows)]
 use std::sync::{
     atomic::{AtomicBool, Ordering},
     Arc as StdArc,
 };
+use std::sync::{Arc, Mutex};
 
 use agent_sidecar::AgentBridge;
 use serde::{Deserialize, Serialize};
@@ -318,11 +318,7 @@ fn create_tray(app: &tauri::AppHandle) -> Result<(), String> {
         .map_err(|error| format!("创建托盘图标失败: {error}"))
 }
 
-async fn call_agent(
-    app: &tauri::AppHandle,
-    method: &str,
-    params: Value,
-) -> Result<Value, String> {
+async fn call_agent(app: &tauri::AppHandle, method: &str, params: Value) -> Result<Value, String> {
     let bridge = &app.state::<AgentBridgeState>().0;
     bridge.call(method, params).await
 }
@@ -540,8 +536,7 @@ pub fn run() {
                 .map_err(std::io::Error::other)?;
             app.manage(AgentBridgeState(bridge));
 
-            let init_script =
-                build_runtime_script(&runtime).map_err(std::io::Error::other)?;
+            let init_script = build_runtime_script(&runtime).map_err(std::io::Error::other)?;
             let window =
                 WebviewWindowBuilder::new(app, WINDOW_LABEL, WebviewUrl::App("index.html".into()))
                     .title("Prism")
