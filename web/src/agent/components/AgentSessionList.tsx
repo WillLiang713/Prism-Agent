@@ -1,6 +1,6 @@
-import { Plus, FolderOpen, Folder, Trash2, Check, X } from 'lucide-react';
+import { Trash2, Check, X } from 'lucide-react';
 import { useMemo, useState, useEffect } from 'react';
-import { open, ask } from '@tauri-apps/plugin-dialog';
+import { open } from '@tauri-apps/plugin-dialog';
 
 import { Button } from '../../components/ui/button';
 import { ScrollArea } from '../../components/ui/scroll-area';
@@ -13,7 +13,6 @@ function previewLabel(thread: AgentThreadMeta) {
 
 function getBasename(path: string) {
   if (!path) return '未归类';
-  // 针对不同平台处理路径分隔符
   const parts = path.split(/[/\\]/).filter(Boolean);
   if (parts.length === 0) return path;
   return parts[parts.length - 1];
@@ -80,7 +79,6 @@ export function AgentSessionList({
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const [pendingDeleteGroup, setPendingDeleteGroup] = useState<string | null>(null);
 
-  // 点击外部重置确认状态
   useEffect(() => {
     const handleClick = () => {
       setPendingDeleteId(null);
@@ -91,7 +89,6 @@ export function AgentSessionList({
   }, []);
 
   const handleDeleteThread = (threadId: string) => {
-    // 设置状态为 null 必须在调用业务逻辑之前或之后尽快完成
     setPendingDeleteId(null);
     onDelete(threadId);
   };
@@ -108,26 +105,19 @@ export function AgentSessionList({
           type="button"
           variant="surface"
           onClick={handleCreateNew}
-          className="h-10 w-full justify-center gap-2 rounded-xl text-sm"
+          className="h-10 w-full justify-center rounded-xl text-sm"
         >
-          <Plus className="h-4 w-4" />
           <span>新会话</span>
         </Button>
         <Button
           type="button"
           variant="secondary"
           onClick={handleOpenDirectory}
-          className="h-10 w-full justify-center gap-2 rounded-xl border border-dashed border-border/70 bg-muted/70 text-sm text-foreground hover:bg-muted hover:border-border"
+          className="h-10 w-full justify-center rounded-xl border border-dashed border-border/70 bg-muted/70 text-sm text-foreground hover:bg-muted hover:border-border"
         >
-          <FolderOpen className="h-4 w-4" aria-hidden="true" />
           <span>添加目录</span>
         </Button>
       </div>
-
-
-
-
-
 
       <ScrollArea className="mt-2 flex-1 px-3">
         <div className="pb-4 pt-2">
@@ -135,7 +125,6 @@ export function AgentSessionList({
             <div key={group.cwd} className="mb-5 last:mb-0">
               <div className="group/header mb-1.5 grid grid-cols-[1fr_auto] items-center gap-2 px-3 text-[10px] font-bold uppercase tracking-widest text-mutedForeground/40">
                 <div className="flex min-w-0 items-center gap-2">
-                  <Folder className="h-3.5 w-3.5 opacity-70 group-hover/header:opacity-100 shrink-0" />
                   <span className="truncate" title={group.cwd}>{group.label}</span>
                 </div>
                 {pendingDeleteGroup === group.cwd ? (
@@ -186,9 +175,8 @@ export function AgentSessionList({
                   return (
                     <div
                       key={thread.threadId}
-                      className={`group grid w-full grid-cols-[1fr_auto] items-center gap-1 rounded-lg px-2 py-1.5 transition-all ${
-                        active ? 'bg-card shadow-sm' : 'hover:bg-muted/50'
-                      }`}
+                      className={`group grid w-full grid-cols-[1fr_auto] items-center gap-1 rounded-lg px-2 py-1.5 transition-all ${active ? 'bg-card shadow-sm' : 'hover:bg-muted/50'
+                        }`}
                     >
                       <div
                         role="button"

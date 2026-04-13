@@ -1,4 +1,4 @@
-import { MoonStar, Settings, SunMedium, FolderOpen } from 'lucide-react';
+import { MoonStar, Settings, SunMedium } from 'lucide-react';
 import { useState } from 'react';
 
 import { SettingsDialog } from '../components/config/SettingsDialog';
@@ -32,7 +32,7 @@ export function AgentAppLayout() {
 
   const isDesktop = isDesktopRuntime();
   const headerIconButtonClass =
-    'h-10 w-10 rounded-full border border-transparent text-foreground hover:bg-muted hover:text-foreground';
+    'h-8 w-8 rounded-full border border-transparent text-foreground hover:bg-muted hover:text-foreground';
 
   return (
     <>
@@ -43,15 +43,14 @@ export function AgentAppLayout() {
             data-tauri-drag-region
           >
             <div className="flex items-center gap-2 overflow-hidden" data-tauri-drag-region>
-               {activeSession?.workspaceRoot ? (
-                 <div 
-                   className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-muted/40 text-[11px] text-mutedForeground truncate max-w-[280px]"
-                   title={activeSession.workspaceRoot}
-                 >
-                   <FolderOpen className="h-3 w-3 shrink-0 opacity-60" />
-                   <span className="truncate font-mono">{activeSession.workspaceRoot}</span>
-                 </div>
-               ) : null}
+                {activeSession?.workspaceRoot ? (
+                  <div 
+                    className="flex items-center gap-1.5 text-[10px] font-medium tracking-tight text-mutedForeground/50 truncate max-w-[320px] transition-colors hover:text-mutedForeground/80"
+                    title={activeSession.workspaceRoot}
+                  >
+                    <span className="truncate font-mono">{activeSession.workspaceRoot}</span>
+                  </div>
+                ) : null}
             </div>
             <div className="flex justify-center overflow-hidden" data-tauri-drag-region>
               {agentRuntimeStatus.model && (
@@ -63,10 +62,10 @@ export function AgentAppLayout() {
             <div className="flex items-center justify-end gap-1" data-tauri-drag-region>
               <div className="flex items-center gap-1 no-drag mr-2">
                 <Button size="icon" variant="ghost" onClick={toggleTheme} className={headerIconButtonClass}>
-                  {theme === 'dark' ? <SunMedium className="h-5 w-5" /> : <MoonStar className="h-5 w-5" />}
+                  {theme === 'dark' ? <SunMedium className="h-4 w-4" /> : <MoonStar className="h-4 w-4" />}
                 </Button>
                 <Button size="icon" variant="ghost" onClick={() => setSettingsOpen(true)} className={headerIconButtonClass}>
-                  <Settings className="h-5 w-5" />
+                  <Settings className="h-4 w-4" />
                 </Button>
               </div>
               {isDesktop && <WindowControls />}
