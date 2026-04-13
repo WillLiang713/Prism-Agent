@@ -1,4 +1,4 @@
-import { History, Plus, FolderOpen, Folder, Trash2, Check, X } from 'lucide-react';
+import { Plus, FolderOpen, Folder, Trash2, Check, X } from 'lucide-react';
 import { useMemo, useState, useEffect } from 'react';
 import { open, ask } from '@tauri-apps/plugin-dialog';
 
@@ -124,10 +124,10 @@ export function AgentSessionList({
         </Button>
       </div>
 
-      <div className="mt-4 flex items-center gap-2 px-5 text-[10px] font-bold uppercase tracking-[0.15em] text-mutedForeground/60">
-        <History className="h-3 w-3" />
-        历史记录
-      </div>
+
+
+
+
 
       <ScrollArea className="mt-2 flex-1 px-3">
         <div className="pb-4 pt-2">
@@ -257,7 +257,7 @@ export function AgentSessionList({
           ))}
           {groupedThreads.length === 0 ? (
             <div className="px-5 py-8 text-center text-xs text-mutedForeground/50">
-              暂无历史记录
+              暂无记录
             </div>
           ) : null}
         </div>
