@@ -53,7 +53,13 @@ export function AgentAppLayout() {
                  </div>
                ) : null}
             </div>
-            <div />
+            <div className="flex justify-center overflow-hidden" data-tauri-drag-region>
+              {agentRuntimeStatus.model && (
+                <div className="flex items-center text-[10px] font-mono lowercase text-mutedForeground/60" data-tauri-drag-region>
+                  {agentRuntimeStatus.model}
+                </div>
+              )}
+            </div>
             <div className="flex items-center justify-end gap-1" data-tauri-drag-region>
               <div className="flex items-center gap-1 no-drag mr-2">
                 <Button size="icon" variant="ghost" onClick={toggleTheme} className={headerIconButtonClass}>

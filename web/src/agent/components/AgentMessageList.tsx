@@ -13,18 +13,7 @@ export function AgentMessageList({
   isStreaming: boolean;
 }) {
   if (messages.length === 0) {
-    return (
-      <div className="flex min-h-full w-full flex-1 flex-col items-center pt-12">
-        <div className="max-w-md text-center">
-          <h2 className="font-display text-3xl font-medium tracking-tight text-foreground">
-            想做什么？
-          </h2>
-          <p className="mt-3 text-sm leading-7 text-mutedForeground">
-            输入需求、发送图片或恢复历史记录。
-          </p>
-        </div>
-      </div>
-    );
+    return null;
   }
 
   return (
@@ -56,11 +45,6 @@ export function AgentMessageList({
                 <ReactMarkdown rehypePlugins={[rehypeHighlight]}>
                   {generating ? message.text + ' \u2503' : message.text}
                 </ReactMarkdown>
-              </div>
-            ) : generating ? (
-              <div className="flex items-center gap-2 text-sm text-mutedForeground animate-pulse">
-                <div className="h-1.5 w-1.5 rounded-full bg-mutedForeground/60" />
-                正在生成回复...
               </div>
             ) : null}
             {message.error ? (
