@@ -35,10 +35,20 @@ export function ApprovalDialog({
             </pre>
           </div>
           <div className="mt-6 flex justify-end gap-3">
-            <Button type="button" variant="secondary" onClick={() => onDecision('deny')}>
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              onClick={() => onDecision('deny')}
+            >
               拒绝
             </Button>
-            <Button type="button" variant="primary" onClick={() => onDecision('allow')}>
+            <Button
+              type="button"
+              size="sm"
+              variant="primary"
+              onClick={() => onDecision('allow')}
+            >
               允许一次
             </Button>
           </div>

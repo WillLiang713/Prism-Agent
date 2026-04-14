@@ -23,6 +23,7 @@ import { classifyCommandRisk, classifyPathRisk, shouldAutoApproveCommand } from 
 import { createBridge } from './bridge.js';
 import { SessionRegistry, type PersistedSessionSnapshot, type RuntimeSessionRecord } from './sessions.js';
 import type {
+  AgentApprovalMode,
   CancelParams,
   AgentEvent,
   AgentRuntimeConfig,
@@ -51,6 +52,7 @@ type PendingApproval = {
 const authStorage = AuthStorage.create();
 const modelRegistry = ModelRegistry.create(authStorage);
 const pendingApprovals = new Map<string, PendingApproval>();
+const requestApprovalModes = new Map<string, AgentApprovalMode>();
 const sessionRegistry = new SessionRegistry(resolveDataDir());
 
 const bridge = createBridge(
@@ -91,6 +93,7 @@ const bridge = createBridge(
       const payload = params as SendMessageParams;
       const runtime = sessionRegistry.getRuntimeSession(payload.sessionId);
       const requestId = payload.requestId || randomUUID();
+      requestApprovalModes.set(requestId, normalizeApprovalMode(payload.approvalMode));
       sessionRegistry.markRequestStarted(runtime.sessionId, requestId, payload.text);
       await sessionRegistry.saveSnapshot(runtime.snapshot);
 
@@ -115,6 +118,7 @@ const bridge = createBridge(
 
     async cancel(params) {
       const payload = params as CancelParams;
+      requestApprovalModes.delete(payload.requestId);
       for (const [approvalId, approval] of pendingApprovals.entries()) {
         if (approval.requestId === payload.requestId) {
           pendingApprovals.delete(approvalId);
@@ -385,6 +389,7 @@ async function runPrompt(runtime: RuntimeSessionRecord, requestId: string, paylo
       });
     }
   } finally {
+    requestApprovalModes.delete(requestId);
     sessionRegistry.clearRequest(runtime.sessionId, requestId);
     await sessionRegistry.saveSnapshot(runtime.snapshot);
   }
@@ -401,7 +406,11 @@ function createBridgeExtension(context: { sessionId: string; threadId: string })
 
       if (event.toolName === 'bash') {
         const command = typeof event.input.command === 'string' ? event.input.command : '';
-        if (shouldAutoApproveCommand(command, runtime.workspaceRoot)) {
+        const approvalMode = requestApprovalModes.get(requestId) ?? 'manual';
+        const shouldSkipApproval = approvalMode === 'auto'
+          ? true
+          : shouldAutoApproveCommand(command, runtime.workspaceRoot);
+        if (shouldSkipApproval) {
           return undefined;
         }
 
@@ -554,6 +563,10 @@ function normalizeThinking(reasoning: AgentReasoningEffort | undefined) {
     return 'off';
   }
   return reasoning;
+}
+
+function normalizeApprovalMode(mode: AgentApprovalMode | undefined) {
+  return mode === 'auto' ? 'auto' : 'manual';
 }
 
 function normalizeRuntimeConfig(config?: AgentRuntimeConfig | null) {

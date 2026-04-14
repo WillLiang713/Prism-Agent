@@ -11,15 +11,17 @@ import { reasoningOptions } from '../../lib/configOptions';
 import { Button } from '../../components/ui/button';
 import { ContentImage } from '../../components/ui/content-image';
 import { FileInput } from '../../components/ui/file-input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger } from '../../components/ui/select';
 import { Textarea } from '../../components/ui/textarea';
-import type { AgentReasoningEffort } from '../client';
+import type { AgentApprovalMode, AgentReasoningEffort } from '../client';
 
 export function AgentChatInput({
   inputDisabled,
   submitDisabled,
   submitHint,
   isStreaming,
+  approvalMode,
+  onApprovalModeChange,
   onSubmit,
   onStop,
 }: {
@@ -27,10 +29,13 @@ export function AgentChatInput({
   submitDisabled?: boolean;
   submitHint?: string;
   isStreaming: boolean;
+  approvalMode: AgentApprovalMode;
+  onApprovalModeChange: (mode: AgentApprovalMode) => void;
   onSubmit: (payload: {
     text: string;
     images: Array<{ name: string; mediaType: string; dataUrl: string }>;
     reasoningEffort: AgentReasoningEffort;
+    approvalMode: AgentApprovalMode;
   }) => void;
   onStop: () => void;
 }) {
@@ -54,6 +59,7 @@ export function AgentChatInput({
       text,
       images,
       reasoningEffort,
+      approvalMode,
     });
     setText('');
     setImages([]);
@@ -158,6 +164,18 @@ export function AgentChatInput({
                   {option.label}
                 </SelectItem>
               ))}
+            </SelectContent>
+          </Select>
+          <Select value={approvalMode} onValueChange={(value) => onApprovalModeChange(value as AgentApprovalMode)}>
+            <SelectTrigger className="h-10 w-[138px] px-4 text-sm" aria-label="执行模式">
+              <div className="flex items-center gap-2">
+                <span className="text-mutedForeground">执行</span>
+                <span>{approvalMode === 'auto' ? '自动' : '手动'}</span>
+              </div>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="auto">自动</SelectItem>
+              <SelectItem value="manual">手动</SelectItem>
             </SelectContent>
           </Select>
         </div>

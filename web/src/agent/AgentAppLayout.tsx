@@ -20,8 +20,10 @@ export function AgentAppLayout() {
     threadList,
     sessions,
     activeSession,
+    approvalMode,
     agentRuntimeStatus,
     agentConfigValidating,
+    setApprovalMode,
     startNewSession,
     resumeThread,
     sendMessage,
@@ -45,7 +47,7 @@ export function AgentAppLayout() {
             <div className="flex items-center gap-2 overflow-hidden" data-tauri-drag-region>
                 {activeSession?.workspaceRoot ? (
                   <div 
-                    className="flex items-center gap-1.5 text-[10px] font-medium tracking-tight text-mutedForeground/50 truncate max-w-[320px] transition-colors hover:text-mutedForeground/80"
+                    className="flex max-w-[420px] items-center gap-1.5 truncate text-xs font-medium tracking-tight text-mutedForeground/80 transition-colors hover:text-foreground"
                     title={activeSession.workspaceRoot}
                   >
                     <span className="truncate font-mono">{activeSession.workspaceRoot}</span>
@@ -54,7 +56,10 @@ export function AgentAppLayout() {
             </div>
             <div className="flex justify-center overflow-hidden" data-tauri-drag-region>
               {agentRuntimeStatus.model && (
-                <div className="flex items-center text-[10px] font-mono lowercase text-mutedForeground/60" data-tauri-drag-region>
+                <div
+                  className="flex items-center text-xs font-mono lowercase text-mutedForeground/80"
+                  data-tauri-drag-region
+                >
                   {agentRuntimeStatus.model}
                 </div>
               )}
@@ -79,8 +84,10 @@ export function AgentAppLayout() {
               threadList={threadList}
               sessions={sessions}
               activeSession={activeSession}
+              approvalMode={approvalMode}
               agentRuntimeStatus={agentRuntimeStatus}
               agentConfigValidating={agentConfigValidating}
+              onApprovalModeChange={setApprovalMode}
               onOpenSettings={() => setSettingsOpen(true)}
               onCreateSession={(workspaceRoot) => {
                 void startNewSession(workspaceRoot);

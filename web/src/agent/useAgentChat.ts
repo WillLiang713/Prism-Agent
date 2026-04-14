@@ -10,6 +10,7 @@ import {
   agentSendMessage,
   agentStartSession,
   agentValidateConfig,
+  type AgentApprovalMode,
   type AgentRuntimeConfig,
   type AgentRuntimeStatus,
   listenAgentEvents,
@@ -46,6 +47,7 @@ export function useAgentChat() {
   const runtimeModelConfig = useConfigStore((state) => state.runtimeModelConfig);
   const serviceManagerSelectedId = useConfigStore((state) => state.serviceManagerSelectedId);
   const [workspaceRoot] = useState('');
+  const [approvalMode, setApprovalMode] = useState<AgentApprovalMode>('auto');
   const [agentRuntimeStatus, setAgentRuntimeStatus] = useState<AgentRuntimeStatus>({
     configured: false,
     ready: false,
@@ -271,6 +273,7 @@ export function useAgentChat() {
     text: string;
     images: Array<{ name: string; mediaType: string; dataUrl: string }>;
     reasoningEffort: AgentReasoningEffort;
+    approvalMode: AgentApprovalMode;
   }) {
     if (!activeSession || !agentRuntimeStatus.ready) {
       return;
@@ -285,6 +288,7 @@ export function useAgentChat() {
         text: payload.text,
         images: payload.images,
         reasoningEffort: payload.reasoningEffort,
+        approvalMode: payload.approvalMode,
         config: agentRuntimeConfig,
       });
       if (response.requestId !== requestId) {
@@ -319,8 +323,10 @@ export function useAgentChat() {
     threadList,
     sessions: sessionOrder.map((sessionId) => sessionsById[sessionId]).filter(Boolean),
     activeSession,
+    approvalMode,
     agentRuntimeStatus,
     agentConfigValidating,
+    setApprovalMode,
     startNewSession,
     resumeThread,
     sendMessage,

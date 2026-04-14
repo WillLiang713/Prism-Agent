@@ -8,7 +8,7 @@ import { AgentMessageList } from './components/AgentMessageList';
 import { AgentSessionList } from './components/AgentSessionList';
 import { SkillsDisplay } from './components/SkillsDisplay';
 import { Button } from '../components/ui/button';
-import type { AgentRuntimeStatus, AgentThreadMeta } from './client';
+import type { AgentApprovalMode, AgentRuntimeStatus, AgentThreadMeta } from './client';
 import type { AgentSession } from './sessionStore';
 
 const CHAT_SIDE_PADDING = 'calc(1.5rem + 10px)';
@@ -20,8 +20,10 @@ export function AgentChatPanel({
   threadList,
   sessions,
   activeSession,
+  approvalMode,
   agentRuntimeStatus,
   agentConfigValidating,
+  onApprovalModeChange,
   onOpenSettings,
   onCreateSession,
   onResumeThread,
@@ -36,8 +38,10 @@ export function AgentChatPanel({
   threadList: AgentThreadMeta[];
   sessions: AgentSession[];
   activeSession: AgentSession | null;
+  approvalMode: AgentApprovalMode;
   agentRuntimeStatus: AgentRuntimeStatus;
   agentConfigValidating: boolean;
+  onApprovalModeChange: (mode: AgentApprovalMode) => void;
   onOpenSettings: () => void;
   onCreateSession: (workspaceRoot?: string) => void;
   onResumeThread: (threadId: string, cwd: string) => void;
@@ -45,6 +49,7 @@ export function AgentChatPanel({
     text: string;
     images: Array<{ name: string; mediaType: string; dataUrl: string }>;
     reasoningEffort: 'none' | 'minimal' | 'low' | 'medium' | 'high' | 'xhigh';
+    approvalMode: AgentApprovalMode;
   }) => void;
   onStop: () => void;
   onRespondApproval: (approvalId: string, decision: 'allow' | 'deny') => void;
@@ -151,6 +156,8 @@ export function AgentChatPanel({
                 submitDisabled={submitDisabled}
                 submitHint={runtimeStatusMessage}
                 isStreaming={activeSession?.isStreaming || false}
+                approvalMode={approvalMode}
+                onApprovalModeChange={onApprovalModeChange}
                 onStop={onStop}
                 onSubmit={onSendMessage}
               />

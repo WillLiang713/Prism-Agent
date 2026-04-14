@@ -4,6 +4,7 @@ import { listen } from '@tauri-apps/api/event';
 import { isDesktopRuntime } from '../lib/runtime';
 
 export type AgentReasoningEffort = 'none' | 'minimal' | 'low' | 'medium' | 'high' | 'xhigh';
+export type AgentApprovalMode = 'manual' | 'auto';
 
 export interface AgentHealth {
   sidecarVersion: string;
@@ -185,6 +186,7 @@ export async function agentSendMessage(payload: {
   text: string;
   images: UploadImagePayload[];
   reasoningEffort: AgentReasoningEffort;
+  approvalMode: AgentApprovalMode;
   config: AgentRuntimeConfig;
 }) {
   assertDesktopRuntime();

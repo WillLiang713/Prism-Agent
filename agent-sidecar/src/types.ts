@@ -61,6 +61,7 @@ export interface SendMessageParams {
   text: string;
   images?: SendMessageImagePayload[];
   reasoningEffort?: AgentReasoningEffort;
+  approvalMode?: AgentApprovalMode;
   config?: AgentRuntimeConfig;
 }
 
@@ -137,6 +138,7 @@ export interface SessionBootstrapResult {
 }
 
 export type AgentReasoningEffort = 'minimal' | 'low' | 'medium' | 'high' | 'xhigh' | 'none';
+export type AgentApprovalMode = 'manual' | 'auto';
 
 export type AgentEvent =
   | {

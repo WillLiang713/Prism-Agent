@@ -1,53 +1,90 @@
-import { Terminal } from 'lucide-react';
+import { ChevronRight } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import rehypeHighlight from 'rehype-highlight';
 
 import type { AgentToolEvent } from '../sessionStore';
 
-function renderArgs(args: unknown) {
+function normalizeArgs(args: unknown) {
   if (typeof args !== 'string') {
-    return JSON.stringify(args, null, 2);
+    return args;
   }
+
   try {
-    const parsed = JSON.parse(args);
-    return JSON.stringify(parsed, null, 2);
+    return JSON.parse(args);
   } catch {
     return args;
   }
 }
 
+function renderArgs(args: unknown) {
+  const normalized = normalizeArgs(args);
+  if (typeof normalized === 'string') {
+    return normalized;
+  }
+  return JSON.stringify(normalized, null, 2);
+}
+
+function extractCommand(args: unknown) {
+  const normalized = normalizeArgs(args);
+  if (typeof normalized === 'string') {
+    return normalized.trim() || null;
+  }
+
+  if (normalized && typeof normalized === 'object') {
+    const candidate = normalized as Record<string, unknown>;
+    const commandFields = ['command', 'cmd', 'script', 'bash'];
+    for (const field of commandFields) {
+      if (typeof candidate[field] === 'string' && candidate[field].trim()) {
+        return candidate[field].trim();
+      }
+    }
+  }
+
+  return null;
+}
+
 export function ToolCallCard({ event }: { event: AgentToolEvent }) {
+  const [isOpen, setIsOpen] = useState(false);
+
+  useEffect(() => {
+    if (event.ok === false) {
+      setIsOpen(true);
+    }
+  }, [event.ok]);
+
+  const commandText = useMemo(() => extractCommand(event.args), [event.args]);
+  const isCommandLike = Boolean(commandText) || event.name.toLowerCase().includes('bash');
+  const compactTitle = commandText || event.summary || event.name;
+
   const formattedOutput = event.diff
     ? `\`\`\`diff\n${event.diff}\n\`\`\`${event.output ? `\n\n${event.output}` : ''}`
     : event.output;
 
   return (
-    <div className="rounded-xl border border-border bg-card px-4 py-3 text-sm text-mutedForeground w-full min-w-0 overflow-hidden">
-      <div className="flex items-center justify-between gap-3 font-mono">
-        <div className="flex min-w-0 items-center gap-2 text-foreground font-medium">
-          <Terminal className="h-4 w-4" />
-          <span className="truncate">{event.name}</span>
-          {event.skillName ? (
-            <span className="rounded-full border border-border px-2 py-0.5 text-[10px] normal-case text-mutedForeground">
-              {event.skillName}
-            </span>
-          ) : null}
-        </div>
-        <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] uppercase tracking-wide">
-          {event.status}
-        </span>
-      </div>
-      <div className="mt-2 space-y-2 min-w-0">
+    <details
+      className="group min-w-0 text-sm text-mutedForeground"
+      open={isOpen}
+      onToggle={(event) => setIsOpen((event.currentTarget as HTMLDetailsElement).open)}
+    >
+      <summary className="flex w-fit max-w-full cursor-pointer list-none items-center gap-1.5 text-mutedForeground/80 hover:text-foreground">
+        <span className={`truncate ${isCommandLike ? 'font-mono text-xs' : 'text-sm'}`}>{compactTitle}</span>
+        <ChevronRight className="h-4 w-4 shrink-0 group-open:rotate-90" />
+      </summary>
+      {isOpen ? (
+        <div className="mt-2 space-y-2 min-w-0">
         {event.summary ? (
-          <div className="break-words rounded-xl border border-border/70 bg-background/60 px-3 py-2 text-xs text-foreground">
+          <div className="break-words text-xs leading-6 text-foreground/90">
             {event.summary}
           </div>
         ) : null}
-        <pre className="overflow-x-auto whitespace-pre-wrap break-all rounded-xl bg-background/50 px-4 py-4 text-xs leading-6 text-mutedForeground w-full min-w-0 font-mono">
-          {renderArgs(event.args)}
-        </pre>
+        {!isCommandLike ? (
+          <pre className="overflow-x-auto whitespace-pre-wrap break-all rounded-lg border border-border/60 bg-background/40 px-3 py-2.5 text-xs leading-6 text-mutedForeground font-mono">
+            {renderArgs(event.args)}
+          </pre>
+        ) : null}
         {event.output || event.diff ? (
-          <div className="prose prose-sm prose-neutral max-w-none dark:prose-invert [&_pre]:rounded-xl [&_pre]:border [&_pre]:border-border [&_pre]:bg-background/80 [&_pre]:px-4 [&_pre]:py-4 [&_pre]:text-xs [&_pre]:overflow-x-auto [&_pre]:whitespace-pre-wrap [&_pre]:break-all break-words min-w-0">
+          <div className="prose prose-sm prose-neutral max-w-none dark:prose-invert [&_pre]:rounded-lg [&_pre]:border [&_pre]:border-border/60 [&_pre]:bg-background/50 [&_pre]:px-3 [&_pre]:py-2.5 [&_pre]:text-xs [&_pre]:overflow-x-auto [&_pre]:whitespace-pre-wrap [&_pre]:break-all break-words min-w-0">
             <ReactMarkdown rehypePlugins={[rehypeHighlight]}>{formattedOutput}</ReactMarkdown>
           </div>
         ) : null}
@@ -56,7 +93,8 @@ export function ToolCallCard({ event }: { event: AgentToolEvent }) {
             exit code: {event.exitCode}
           </div>
         ) : null}
-      </div>
-    </div>
+        </div>
+      ) : null}
+    </details>
   );
 }

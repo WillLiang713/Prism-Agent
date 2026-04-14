@@ -120,6 +120,7 @@ struct SendMessagePayload {
     text: String,
     images: Option<Vec<SendImagePayload>>,
     reasoning_effort: Option<String>,
+    approval_mode: Option<String>,
     config: Option<AgentConfigPayload>,
 }
 
@@ -406,6 +407,7 @@ async fn agent_send_message(
             "text": payload.text,
             "images": images,
             "reasoningEffort": payload.reasoning_effort,
+            "approvalMode": payload.approval_mode,
             "config": payload.config.as_ref().map(|config| json!({
                 "provider": config.provider.as_str(),
                 "model": config.model.as_str(),

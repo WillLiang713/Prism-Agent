@@ -123,9 +123,9 @@ export function AgentSessionList({
         <div className="pb-4 pt-2">
           {groupedThreads.map((group) => (
             <div key={group.cwd} className="mb-5 last:mb-0">
-              <div className="group/header mb-1.5 grid grid-cols-[1fr_auto] items-center gap-2 px-3 text-[10px] font-bold uppercase tracking-widest text-mutedForeground/40">
+              <div className="group/header mb-1.5 grid grid-cols-[1fr_auto] items-center gap-2 px-3 text-[11px] font-medium uppercase tracking-[0.12em] text-mutedForeground/62">
                 <div className="flex min-w-0 items-center gap-2">
-                  <span className="truncate" title={group.cwd}>{group.label}</span>
+                  <span className="truncate leading-none" title={group.cwd}>{group.label}</span>
                 </div>
                 {pendingDeleteGroup === group.cwd ? (
                   <div className="flex items-center gap-1 animate-in fade-in slide-in-from-right-1 duration-200">
@@ -197,7 +197,7 @@ export function AgentSessionList({
                           {label}
                         </div>
                         {thread.cwd.replace(group.cwd, '').replace(/^[/\\]/, '') && (
-                          <div className="line-clamp-1 w-full text-[11px] opacity-40 font-mono">
+                          <div className="line-clamp-1 w-full text-xs font-mono text-mutedForeground/65">
                             {thread.cwd.replace(group.cwd, '').replace(/^[/\\]/, '')}
                           </div>
                         )}
