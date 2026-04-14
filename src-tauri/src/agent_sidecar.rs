@@ -157,7 +157,7 @@ fn spawn_stderr_task(stderr: tokio::process::ChildStderr) {
 }
 
 fn build_sidecar_command(app: &AppHandle) -> Result<Command, String> {
-    let repo_root = repo_root()?;
+    let repo_root = normalize_path_for_node(repo_root()?);
     let app_data_dir = app
         .path()
         .app_data_dir()
@@ -165,12 +165,15 @@ fn build_sidecar_command(app: &AppHandle) -> Result<Command, String> {
     let node_path = resolve_node_executable()?;
 
     if cfg!(debug_assertions) {
-        let tsx_cli_path = repo_root
-            .join("node_modules")
-            .join("tsx")
-            .join("dist")
-            .join("cli.mjs");
-        let script_path = repo_root.join("agent-sidecar").join("src").join("index.ts");
+        let tsx_cli_path = normalize_path_for_node(
+            repo_root
+                .join("node_modules")
+                .join("tsx")
+                .join("dist")
+                .join("cli.mjs"),
+        );
+        let script_path =
+            normalize_path_for_node(repo_root.join("agent-sidecar").join("src").join("index.ts"));
         let mut command = Command::new(node_path);
         command.current_dir(&repo_root);
         command.arg(tsx_cli_path);
@@ -180,7 +183,7 @@ fn build_sidecar_command(app: &AppHandle) -> Result<Command, String> {
         return Ok(command);
     }
 
-    let release_script = find_release_sidecar_script(app)?;
+    let release_script = normalize_path_for_node(find_release_sidecar_script(app)?);
     let mut command = Command::new(node_path);
     command.current_dir(&repo_root);
     command.arg(release_script);
@@ -265,6 +268,26 @@ fn repo_root() -> Result<PathBuf, String> {
         .map_err(|error| format!("解析仓库根目录失败: {error}"))
 }
 
+#[cfg(windows)]
+fn normalize_path_for_node(path: PathBuf) -> PathBuf {
+    let raw = path.as_os_str().to_string_lossy();
+
+    if let Some(stripped) = raw.strip_prefix(r"\\?\UNC\") {
+        return PathBuf::from(format!(r"\\{stripped}"));
+    }
+
+    if let Some(stripped) = raw.strip_prefix(r"\\?\") {
+        return PathBuf::from(stripped);
+    }
+
+    path
+}
+
+#[cfg(not(windows))]
+fn normalize_path_for_node(path: PathBuf) -> PathBuf {
+    path
+}
+
 fn find_release_sidecar_script(app: &AppHandle) -> Result<PathBuf, String> {
     let candidates = [
         "dist/index.js",
@@ -283,4 +306,32 @@ fn find_release_sidecar_script(app: &AppHandle) -> Result<PathBuf, String> {
     }
 
     Err("未找到发布版 sidecar 脚本".to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::normalize_path_for_node;
+    use std::path::PathBuf;
+
+    #[test]
+    #[cfg(windows)]
+    fn strips_extended_length_drive_prefix() {
+        let normalized = normalize_path_for_node(PathBuf::from(
+            r"\\?\C:\dev\Project\Prism-Agent\agent-sidecar\src\index.ts",
+        ));
+
+        assert_eq!(
+            normalized,
+            PathBuf::from(r"C:\dev\Project\Prism-Agent\agent-sidecar\src\index.ts")
+        );
+    }
+
+    #[test]
+    #[cfg(windows)]
+    fn strips_extended_length_unc_prefix() {
+        let normalized =
+            normalize_path_for_node(PathBuf::from(r"\\?\UNC\server\share\agent-sidecar"));
+
+        assert_eq!(normalized, PathBuf::from(r"\\server\share\agent-sidecar"));
+    }
 }
