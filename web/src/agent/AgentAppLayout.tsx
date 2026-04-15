@@ -38,16 +38,16 @@ export function AgentAppLayout() {
 
   return (
     <>
-      <div className="flex h-screen overflow-hidden">
+      <div className="flex h-screen overflow-hidden bg-background">
         <section className="flex min-w-0 flex-1 flex-col">
           <header 
-            className="grid grid-cols-[1fr_auto_1fr] items-center pr-2 pl-6 py-2 select-none"
+            className="grid grid-cols-[1fr_auto_1fr] items-center bg-background pr-2 pl-6 py-2 select-none"
             data-tauri-drag-region
           >
             <div className="flex items-center gap-2 overflow-hidden" data-tauri-drag-region>
                 {activeSession?.workspaceRoot ? (
                   <div 
-                    className="flex max-w-[420px] items-center gap-1.5 truncate text-xs font-medium tracking-tight text-mutedForeground/80 transition-colors hover:text-foreground"
+                    className="flex max-w-[420px] items-center gap-1.5 truncate text-xs font-medium tracking-tight text-mutedForeground/80"
                     title={activeSession.workspaceRoot}
                   >
                     <span className="truncate font-mono">{activeSession.workspaceRoot}</span>

@@ -1,4 +1,4 @@
-import { Trash2, Check, X } from 'lucide-react';
+import { Trash2, Check, X, Folder } from 'lucide-react';
 import { useMemo, useState, useEffect } from 'react';
 import { open } from '@tauri-apps/plugin-dialog';
 
@@ -108,13 +108,13 @@ export function AgentSessionList({
   };
 
   return (
-    <aside className="flex h-full w-[260px] shrink-0 flex-col bg-muted/30">
+    <aside className="flex h-full w-[260px] shrink-0 flex-col bg-background">
       <div className="p-4 pb-2 flex flex-col gap-2">
         <Button
           type="button"
           variant="surface"
           onClick={handleCreateNew}
-          className="h-10 w-full justify-center rounded-xl text-sm"
+          className="h-10 w-full justify-center rounded-2xl border-border/85 bg-muted/95 text-sm hover:bg-muted"
         >
           <span>新会话</span>
         </Button>
@@ -122,7 +122,7 @@ export function AgentSessionList({
           type="button"
           variant="secondary"
           onClick={handleOpenDirectory}
-          className="h-10 w-full justify-center rounded-xl border border-dashed border-border/70 bg-muted/70 text-sm text-foreground hover:bg-muted hover:border-border"
+          className="h-10 w-full justify-center rounded-2xl border border-dashed border-border/80 bg-muted/85 text-sm text-foreground hover:bg-muted hover:border-border"
         >
           <span>添加目录</span>
         </Button>
@@ -132,8 +132,12 @@ export function AgentSessionList({
         <div className="pb-4 pt-2">
           {groupedThreads.map((group) => (
             <div key={group.cwd} className="mb-5 last:mb-0">
-              <div className="group/header mb-1.5 grid grid-cols-[1fr_auto] items-center gap-2 px-3 text-[11px] font-medium uppercase tracking-[0.12em] text-mutedForeground/62">
+              <div className="group/header mb-1.5 grid grid-cols-[1fr_auto] items-center gap-2 px-3 text-sm font-medium tracking-[0.02em] text-mutedForeground/62">
                 <div className="flex min-w-0 items-center gap-2">
+                  <Folder
+                    aria-hidden="true"
+                    className="h-4 w-4 shrink-0 text-mutedForeground/50"
+                  />
                   <span className="truncate leading-none" title={group.cwd}>{group.label}</span>
                 </div>
                 {pendingDeleteGroup === group.cwd ? (
@@ -184,10 +188,10 @@ export function AgentSessionList({
                   return (
                     <div
                       key={thread.threadId}
-                      className={`group grid w-full grid-cols-[1fr_auto] items-center gap-1 rounded-xl border px-2 py-1.5 transition-colors ${
+                      className={`group grid w-full grid-cols-[1fr_auto] items-center gap-1 rounded-2xl border px-2 py-1.5 transition-colors ${
                         active
-                          ? 'border-border/70 bg-muted'
-                          : 'border-transparent hover:border-border/40 hover:bg-foreground/[0.04]'
+                          ? 'border-border/80 bg-muted/95'
+                          : 'border-border/45 bg-muted/70 hover:border-border/65 hover:bg-muted/85'
                       }`}
                     >
                       <div

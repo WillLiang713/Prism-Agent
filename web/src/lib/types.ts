@@ -58,17 +58,6 @@ export interface RuntimeModelConfig {
   reasoningEffort: ReasoningEffort;
 }
 
-export interface WebSearchConfig {
-  enabled: boolean;
-  toolMode: 'tavily' | 'exa' | 'builtin';
-  provider: string;
-  tavilyApiKey: string;
-  exaApiKey: string;
-  exaSearchType: string;
-  maxResults: number;
-  searchDepth: string;
-}
-
 export interface DesktopConfig {
   closeToTrayOnClose: boolean;
 }

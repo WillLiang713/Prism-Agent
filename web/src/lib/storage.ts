@@ -6,7 +6,6 @@ import type {
   ServiceConfig,
   ThemeMode,
   Topic,
-  WebSearchConfig,
 } from './types';
 
 export const STORAGE_KEYS = {
@@ -22,7 +21,6 @@ type ConfigPersistedShape = {
   serviceManagerSelectedId: string | null;
   services: ServiceConfig[];
   runtime: RuntimeModelConfig;
-  webSearch: WebSearchConfig;
   desktop: DesktopConfig;
 };
 

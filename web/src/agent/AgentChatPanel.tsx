@@ -7,11 +7,11 @@ import { AgentChatInput } from './components/AgentChatInput';
 import { AgentMessageList } from './components/AgentMessageList';
 import { AgentSessionList } from './components/AgentSessionList';
 import { SkillsDisplay } from './components/SkillsDisplay';
-import { Button } from '../components/ui/button';
 import type { AgentApprovalMode, AgentRuntimeStatus, AgentThreadMeta } from './client';
 import type { AgentSession } from './sessionStore';
 
 const CHAT_SIDE_PADDING = 'calc(1.5rem + 10px)';
+const SUPPRESSED_RUNTIME_REASON = '未指定主模型，请在设置中选择或输入模型名称。';
 
 export function AgentChatPanel({
   initialized,
@@ -61,7 +61,9 @@ export function AgentChatPanel({
   const submitDisabled = inputDisabled || agentConfigValidating || !agentRuntimeStatus.ready;
   const runtimeStatusMessage = agentConfigValidating
     ? '正在检查模型配置…'
-    : agentRuntimeStatus.reason;
+    : agentRuntimeStatus.reason === SUPPRESSED_RUNTIME_REASON
+      ? ''
+      : agentRuntimeStatus.reason;
 
   useEffect(() => {
     const root = scrollRef.current;
@@ -93,24 +95,17 @@ export function AgentChatPanel({
         
         <div className="flex-1 overflow-hidden">
           {!initialized ? (
-            <div className="flex h-full flex-col items-center justify-center gap-4 p-8 text-center">
+            <div className="flex h-full flex-col items-center justify-center p-8 text-center">
               <Loader2 className="h-8 w-8 animate-spin text-mutedForeground" />
-              <p className="text-sm text-mutedForeground">正在启动后端服务...</p>
             </div>
           ) : !activeSession ? (
-            <div className="flex h-full flex-col items-center justify-center gap-6 p-8 text-center">
-              <div className="rounded-full bg-muted p-6">
-                <MessageSquarePlus className="h-10 w-10 text-mutedForeground" />
-              </div>
-              <div className="max-w-sm space-y-2">
+            <div className="flex h-full items-center justify-center p-8">
+              <div className="flex w-full max-w-xl flex-col items-center gap-6 rounded-[28px] bg-background px-10 py-12 text-center">
+                <div className="rounded-full bg-background p-6">
+                  <MessageSquarePlus className="h-10 w-10 text-mutedForeground" />
+                </div>
                 <h3 className="text-lg font-medium">开始新的对话</h3>
-                <p className="text-sm text-mutedForeground">
-                  选择左侧的历史会话，或点击下方按钮开启一个新的任务。
-                </p>
               </div>
-              <Button onClick={() => onCreateSession()} variant="primary" className="h-11 px-8 rounded-full">
-                开启新会话
-              </Button>
             </div>
           ) : (
             <ScrollArea ref={scrollRef} className="h-full">

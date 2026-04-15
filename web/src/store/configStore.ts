@@ -9,7 +9,6 @@ import type {
   RuntimeModelConfig,
   ServiceConfig,
   ServiceModelConfig,
-  WebSearchConfig,
 } from '../lib/types';
 import { createId } from '../lib/utils';
 
@@ -17,13 +16,11 @@ type ConfigStoreState = {
   serviceManagerSelectedId: string | null;
   services: ServiceConfig[];
   runtimeModelConfig: RuntimeModelConfig;
-  webSearch: WebSearchConfig;
   desktop: DesktopConfig;
   setServiceManagerSelectedId: (serviceId: string) => void;
   upsertService: (service: Partial<ServiceConfig> & { id?: string }) => string;
   removeService: (serviceId: string) => void;
   updateRuntimeModelConfig: (patch: Partial<RuntimeModelConfig>) => void;
-  updateWebSearch: (patch: Partial<WebSearchConfig>) => void;
   updateDesktopConfig: (patch: Partial<DesktopConfig>) => void;
   getSelectedService: () => ServiceConfig | null;
   getServiceById: (serviceId: string | null | undefined) => ServiceConfig | null;
@@ -82,19 +79,6 @@ function createDefaultRuntimeConfig(): RuntimeModelConfig {
   };
 }
 
-function createDefaultWebSearchConfig(): WebSearchConfig {
-  return {
-    enabled: false,
-    toolMode: 'tavily',
-    provider: 'tavily',
-    tavilyApiKey: '',
-    exaApiKey: '',
-    exaSearchType: 'auto',
-    maxResults: 5,
-    searchDepth: 'basic',
-  };
-}
-
 function normalizeServices(services: ServiceConfig[] | undefined) {
   if (services && services.length > 0) {
     return services;
@@ -149,7 +133,6 @@ export const useConfigStore = create<ConfigStoreState>()(
       serviceManagerSelectedId: null,
       services: normalizeServices(undefined),
       runtimeModelConfig: createDefaultRuntimeConfig(),
-      webSearch: createDefaultWebSearchConfig(),
       desktop: {
         closeToTrayOnClose: true,
       },
@@ -201,14 +184,6 @@ export const useConfigStore = create<ConfigStoreState>()(
           },
         }));
       },
-      updateWebSearch: (patch) => {
-        set((state) => ({
-          webSearch: {
-            ...state.webSearch,
-            ...patch,
-          },
-        }));
-      },
       updateDesktopConfig: (patch) => {
         set((state) => ({
           desktop: {
@@ -247,7 +222,6 @@ export const useConfigStore = create<ConfigStoreState>()(
             state.serviceManagerSelectedId || state.services[0]?.id || null,
           services: state.services,
           runtime: state.runtimeModelConfig,
-          webSearch: state.webSearch,
           desktop: state.desktop,
         }),
         (persisted) => ({
@@ -257,7 +231,6 @@ export const useConfigStore = create<ConfigStoreState>()(
             normalizeServices(undefined)[0].id,
           services: normalizeServices(persisted.services),
           runtimeModelConfig: persisted.runtime || createDefaultRuntimeConfig(),
-          webSearch: persisted.webSearch || createDefaultWebSearchConfig(),
           desktop: persisted.desktop || { closeToTrayOnClose: true },
         }) as ConfigStoreState,
       ),

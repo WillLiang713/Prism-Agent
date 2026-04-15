@@ -23,14 +23,14 @@
 }
 
 .dark {
-  --background: 0 0% 4%;
+  --background: 0 0% 6%;
   --foreground: 0 0% 95%;
-  --card: 0 0% 7%;
+  --card: 0 0% 9%;
   --card-foreground: 0 0% 95%;
-  --muted: 0 0% 10%;
+  --muted: 0 0% 12%;
   --muted-foreground: 0 0% 67%;
-  --border: 0 0% 17%;
-  --accent: 0 0% 10%;
+  --border: 0 0% 19%;
+  --accent: 0 0% 13%;
   --accent-foreground: 0 0% 92%;
   --primary: 0 0% 100%;
   --primary-foreground: 0 0% 4%;

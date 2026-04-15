@@ -68,7 +68,7 @@ export function ServiceManager() {
         <div className="pr-3">
           <Button
             onClick={() => upsertService({ name: '新服务' })}
-            className="h-11 w-full gap-2 rounded-xl bg-muted text-sm text-foreground hover:bg-border"
+            className="h-11 w-full gap-2 rounded-xl border-0 bg-muted/80 text-sm text-foreground transition-colors hover:bg-muted"
           >
             <Plus className="h-4 w-4" />
             <span className="font-medium">新建服务</span>
@@ -77,15 +77,14 @@ export function ServiceManager() {
         <ScrollArea className="max-h-[360px] pr-3">
           <div className="space-y-2">
             {services.map((service) => (
-              <Button
+              <button
                 key={service.id}
                 type="button"
-                variant="ghost"
                 onClick={() => setServiceManagerSelectedId(service.id)}
-                className={`h-auto w-full justify-start rounded-xl border px-4 py-4 text-left ${
+                className={`inline-flex h-auto w-full touch-manipulation justify-start rounded-xl px-4 py-4 text-left focus-visible:outline-none ${
                   service.id === selectedService.id
-                    ? 'border-border bg-card hover:bg-card'
-                    : 'border-transparent bg-muted hover:bg-card'
+                    ? 'bg-foreground/[0.08]'
+                    : 'bg-foreground/[0.045] shadow-[0_1px_0_rgba(255,255,255,0.02)_inset] transition-colors hover:bg-foreground/[0.06]'
                 }`}
               >
                 <div className="flex w-full min-w-0 flex-col items-start gap-1.5">
@@ -93,18 +92,24 @@ export function ServiceManager() {
                     {service.name || '未命名服务'}
                   </div>
                   <div className="flex w-full items-center gap-2">
-                    <div className="truncate rounded-full border border-border bg-card px-2 py-0.5 text-xs font-normal text-mutedForeground">
+                    <div
+                      className={`truncate rounded-full px-2 py-0.5 text-xs font-normal text-mutedForeground ${
+                        service.id === selectedService.id
+                          ? 'bg-background/85'
+                          : 'bg-background/65'
+                      }`}
+                    >
                       {providerLabels[service.model.providerSelection]}
                     </div>
                   </div>
                 </div>
-              </Button>
+              </button>
             ))}
           </div>
         </ScrollArea>
       </div>
 
-      <div className="space-y-5 rounded-xl border border-border bg-card p-6">
+      <div className="space-y-5 rounded-xl bg-card p-6">
         <div className="flex items-center justify-between">
           <h3 className="font-display text-base font-medium tracking-tight text-foreground">当前</h3>
           {services.length > 1 ? (
@@ -116,6 +121,7 @@ export function ServiceManager() {
         <label className="grid gap-2 text-xs">
           <span className="text-mutedForeground">名称</span>
           <Input
+            className="border-0 bg-muted"
             value={selectedService.name}
             onChange={(event) =>
               upsertService({
@@ -136,10 +142,10 @@ export function ServiceManager() {
                 )
               }
             >
-              <SelectTrigger>
+              <SelectTrigger className="border-0 bg-muted shadow-none">
                 <SelectValue placeholder="选择服务类型" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="border-0">
                 <SelectItem value="openai_chat">OpenAI Chat</SelectItem>
                 <SelectItem value="openai_responses">OpenAI Responses</SelectItem>
                 <SelectItem value="anthropic">Anthropic Messages</SelectItem>
@@ -150,6 +156,7 @@ export function ServiceManager() {
           <label className="grid gap-2 text-xs">
             <span className="text-mutedForeground">地址</span>
             <Input
+              className="border-0 bg-muted"
               value={selectedService.model.apiUrl}
               onChange={(event) => handleServiceChange('apiUrl', event.currentTarget.value)}
             />
@@ -157,6 +164,7 @@ export function ServiceManager() {
           <label className="grid gap-2 text-xs">
             <span className="text-mutedForeground">Key</span>
             <Input
+              className="border-0 bg-muted"
               type="password"
               value={selectedService.model.apiKey}
               onChange={(event) => handleServiceChange('apiKey', event.currentTarget.value)}
@@ -165,6 +173,7 @@ export function ServiceManager() {
           <label className="grid gap-2 text-xs">
             <span className="text-mutedForeground">模型</span>
             <Input
+              className="border-0 bg-muted"
               value={selectedService.model.model}
               onChange={(event) => handleServiceChange('model', event.currentTarget.value)}
             />

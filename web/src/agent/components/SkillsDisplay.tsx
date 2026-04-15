@@ -32,7 +32,7 @@ export function SkillsDisplay({ skills }: { skills: AgentSkillsSnapshot }) {
           {skills.items.map((skill) => (
             <span
               key={skill.id}
-              className="rounded-lg border border-border/40 bg-muted/30 px-2.5 py-1 text-[12px] text-mutedForeground transition-colors hover:border-border hover:bg-muted/50"
+              className="cursor-default select-none rounded-lg border border-border/40 bg-muted/30 px-2.5 py-1 text-[12px] text-mutedForeground"
               title={`${skill.description}\n${skill.source}`}
             >
               {skill.name}

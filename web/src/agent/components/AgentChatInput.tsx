@@ -106,12 +106,15 @@ export function AgentChatInput({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="rounded-[12px] border border-border bg-background/95 p-3 backdrop-blur shadow-sm">
+    <form
+      onSubmit={handleSubmit}
+      className="rounded-[20px] bg-card p-3 shadow-none dark:shadow-[0_10px_30px_rgba(0,0,0,0.16)]"
+    >
       {images.length > 0 ? (
         <div className="mb-3 flex flex-wrap gap-3">
           {images.map((image, index) => (
             <div key={`${image.name}-${index}`} className="relative">
-              <ContentImage src={image.dataUrl} alt={image.name} className="h-16 w-16 rounded-xl object-cover" />
+              <ContentImage src={image.dataUrl} alt={image.name} className="h-16 w-16 rounded-2xl object-cover" />
               <Button
                 type="button"
                 variant="inverse"
