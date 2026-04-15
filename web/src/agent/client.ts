@@ -1,7 +1,4 @@
-import { invoke } from '@tauri-apps/api/core';
-import { listen } from '@tauri-apps/api/event';
-
-import { isDesktopRuntime } from '../lib/runtime';
+import { buildApiUrl, runtimeConfig } from '../lib/runtime';
 
 export type AgentReasoningEffort = 'none' | 'minimal' | 'low' | 'medium' | 'high' | 'xhigh';
 export type AgentApprovalMode = 'manual' | 'auto';
@@ -155,80 +152,167 @@ export interface UploadImagePayload {
   dataUrl: string;
 }
 
-function assertDesktopRuntime() {
-  if (!isDesktopRuntime()) {
-    throw new Error('Agent backend 仅支持桌面模式');
+function assertBackendConfigured() {
+  if (!runtimeConfig.apiBase) {
+    throw new Error(runtimeConfig.startupError || '当前未配置可用的 Agent 后端。');
+  }
+}
+
+function createHeaders(contentType = true) {
+  const headers = new Headers();
+  if (contentType) {
+    headers.set('Content-Type', 'application/json');
+  }
+  if (runtimeConfig.authToken) {
+    headers.set('Authorization', `Bearer ${runtimeConfig.authToken}`);
+  }
+  return headers;
+}
+
+async function requestJson<T>(input: string, init: RequestInit = {}) {
+  assertBackendConfigured();
+  const response = await fetch(buildApiUrl(input), {
+    ...init,
+    headers: init.headers ?? createHeaders(init.body !== undefined),
+  });
+
+  if (!response.ok) {
+    throw new Error(await readErrorMessage(response));
+  }
+
+  if (response.status === 204) {
+    return undefined as T;
+  }
+
+  return (await response.json()) as T;
+}
+
+async function readErrorMessage(response: Response) {
+  try {
+    const payload = (await response.json()) as { message?: string };
+    return payload.message || `请求失败（${response.status}）`;
+  } catch {
+    return `请求失败（${response.status}）`;
   }
 }
 
 export async function agentHealth() {
-  assertDesktopRuntime();
-  return invoke<AgentHealth>('agent_health');
+  return requestJson<AgentHealth>('/api/agent/health', {
+    headers: createHeaders(false),
+  });
 }
 
 export async function agentStartSession(workspaceRoot = '') {
-  assertDesktopRuntime();
-  return invoke<AgentSessionBootstrap>('agent_start_session', {
-    payload: { workspaceRoot },
+  return requestJson<AgentSessionBootstrap>('/api/agent/sessions', {
+    method: 'POST',
+    body: JSON.stringify({ workspaceRoot }),
   });
 }
 
 export async function agentResumeSession(threadId: string, workspaceRoot = '') {
-  assertDesktopRuntime();
-  return invoke<AgentSessionBootstrap>('agent_resume_session', {
-    payload: { threadId, workspaceRoot },
+  return requestJson<AgentSessionBootstrap>('/api/agent/sessions/resume', {
+    method: 'POST',
+    body: JSON.stringify({ threadId, workspaceRoot }),
   });
 }
 
-export async function agentSendMessage(payload: {
-  requestId: string;
-  sessionId: string;
-  text: string;
-  images: UploadImagePayload[];
-  reasoningEffort: AgentReasoningEffort;
-  approvalMode: AgentApprovalMode;
-  config: AgentRuntimeConfig;
-}) {
-  assertDesktopRuntime();
-  return invoke<{ requestId: string }>('agent_send_message', {
-    payload,
+export async function agentSendMessage(
+  payload: {
+    requestId: string;
+    sessionId: string;
+    text: string;
+    images: UploadImagePayload[];
+    reasoningEffort: AgentReasoningEffort;
+    approvalMode: AgentApprovalMode;
+    config: AgentRuntimeConfig;
+  },
+  onEvent: (event: AgentEvent) => void,
+) {
+  assertBackendConfigured();
+  const response = await fetch(buildApiUrl('/api/agent/requests'), {
+    method: 'POST',
+    headers: createHeaders(true),
+    body: JSON.stringify(payload),
   });
+
+  if (!response.ok) {
+    throw new Error(await readErrorMessage(response));
+  }
+
+  if (!response.body) {
+    throw new Error('后端未返回流式响应。');
+  }
+
+  await readNdjsonStream(response.body, onEvent);
+  return { requestId: payload.requestId };
 }
 
 export async function agentValidateConfig(config: AgentRuntimeConfig) {
-  assertDesktopRuntime();
-  return invoke<AgentRuntimeStatus>('agent_validate_config', {
-    payload: { config },
+  return requestJson<AgentRuntimeStatus>('/api/agent/config/validate', {
+    method: 'POST',
+    body: JSON.stringify({ config }),
   });
 }
 
 export async function agentCancel(requestId: string) {
-  assertDesktopRuntime();
-  return invoke('agent_cancel', {
-    payload: { requestId },
+  await requestJson(`/api/agent/requests/${encodeURIComponent(requestId)}/cancel`, {
+    method: 'POST',
+    body: JSON.stringify({}),
   });
 }
 
 export async function agentRespondApproval(approvalId: string, decision: 'allow' | 'deny') {
-  assertDesktopRuntime();
-  return invoke('agent_respond_approval', {
-    payload: { approvalId, decision },
+  await requestJson(`/api/agent/approvals/${encodeURIComponent(approvalId)}`, {
+    method: 'POST',
+    body: JSON.stringify({ decision }),
   });
 }
 
 export async function agentListThreads() {
-  assertDesktopRuntime();
-  return invoke<{ threads: AgentThreadMeta[] }>('agent_list_sessions');
-}
-
-export async function agentArchiveThread(threadId: string) {
-  assertDesktopRuntime();
-  return invoke('agent_delete_session', {
-    payload: { threadId },
+  return requestJson<{ threads: AgentThreadMeta[] }>('/api/agent/threads', {
+    headers: createHeaders(false),
   });
 }
 
-export async function listenAgentEvents(callback: (event: AgentEvent) => void) {
-  assertDesktopRuntime();
-  return listen<AgentEvent>('agent://event', (event) => callback(event.payload));
+export async function agentArchiveThread(threadId: string) {
+  await requestJson(`/api/agent/threads/${encodeURIComponent(threadId)}`, {
+    method: 'DELETE',
+    headers: createHeaders(false),
+  });
+}
+
+async function readNdjsonStream(
+  stream: ReadableStream<Uint8Array>,
+  onEvent: (event: AgentEvent) => void,
+) {
+  const reader = stream.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) {
+        break;
+      }
+
+      buffer += decoder.decode(value, { stream: true });
+      let newlineIndex = buffer.indexOf('\n');
+      while (newlineIndex !== -1) {
+        const line = buffer.slice(0, newlineIndex).trim();
+        buffer = buffer.slice(newlineIndex + 1);
+        if (line) {
+          onEvent(JSON.parse(line) as AgentEvent);
+        }
+        newlineIndex = buffer.indexOf('\n');
+      }
+    }
+
+    const trailing = buffer.trim();
+    if (trailing) {
+      onEvent(JSON.parse(trailing) as AgentEvent);
+    }
+  } finally {
+    reader.releaseLock();
+  }
 }

@@ -1,6 +1,7 @@
 import os from 'node:os';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
+import type http from 'node:http';
 
 import {
   AuthStorage,
@@ -21,15 +22,16 @@ import {
 
 import { classifyCommandRisk, classifyPathRisk, shouldAutoApproveCommand } from './approval.js';
 import { createBridge } from './bridge.js';
+import { createHttpServer } from './http.js';
 import { SessionRegistry, type PersistedSessionSnapshot, type RuntimeSessionRecord } from './sessions.js';
 import type {
   AgentApprovalMode,
-  CancelParams,
   AgentEvent,
+  AgentReasoningEffort,
   AgentRuntimeConfig,
   AgentRuntimeStatus,
-  AgentReasoningEffort,
   AgentSessionToolEvent,
+  CancelParams,
   OuterMethods,
   RespondApprovalParams,
   ResumeSessionParams,
@@ -39,7 +41,7 @@ import type {
   StartSessionParams,
 } from './types.js';
 
-const SIDECAR_VERSION = '0.2.0';
+const SIDECAR_VERSION = '0.3.0';
 const AGENT_VERSION = '0.66.1';
 const SUPPORTED_PROVIDERS = ['openai', 'anthropic', 'gemini'] as const;
 
@@ -49,130 +51,238 @@ type PendingApproval = {
   resolve: (decision: 'allow' | 'deny') => void;
 };
 
+type RuntimeOptions = {
+  transport: 'http' | 'stdio';
+  host: string;
+  port: number;
+  token: string;
+};
+
 const authStorage = AuthStorage.create();
 const modelRegistry = ModelRegistry.create(authStorage);
 const pendingApprovals = new Map<string, PendingApproval>();
 const requestApprovalModes = new Map<string, AgentApprovalMode>();
 const sessionRegistry = new SessionRegistry(resolveDataDir());
+const eventSubscribers = new Set<(event: AgentEvent) => void>();
+const servers: http.Server[] = [];
 
-const bridge = createBridge(
-  {
-    async health() {
-      await sessionRegistry.ensureReady();
-      return {
-        sidecarVersion: SIDECAR_VERSION,
-        agentVersion: AGENT_VERSION,
-        loggedIn: authStorage.list().length > 0,
-      } satisfies SidecarHealth;
-    },
+const methods = {
+  async health() {
+    await sessionRegistry.ensureReady();
+    return {
+      sidecarVersion: SIDECAR_VERSION,
+      agentVersion: AGENT_VERSION,
+      loggedIn: authStorage.list().length > 0,
+    } satisfies SidecarHealth;
+  },
 
-    async startSession(params) {
-      const { workspaceRoot } = params as StartSessionParams;
-      const runtime = await createRuntimeSession({
-        workspaceRoot,
-      });
-      return sessionRegistry.toBootstrap(runtime.snapshot) satisfies OuterMethods['startSession'];
-    },
+  async startSession(params?: StartSessionParams) {
+    const workspaceRoot = params?.workspaceRoot ?? '';
+    const runtime = await createRuntimeSession({
+      workspaceRoot,
+    });
+    return sessionRegistry.toBootstrap(runtime.snapshot) satisfies OuterMethods['startSession'];
+  },
 
-    async resumeSession(params) {
-      const { workspaceRoot, threadId } = params as ResumeSessionParams;
-      const existing = sessionRegistry.getRuntimeSessionByThreadId(threadId);
-      if (existing) {
-        return sessionRegistry.toBootstrap(existing.snapshot) satisfies OuterMethods['resumeSession'];
-      }
+  async resumeSession(params?: ResumeSessionParams) {
+    const workspaceRoot = params?.workspaceRoot ?? '';
+    const threadId = params?.threadId ?? '';
+    const existing = sessionRegistry.getRuntimeSessionByThreadId(threadId);
+    if (existing) {
+      return sessionRegistry.toBootstrap(existing.snapshot) satisfies OuterMethods['resumeSession'];
+    }
 
-      const snapshot = await sessionRegistry.loadSnapshot(threadId);
-      const runtime = await createRuntimeSession({
-        workspaceRoot: workspaceRoot || snapshot.workspaceRoot,
-        existingSnapshot: snapshot,
-      });
-      return sessionRegistry.toBootstrap(runtime.snapshot) satisfies OuterMethods['resumeSession'];
-    },
+    const snapshot = await sessionRegistry.loadSnapshot(threadId);
+    const runtime = await createRuntimeSession({
+      workspaceRoot: workspaceRoot || snapshot.workspaceRoot,
+      existingSnapshot: snapshot,
+    });
+    return sessionRegistry.toBootstrap(runtime.snapshot) satisfies OuterMethods['resumeSession'];
+  },
 
-    async sendMessage(params) {
-      const payload = params as SendMessageParams;
-      const runtime = sessionRegistry.getRuntimeSession(payload.sessionId);
-      const requestId = payload.requestId || randomUUID();
-      requestApprovalModes.set(requestId, normalizeApprovalMode(payload.approvalMode));
-      sessionRegistry.markRequestStarted(runtime.sessionId, requestId, payload.text);
-      await sessionRegistry.saveSnapshot(runtime.snapshot);
+  async sendMessage(params?: SendMessageParams) {
+    if (!params) {
+      throw new Error('缺少请求参数。');
+    }
 
-      void runPrompt(runtime, requestId, payload).catch((error) => {
-        emit({
-          type: 'error',
-          requestId,
-          sessionId: runtime.sessionId,
-          message: error instanceof Error ? error.message : String(error),
-        });
-      });
+    const runtime = sessionRegistry.getRuntimeSession(params.sessionId);
+    const requestId = params.requestId || randomUUID();
+    requestApprovalModes.set(requestId, normalizeApprovalMode(params.approvalMode));
+    sessionRegistry.markRequestStarted(runtime.sessionId, requestId, params.text);
+    await sessionRegistry.saveSnapshot(runtime.snapshot);
 
-      return {
+    void runPrompt(runtime, requestId, { ...params, requestId }).catch((error) => {
+      emit({
+        type: 'error',
         requestId,
-      } satisfies OuterMethods['sendMessage'];
-    },
+        sessionId: runtime.sessionId,
+        message: error instanceof Error ? error.message : String(error),
+      });
+    });
 
-    async validateConfig(params) {
-      const payload = params as { config?: AgentRuntimeConfig };
-      return resolveRuntimeConfigStatus(payload.config) satisfies OuterMethods['validateConfig'];
-    },
-
-    async cancel(params) {
-      const payload = params as CancelParams;
-      requestApprovalModes.delete(payload.requestId);
-      for (const [approvalId, approval] of pendingApprovals.entries()) {
-        if (approval.requestId === payload.requestId) {
-          pendingApprovals.delete(approvalId);
-          approval.resolve('deny');
-        }
-      }
-
-      for (const runtime of getRuntimeSessions()) {
-        if (runtime.currentRequestId === payload.requestId) {
-          sessionRegistry.markRequestCancelled(payload.requestId);
-          await runtime.session.abort();
-        }
-      }
-      return null;
-    },
-
-    async respondApproval(params) {
-      const payload = params as RespondApprovalParams;
-      const pending = pendingApprovals.get(payload.approvalId);
-      if (!pending) {
-        throw new Error(`Unknown approval: ${payload.approvalId}`);
-      }
-      pendingApprovals.delete(payload.approvalId);
-      pending.resolve(payload.decision);
-      return null;
-    },
-
-    async listThreads() {
-      const threads = await sessionRegistry.listThreads();
-      return {
-        threads,
-      } satisfies OuterMethods['listThreads'];
-    },
-
-    async archiveThread(params) {
-      const { threadId } = params as { threadId: string };
-      await sessionRegistry.archiveThread(threadId);
-      return null;
-    },
+    return {
+      requestId,
+    } satisfies OuterMethods['sendMessage'];
   },
-  (payload) => {
-    process.stdout.write(`${JSON.stringify(payload)}\n`);
+
+  async validateConfig(params?: { config?: AgentRuntimeConfig }) {
+    return resolveRuntimeConfigStatus(params?.config) satisfies OuterMethods['validateConfig'];
   },
-);
+
+  async cancel(params?: CancelParams) {
+    const requestId = params?.requestId ?? '';
+    requestApprovalModes.delete(requestId);
+    for (const [approvalId, approval] of pendingApprovals.entries()) {
+      if (approval.requestId === requestId) {
+        pendingApprovals.delete(approvalId);
+        approval.resolve('deny');
+      }
+    }
+
+    for (const runtime of getRuntimeSessions()) {
+      if (runtime.currentRequestId === requestId) {
+        sessionRegistry.markRequestCancelled(requestId);
+        await runtime.session.abort();
+      }
+    }
+    return null;
+  },
+
+  async respondApproval(params?: RespondApprovalParams) {
+    const approvalId = params?.approvalId ?? '';
+    const pending = pendingApprovals.get(approvalId);
+    if (!pending) {
+      throw new Error(`Unknown approval: ${approvalId}`);
+    }
+
+    pendingApprovals.delete(approvalId);
+    pending.resolve(params?.decision ?? 'deny');
+    return null;
+  },
+
+  async listThreads() {
+    const threads = await sessionRegistry.listThreads();
+    return {
+      threads,
+    } satisfies OuterMethods['listThreads'];
+  },
+
+  async archiveThread(params?: { threadId: string }) {
+    const threadId = params?.threadId ?? '';
+    await sessionRegistry.archiveThread(threadId);
+    return null;
+  },
+};
 
 process.on('SIGINT', () => {
-  disposeAll();
-  process.exit(0);
+  void shutdown(0);
 });
 
 process.on('SIGTERM', () => {
-  disposeAll();
-  process.exit(0);
+  void shutdown(0);
 });
+
+async function main() {
+  const options = parseArgs(process.argv.slice(2));
+  await sessionRegistry.ensureReady();
+
+  if (options.transport === 'stdio') {
+    startStdioTransport();
+    return;
+  }
+
+  const server = await createHttpServer({
+    host: options.host,
+    port: options.port,
+    token: options.token,
+    methods,
+    subscribe,
+  });
+  servers.push(server);
+  console.error(
+    `[agent-sidecar] http listening on http://${options.host}:${options.port}/api/agent`,
+  );
+}
+
+function startStdioTransport() {
+  const bridge = createBridge(
+    methods as unknown as Record<string, (params?: unknown) => Promise<unknown>>,
+    (payload) => {
+      process.stdout.write(`${JSON.stringify(payload)}\n`);
+    },
+  );
+  subscribe((event) => bridge.emit(event));
+}
+
+function subscribe(listener: (event: AgentEvent) => void) {
+  eventSubscribers.add(listener);
+  return () => {
+    eventSubscribers.delete(listener);
+  };
+}
+
+async function shutdown(exitCode: number) {
+  for (const server of servers) {
+    await new Promise<void>((resolve) => {
+      server.close(() => resolve());
+    });
+  }
+  disposeAll();
+  process.exit(exitCode);
+}
+
+function parseArgs(argv: string[]): RuntimeOptions {
+  let transport: RuntimeOptions['transport'] = 'stdio';
+  let host = '127.0.0.1';
+  let port = 33100;
+  let token = '';
+
+  for (let index = 0; index < argv.length; index += 1) {
+    const arg = argv[index];
+    if (arg === '--transport' && argv[index + 1]) {
+      transport = argv[index + 1] === 'http' ? 'http' : 'stdio';
+      index += 1;
+      continue;
+    }
+    if (arg.startsWith('--transport=')) {
+      transport = arg.slice('--transport='.length) === 'http' ? 'http' : 'stdio';
+      continue;
+    }
+    if (arg === '--host' && argv[index + 1]) {
+      host = argv[index + 1];
+      index += 1;
+      continue;
+    }
+    if (arg.startsWith('--host=')) {
+      host = arg.slice('--host='.length);
+      continue;
+    }
+    if (arg === '--port' && argv[index + 1]) {
+      port = Number.parseInt(argv[index + 1], 10) || port;
+      index += 1;
+      continue;
+    }
+    if (arg.startsWith('--port=')) {
+      port = Number.parseInt(arg.slice('--port='.length), 10) || port;
+      continue;
+    }
+    if (arg === '--token' && argv[index + 1]) {
+      token = argv[index + 1];
+      index += 1;
+      continue;
+    }
+    if (arg.startsWith('--token=')) {
+      token = arg.slice('--token='.length);
+    }
+  }
+
+  return {
+    transport,
+    host,
+    port,
+    token,
+  };
+}
 
 async function createRuntimeSession(options: {
   workspaceRoot: string;
@@ -541,9 +651,9 @@ function collectSkills(loader: DefaultResourceLoader) {
   }));
   return sessionRegistry.buildSkillsSnapshot(
     items,
-    skillResult.diagnostics.map((diagnostic) =>
-      String((diagnostic as { message?: unknown }).message ?? ''),
-    ).filter(Boolean),
+    skillResult.diagnostics
+      .map((diagnostic) => String((diagnostic as { message?: unknown }).message ?? ''))
+      .filter(Boolean),
   );
 }
 
@@ -631,7 +741,7 @@ function resolveRuntimeConfigStatus(config?: AgentRuntimeConfig | null): AgentRu
     };
   }
 
-  if (!SUPPORTED_PROVIDERS.includes(normalized.provider as typeof SUPPORTED_PROVIDERS[number])) {
+  if (!SUPPORTED_PROVIDERS.includes(normalized.provider as (typeof SUPPORTED_PROVIDERS)[number])) {
     resetProviderOverrides();
     return {
       configured: true,
@@ -699,7 +809,11 @@ async function applyRuntimeConfig(runtime: RuntimeSessionRecord, config?: AgentR
     throw new Error(`找不到模型 ${status.provider}/${status.model}。`);
   }
 
-  if (!runtime.session.model || runtime.session.model.provider !== model.provider || runtime.session.model.id !== model.id) {
+  if (
+    !runtime.session.model ||
+    runtime.session.model.provider !== model.provider ||
+    runtime.session.model.id !== model.id
+  ) {
     await runtime.session.setModel(model);
   }
 
@@ -708,8 +822,9 @@ async function applyRuntimeConfig(runtime: RuntimeSessionRecord, config?: AgentR
 }
 
 function ensureToolEvent(runtime: RuntimeSessionRecord, seed: AgentSessionToolEvent) {
-  const assistantMessage = sessionRegistry.getAssistantMessage(runtime.sessionId)
-    ?? sessionRegistry.getLatestAssistantMessage(runtime.sessionId);
+  const assistantMessage =
+    sessionRegistry.getAssistantMessage(runtime.sessionId) ??
+    sessionRegistry.getLatestAssistantMessage(runtime.sessionId);
   if (!assistantMessage) {
     throw new Error('No assistant message available for tool event.');
   }
@@ -759,7 +874,12 @@ function summarizeTool(toolName: string, args: unknown) {
   if (toolName === 'bash' && typeof args === 'object' && args && 'command' in args) {
     return String((args as { command?: unknown }).command ?? '');
   }
-  if ((toolName === 'edit' || toolName === 'write' || toolName === 'read') && typeof args === 'object' && args && 'path' in args) {
+  if (
+    (toolName === 'edit' || toolName === 'write' || toolName === 'read') &&
+    typeof args === 'object' &&
+    args &&
+    'path' in args
+  ) {
     return String((args as { path?: unknown }).path ?? '');
   }
   if ((toolName === 'grep' || toolName === 'find') && typeof args === 'object' && args && 'pattern' in args) {
@@ -839,7 +959,9 @@ function waitForApproval(sessionId: string, requestId: string, approvalId: strin
 }
 
 function emit(event: AgentEvent) {
-  bridge.emit(event);
+  for (const listener of eventSubscribers) {
+    listener(event);
+  }
 }
 
 function resolveWorkspaceRoot(workspaceRoot: string) {
@@ -863,3 +985,8 @@ function getRuntimeSessions() {
 function disposeAll() {
   sessionRegistry.disposeAll();
 }
+
+void main().catch(async (error) => {
+  console.error(`[agent-sidecar] ${error instanceof Error ? error.message : String(error)}`);
+  await shutdown(1);
+});

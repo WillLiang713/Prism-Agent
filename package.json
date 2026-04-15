@@ -8,7 +8,8 @@
     "web"
   ],
   "scripts": {
-    "dev": "node scripts/dev-desktop.mjs",
+    "dev:web": "node scripts/dev-web.mjs",
+    "dev:desktop": "node scripts/dev-desktop.mjs",
     "build": "npm --prefix web run build && npm --workspace agent-sidecar run build && tauri build"
   },
   "dependencies": {

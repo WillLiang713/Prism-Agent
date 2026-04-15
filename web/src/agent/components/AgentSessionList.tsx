@@ -4,6 +4,7 @@ import { open } from '@tauri-apps/plugin-dialog';
 
 import { Button } from '../../components/ui/button';
 import { ScrollArea } from '../../components/ui/scroll-area';
+import { isDesktopRuntime } from '../../lib/runtime';
 import type { AgentThreadMeta } from '../client';
 import type { AgentSession } from '../sessionStore';
 
@@ -66,6 +67,14 @@ export function AgentSessionList({
   };
 
   const handleOpenDirectory = async () => {
+    if (!isDesktopRuntime()) {
+      const selected = window.prompt('输入要打开的工作目录路径');
+      if (selected?.trim()) {
+        onCreate(selected.trim());
+      }
+      return;
+    }
+
     const selected = await open({
       directory: true,
       multiple: false,

@@ -1,8 +1,9 @@
 const DESKTOP_DEFAULT_API_BASE = 'http://127.0.0.1:33100';
 
 export interface PrismRuntimeConfig {
-  platform: 'web' | 'desktop';
+  platform: 'web' | 'desktop' | 'mock';
   apiBase: string;
+  authToken: string;
   backendManagedByDesktop: boolean;
   startupError: string;
 }
@@ -13,16 +14,31 @@ function resolveRuntimeConfig(): PrismRuntimeConfig {
   const params = new URLSearchParams(window.location.search);
   const queryApiBase = (params.get('apiBase') || '').trim();
   const queryPlatform = (params.get('platform') || '').trim();
+  const queryAuthToken = (params.get('authToken') || '').trim();
   const injectedApiBase = String(runtime.apiBase || '').trim();
-  const apiBase = (queryApiBase || injectedApiBase || '').replace(/\/+$/, '');
+  const injectedAuthToken = String(runtime.authToken || '').trim();
+  const envApiBase = String(import.meta.env.VITE_PRISM_API_BASE || '').trim();
+  const envAuthToken = String(import.meta.env.VITE_PRISM_AUTH_TOKEN || '').trim();
+  const envPlatform = String(import.meta.env.VITE_PRISM_PLATFORM || '').trim();
+  const apiBase = (queryApiBase || injectedApiBase || envApiBase || '').replace(/\/+$/, '');
+  const authToken = queryAuthToken || injectedAuthToken || envAuthToken;
+  const explicitPlatform =
+    queryPlatform || String(runtime.platform || '').trim() || envPlatform || '';
   const platform =
-    queryPlatform === 'desktop' || runtime.platform === 'desktop' || apiBase
+    explicitPlatform === 'mock'
+      ? 'mock'
+      : explicitPlatform === 'desktop'
+      ? 'desktop'
+      : explicitPlatform === 'web'
+      ? 'web'
+      : apiBase
       ? 'desktop'
       : 'web';
 
   return {
     platform,
     apiBase: apiBase || (platform === 'desktop' ? DESKTOP_DEFAULT_API_BASE : ''),
+    authToken,
     backendManagedByDesktop:
       runtime.backendManagedByDesktop === true || platform === 'desktop',
     startupError: String(runtime.startupError || '').trim(),

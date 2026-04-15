@@ -1,32 +1,26 @@
-use std::collections::HashMap;
 use std::env;
 use std::path::{Path, PathBuf};
-use std::sync::{
-    atomic::{AtomicU64, Ordering},
-    Arc,
-};
+use std::sync::Arc;
+use std::time::{SystemTime, UNIX_EPOCH};
 
-use serde_json::{json, Value};
-use tauri::{path::BaseDirectory, AppHandle, Emitter, Manager};
-use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
-use tokio::process::{Child, ChildStdin, Command};
-use tokio::sync::{oneshot, Mutex};
-use tokio::time::{timeout, Duration};
+use tauri::{path::BaseDirectory, AppHandle, Manager};
+use tokio::io::{AsyncBufReadExt, BufReader};
+use tokio::process::{Child, Command};
+use tokio::sync::Mutex;
 
-type PendingSender = oneshot::Sender<Result<Value, String>>;
-const SIDECAR_RESPONSE_TIMEOUT_SECS: u64 = 10;
+const SIDECAR_HOST: &str = "127.0.0.1";
+const SIDECAR_PORT: u16 = 33100;
 
-pub struct AgentBridge {
+pub struct AgentSidecar {
     child: Mutex<Child>,
-    stdin: Mutex<ChildStdin>,
-    pending: Mutex<HashMap<u64, PendingSender>>,
-    next_id: AtomicU64,
+    pub api_base: String,
+    pub auth_token: String,
 }
 
-impl AgentBridge {
+impl AgentSidecar {
     pub async fn spawn(app: &AppHandle) -> Result<Arc<Self>, String> {
-        let mut command = build_sidecar_command(app)?;
-        command.stdin(std::process::Stdio::piped());
+        let auth_token = generate_token();
+        let mut command = build_sidecar_command(app, &auth_token)?;
         command.stdout(std::process::Stdio::piped());
         command.stderr(std::process::Stdio::piped());
 
@@ -34,10 +28,6 @@ impl AgentBridge {
             .spawn()
             .map_err(|error| format!("启动 agent sidecar 失败: {error}"))?;
 
-        let stdin = child
-            .stdin
-            .take()
-            .ok_or_else(|| "sidecar stdin 不可用".to_string())?;
         let stdout = child
             .stdout
             .take()
@@ -47,58 +37,14 @@ impl AgentBridge {
             .take()
             .ok_or_else(|| "sidecar stderr 不可用".to_string())?;
 
-        let bridge = Arc::new(Self {
+        spawn_log_task(stdout, "stdout");
+        spawn_log_task(stderr, "stderr");
+
+        Ok(Arc::new(Self {
             child: Mutex::new(child),
-            stdin: Mutex::new(stdin),
-            pending: Mutex::new(HashMap::new()),
-            next_id: AtomicU64::new(1),
-        });
-
-        spawn_stdout_task(app.clone(), bridge.clone(), stdout);
-        spawn_stderr_task(stderr);
-
-        Ok(bridge)
-    }
-
-    pub async fn call(&self, method: &str, params: Value) -> Result<Value, String> {
-        let id = self.next_id.fetch_add(1, Ordering::Relaxed);
-        let payload = json!({
-            "jsonrpc": "2.0",
-            "id": id,
-            "method": method,
-            "params": params,
-        });
-
-        let (tx, rx) = oneshot::channel();
-        self.pending.lock().await.insert(id, tx);
-
-        {
-            let mut stdin = self.stdin.lock().await;
-            stdin
-                .write_all(payload.to_string().as_bytes())
-                .await
-                .map_err(|error| format!("写入 sidecar 请求失败: {error}"))?;
-            stdin
-                .write_all(b"\n")
-                .await
-                .map_err(|error| format!("写入 sidecar 分帧失败: {error}"))?;
-            stdin
-                .flush()
-                .await
-                .map_err(|error| format!("刷新 sidecar stdin 失败: {error}"))?;
-        }
-
-        match timeout(Duration::from_secs(SIDECAR_RESPONSE_TIMEOUT_SECS), rx).await {
-            Ok(Ok(result)) => result,
-            Ok(Err(error)) => Err(format!("等待 sidecar 响应失败: {error}")),
-            Err(_) => {
-                self.pending.lock().await.remove(&id);
-                Err(format!(
-                    "等待 sidecar 响应超时（{}s，method={method}）",
-                    SIDECAR_RESPONSE_TIMEOUT_SECS
-                ))
-            }
-        }
+            api_base: format!("http://{SIDECAR_HOST}:{SIDECAR_PORT}"),
+            auth_token,
+        }))
     }
 
     pub async fn shutdown(&self) {
@@ -107,56 +53,7 @@ impl AgentBridge {
     }
 }
 
-fn spawn_stdout_task(
-    app: AppHandle,
-    bridge: Arc<AgentBridge>,
-    stdout: tokio::process::ChildStdout,
-) {
-    tokio::spawn(async move {
-        let mut lines = BufReader::new(stdout).lines();
-        while let Ok(Some(line)) = lines.next_line().await {
-            let trimmed = line.trim();
-            if trimmed.is_empty() {
-                continue;
-            }
-
-            let parsed: Value = match serde_json::from_str(trimmed) {
-                Ok(value) => value,
-                Err(_) => continue,
-            };
-
-            if let Some(id) = parsed.get("id").and_then(Value::as_u64) {
-                let result = if let Some(error) = parsed.get("error") {
-                    Err(error
-                        .get("message")
-                        .and_then(Value::as_str)
-                        .unwrap_or("未知 sidecar 错误")
-                        .to_string())
-                } else {
-                    Ok(parsed.get("result").cloned().unwrap_or(Value::Null))
-                };
-
-                if let Some(sender) = bridge.pending.lock().await.remove(&id) {
-                    let _ = sender.send(result);
-                }
-                continue;
-            }
-
-            let _ = app.emit("agent://event", parsed);
-        }
-    });
-}
-
-fn spawn_stderr_task(stderr: tokio::process::ChildStderr) {
-    tokio::spawn(async move {
-        let mut lines = BufReader::new(stderr).lines();
-        while let Ok(Some(line)) = lines.next_line().await {
-            eprintln!("[agent-sidecar] {line}");
-        }
-    });
-}
-
-fn build_sidecar_command(app: &AppHandle) -> Result<Command, String> {
+fn build_sidecar_command(app: &AppHandle, auth_token: &str) -> Result<Command, String> {
     let repo_root = normalize_path_for_node(repo_root()?);
     let app_data_dir = app
         .path()
@@ -178,7 +75,13 @@ fn build_sidecar_command(app: &AppHandle) -> Result<Command, String> {
         command.current_dir(&repo_root);
         command.arg(tsx_cli_path);
         command.arg(script_path);
-        command.arg("--stdio");
+        command.arg("--transport=http");
+        command.arg("--host");
+        command.arg(SIDECAR_HOST);
+        command.arg("--port");
+        command.arg(SIDECAR_PORT.to_string());
+        command.arg("--token");
+        command.arg(auth_token);
         command.env("PRISM_AGENT_DATA_DIR", &app_data_dir);
         return Ok(command);
     }
@@ -187,9 +90,37 @@ fn build_sidecar_command(app: &AppHandle) -> Result<Command, String> {
     let mut command = Command::new(node_path);
     command.current_dir(&repo_root);
     command.arg(release_script);
-    command.arg("--stdio");
+    command.arg("--transport=http");
+    command.arg("--host");
+    command.arg(SIDECAR_HOST);
+    command.arg("--port");
+    command.arg(SIDECAR_PORT.to_string());
+    command.arg("--token");
+    command.arg(auth_token);
     command.env("PRISM_AGENT_DATA_DIR", &app_data_dir);
     Ok(command)
+}
+
+fn spawn_log_task<T>(stream: T, label: &'static str)
+where
+    T: tokio::io::AsyncRead + Unpin + Send + 'static,
+{
+    tokio::spawn(async move {
+        let mut lines = BufReader::new(stream).lines();
+        while let Ok(Some(line)) = lines.next_line().await {
+            if !line.trim().is_empty() {
+                eprintln!("[agent-sidecar:{label}] {line}");
+            }
+        }
+    });
+}
+
+fn generate_token() -> String {
+    let now = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|value| value.as_nanos())
+        .unwrap_or(0);
+    format!("prism-{}-{now}", std::process::id())
 }
 
 fn resolve_node_executable() -> Result<PathBuf, String> {

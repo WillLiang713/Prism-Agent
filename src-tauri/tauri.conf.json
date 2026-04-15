@@ -17,7 +17,9 @@
         "connect-src": [
           "'self'",
           "ipc:",
-          "http://ipc.localhost"
+          "http://ipc.localhost",
+          "http://127.0.0.1:33100",
+          "http://localhost:33100"
         ],
         "font-src": [
           "'self'",

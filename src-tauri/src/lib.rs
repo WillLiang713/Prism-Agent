@@ -7,9 +7,8 @@ use std::sync::{
 };
 use std::sync::{Arc, Mutex};
 
-use agent_sidecar::AgentBridge;
+use agent_sidecar::AgentSidecar;
 use serde::{Deserialize, Serialize};
-use serde_json::{json, Value};
 use tauri::webview::Color;
 use tauri::{
     menu::{Menu, MenuItem},
@@ -41,7 +40,7 @@ struct DesktopPreferencesState(Mutex<DesktopPreferences>);
 #[derive(Default)]
 struct ExitIntentState(Mutex<bool>);
 
-struct AgentBridgeState(Arc<AgentBridge>);
+struct AgentSidecarState(Arc<AgentSidecar>);
 
 #[cfg(windows)]
 struct WindowsSessionEndState(StdArc<AtomicBool>);
@@ -70,6 +69,7 @@ impl Default for WindowsSessionEndState {
 struct DesktopRuntime {
     platform: &'static str,
     api_base: String,
+    auth_token: String,
     backend_managed_by_desktop: bool,
     startup_error: String,
 }
@@ -78,75 +78,6 @@ struct DesktopRuntime {
 #[serde(rename_all = "camelCase")]
 struct DesktopPreferencesPayload {
     close_to_tray: bool,
-}
-
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct StartSessionPayload {
-    workspace_root: String,
-}
-
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct AgentConfigPayload {
-    provider: String,
-    model: String,
-    api_key: Option<String>,
-    api_url: Option<String>,
-    system_prompt: Option<String>,
-    service_name: Option<String>,
-}
-
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct ResumeSessionPayload {
-    workspace_root: String,
-    thread_id: String,
-}
-
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct SendImagePayload {
-    name: String,
-    media_type: String,
-    data_url: String,
-}
-
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct SendMessagePayload {
-    request_id: String,
-    session_id: String,
-    text: String,
-    images: Option<Vec<SendImagePayload>>,
-    reasoning_effort: Option<String>,
-    approval_mode: Option<String>,
-    config: Option<AgentConfigPayload>,
-}
-
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct ValidateConfigPayload {
-    config: Option<AgentConfigPayload>,
-}
-
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct CancelPayload {
-    request_id: String,
-}
-
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct ApprovalPayload {
-    approval_id: String,
-    decision: String,
-}
-
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct ArchiveThreadPayload {
-    thread_id: String,
 }
 
 fn build_runtime_script(config: &DesktopRuntime) -> Result<String, String> {
@@ -160,12 +91,17 @@ window.__PRISM_RUNTIME__ = {runtime_json};
     ))
 }
 
-fn prepare_runtime() -> DesktopRuntime {
+fn prepare_runtime(sidecar: Option<&AgentSidecar>, startup_error: String) -> DesktopRuntime {
     DesktopRuntime {
         platform: "desktop",
-        api_base: String::new(),
-        backend_managed_by_desktop: true,
-        startup_error: String::new(),
+        api_base: sidecar
+            .map(|sidecar| sidecar.api_base.clone())
+            .unwrap_or_default(),
+        auth_token: sidecar
+            .map(|sidecar| sidecar.auth_token.clone())
+            .unwrap_or_default(),
+        backend_managed_by_desktop: sidecar.is_some(),
+        startup_error,
     }
 }
 
@@ -319,13 +255,8 @@ fn create_tray(app: &tauri::AppHandle) -> Result<(), String> {
         .map_err(|error| format!("创建托盘图标失败: {error}"))
 }
 
-async fn call_agent(app: &tauri::AppHandle, method: &str, params: Value) -> Result<Value, String> {
-    let bridge = &app.state::<AgentBridgeState>().0;
-    bridge.call(method, params).await
-}
-
 async fn shutdown_agent(app: &tauri::AppHandle) {
-    if let Some(state) = app.try_state::<AgentBridgeState>() {
+    if let Some(state) = app.try_state::<AgentSidecarState>() {
         state.0.shutdown().await;
     }
 }
@@ -342,153 +273,6 @@ fn update_desktop_preferences(
         .map_err(|error| format!("更新桌面配置失败: {error}"))?;
     guard.close_to_tray = payload.close_to_tray;
     Ok(())
-}
-
-#[tauri::command]
-async fn agent_health(app: tauri::AppHandle) -> Result<Value, String> {
-    call_agent(&app, "health", Value::Null).await
-}
-
-#[tauri::command]
-async fn agent_start_session(
-    app: tauri::AppHandle,
-    payload: StartSessionPayload,
-) -> Result<Value, String> {
-    call_agent(
-        &app,
-        "startSession",
-        json!({
-            "workspaceRoot": payload.workspace_root,
-        }),
-    )
-    .await
-}
-
-#[tauri::command]
-async fn agent_resume_session(
-    app: tauri::AppHandle,
-    payload: ResumeSessionPayload,
-) -> Result<Value, String> {
-    call_agent(
-        &app,
-        "resumeSession",
-        json!({
-            "workspaceRoot": payload.workspace_root,
-            "threadId": payload.thread_id,
-        }),
-    )
-    .await
-}
-
-#[tauri::command]
-async fn agent_send_message(
-    app: tauri::AppHandle,
-    payload: SendMessagePayload,
-) -> Result<Value, String> {
-    let images = payload
-        .images
-        .unwrap_or_default()
-        .into_iter()
-        .map(|image| {
-            json!({
-                "name": image.name,
-                "mediaType": image.media_type,
-                "dataUrl": image.data_url,
-            })
-        })
-        .collect::<Vec<_>>();
-
-    call_agent(
-        &app,
-        "sendMessage",
-        json!({
-            "requestId": payload.request_id,
-            "sessionId": payload.session_id,
-            "text": payload.text,
-            "images": images,
-            "reasoningEffort": payload.reasoning_effort,
-            "approvalMode": payload.approval_mode,
-            "config": payload.config.as_ref().map(|config| json!({
-                "provider": config.provider.as_str(),
-                "model": config.model.as_str(),
-                "apiKey": config.api_key.as_deref(),
-                "apiUrl": config.api_url.as_deref(),
-                "systemPrompt": config.system_prompt.as_deref(),
-                "serviceName": config.service_name.as_deref(),
-            })),
-        }),
-    )
-    .await
-}
-
-#[tauri::command]
-async fn agent_validate_config(
-    app: tauri::AppHandle,
-    payload: ValidateConfigPayload,
-) -> Result<Value, String> {
-    call_agent(
-        &app,
-        "validateConfig",
-        json!({
-            "config": payload.config.as_ref().map(|config| json!({
-                "provider": config.provider.as_str(),
-                "model": config.model.as_str(),
-                "apiKey": config.api_key.as_deref(),
-                "apiUrl": config.api_url.as_deref(),
-                "systemPrompt": config.system_prompt.as_deref(),
-                "serviceName": config.service_name.as_deref(),
-            })),
-        }),
-    )
-    .await
-}
-
-#[tauri::command]
-async fn agent_cancel(app: tauri::AppHandle, payload: CancelPayload) -> Result<Value, String> {
-    call_agent(
-        &app,
-        "cancel",
-        json!({
-            "requestId": payload.request_id,
-        }),
-    )
-    .await
-}
-
-#[tauri::command]
-async fn agent_respond_approval(
-    app: tauri::AppHandle,
-    payload: ApprovalPayload,
-) -> Result<Value, String> {
-    call_agent(
-        &app,
-        "respondApproval",
-        json!({
-            "approvalId": payload.approval_id,
-            "decision": payload.decision,
-        }),
-    )
-    .await
-}
-
-#[tauri::command]
-async fn agent_list_sessions(app: tauri::AppHandle) -> Result<Value, String> {
-    call_agent(&app, "listThreads", Value::Null).await
-}
-
-#[tauri::command]
-async fn agent_delete_session(
-    app: tauri::AppHandle,
-    payload: ArchiveThreadPayload,
-) -> Result<Value, String> {
-    call_agent(
-        &app,
-        "archiveThread",
-        json!({
-            "threadId": payload.thread_id,
-        }),
-    )
-    .await
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -509,18 +293,7 @@ pub fn run() {
     #[cfg(windows)]
     let builder = builder.manage(WindowsSessionEndState::default());
     let app = builder
-        .invoke_handler(tauri::generate_handler![
-            update_desktop_preferences,
-            agent_health,
-            agent_start_session,
-            agent_resume_session,
-            agent_send_message,
-            agent_validate_config,
-            agent_cancel,
-            agent_respond_approval,
-            agent_list_sessions,
-            agent_delete_session
-        ])
+        .invoke_handler(tauri::generate_handler![update_desktop_preferences])
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
                 if should_close_to_tray(window.app_handle())
@@ -533,10 +306,15 @@ pub fn run() {
             }
         })
         .setup(|app| {
-            let runtime = prepare_runtime();
-            let bridge = tauri::async_runtime::block_on(AgentBridge::spawn(app.handle()))
-                .map_err(std::io::Error::other)?;
-            app.manage(AgentBridgeState(bridge));
+            let sidecar = tauri::async_runtime::block_on(AgentSidecar::spawn(app.handle()));
+            let runtime = match &sidecar {
+                Ok(handle) => prepare_runtime(Some(handle.as_ref()), String::new()),
+                Err(error) => prepare_runtime(None, error.clone()),
+            };
+
+            if let Ok(handle) = sidecar {
+                app.manage(AgentSidecarState(handle));
+            }
 
             let init_script = build_runtime_script(&runtime).map_err(std::io::Error::other)?;
             let window =

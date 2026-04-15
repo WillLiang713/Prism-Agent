@@ -4,9 +4,9 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "tsx src/index.ts --stdio",
+    "dev": "tsx src/index.ts",
     "build": "tsc -p tsconfig.json",
-    "start": "node dist/index.js --stdio"
+    "start": "node dist/index.js"
   },
   "dependencies": {
     "@mariozechner/pi-coding-agent": "^0.66.1"

@@ -13,7 +13,6 @@ import {
   type AgentApprovalMode,
   type AgentRuntimeConfig,
   type AgentRuntimeStatus,
-  listenAgentEvents,
   type AgentReasoningEffort,
 } from './client';
 import {
@@ -75,7 +74,6 @@ export function useAgentChat() {
 
   useEffect(() => {
     let disposed = false;
-    let disposeEvents: null | (() => void) = null;
 
     async function bootstrap() {
       const maxRetries = MAX_HEALTH_RETRIES;
@@ -105,19 +103,6 @@ export function useAgentChat() {
           return;
         }
         setBackendReady(true);
-
-        const listener = await withTimeout(
-          listenAgentEvents((event) => {
-            applyEvent(event);
-          }),
-          BOOTSTRAP_CALL_TIMEOUT_MS,
-          '监听后端事件超时',
-        );
-        if (disposed) {
-          listener();
-          return;
-        }
-        disposeEvents = listener;
 
         const threadResponse = await withTimeout(
           agentListThreads(),
@@ -176,7 +161,6 @@ export function useAgentChat() {
 
     return () => {
       disposed = true;
-      disposeEvents?.();
     };
   }, [
     activateSession,
@@ -282,18 +266,20 @@ export function useAgentChat() {
     const requestId = crypto.randomUUID();
     createPendingMessage(activeSession.sessionId, payload.text, requestId);
     try {
-      const response = await agentSendMessage({
-        requestId,
-        sessionId: activeSession.sessionId,
-        text: payload.text,
-        images: payload.images,
-        reasoningEffort: payload.reasoningEffort,
-        approvalMode: payload.approvalMode,
-        config: agentRuntimeConfig,
-      });
-      if (response.requestId !== requestId) {
-        console.warn('agent request id mismatch', { requestId, responseRequestId: response.requestId });
-      }
+      await agentSendMessage(
+        {
+          requestId,
+          sessionId: activeSession.sessionId,
+          text: payload.text,
+          images: payload.images,
+          reasoningEffort: payload.reasoningEffort,
+          approvalMode: payload.approvalMode,
+          config: agentRuntimeConfig,
+        },
+        (event) => {
+          applyEvent(event);
+        },
+      );
     } catch (error) {
       applyEvent({
         type: 'error',
