@@ -1,267 +1,522 @@
-# Design System Inspiration of Ollama
+# UI Design Specification
 
-## 1. Visual Theme & Atmosphere
+## 1. Design Positioning
 
-Ollama's interface is radical minimalism taken to its logical conclusion — a pure-white void where content floats without decoration, shadow, or color. The design philosophy mirrors the product itself: strip away everything unnecessary until only the essential tool remains. This is the digital equivalent of a Dieter Rams object — every pixel earns its place, and the absence of design IS the design.
+The interface should not feel like a flat white landing page, and it should not drift into a high-saturation neon style. Its core character is:
 
-The entire page exists in pure grayscale. There is zero chromatic color in the interface — no brand blue, no accent green, no semantic red. The only colors that exist are shades between pure black (`#000000`) and pure white (`#ffffff`), creating a monochrome environment that lets the user's mental model of "open models" remain uncolored by brand opinion. The Ollama llama mascot, rendered in simple black line art, is the only illustration — and even it's monochrome.
+- A desktop-first AI chat workspace
+- Dark by default, with full light-theme support
+- Mostly neutral in tone, with restraint instead of strong brand-color dominance
+- Layering built through dark surfaces, subtle borders, blur, and shadow
+- Content-first, with very little decoration and quiet, short interaction feedback
 
-What makes Ollama distinctive is the combination of SF Pro Rounded (Apple's rounded system font) with an exclusively pill-shaped geometry (9999px radius on everything interactive). The rounded letterforms + rounded buttons + rounded containers create a cohesive "softness language" that makes a developer CLI tool feel approachable and friendly rather than intimidating. This is minimalism with warmth — not cold Swiss-style grid minimalism, but the kind where the edges are literally softened.
+Visual keywords:
 
-**Key Characteristics:**
-- Pure white canvas with zero chromatic color — completely grayscale
-- SF Pro Rounded headlines creating a distinctively Apple-like softness
-- Binary border-radius system: 12px (containers) or 9999px (everything interactive)
-- Zero shadows — depth comes exclusively from background color shifts and borders
-- Pill-shaped geometry on all interactive elements (buttons, tabs, inputs, tags)
-- The Ollama llama as the sole illustration — black line art, no color
-- Extreme content restraint — the homepage is short, focused, and uncluttered
+- `neutral`
+- `dense but calm`
+- `desktop workspace`
+- `soft glass panel`
+- `low-saturation grayscale`
 
-## 2. Color Palette & Roles
+## 2. Theme System
 
-### Primary
-- **Pure Black** (`#000000`): Primary headlines, primary links, and the darkest text. The only "color" that demands attention.
-- **Near Black** (`#262626`): Button text on light surfaces, secondary headline weight.
-- **Darkest Surface** (`#090909`): The darkest possible surface — barely distinguishable from pure black, used for footer or dark containers.
+The interface uses a dual-theme system:
 
-### Surface & Background
-- **Pure White** (`#ffffff`): The primary page background — not off-white, not cream, pure white. Button surfaces for secondary actions.
-- **Snow** (`#fafafa`): The subtlest possible surface distinction from white — used for section backgrounds and barely-elevated containers.
-- **Light Gray** (`#e5e5e5`): Button backgrounds, borders, and the primary containment color. The workhorse neutral.
+- Default theme: dark
+- Optional theme: light
+- When no explicit theme is set, follow `prefers-color-scheme`
 
-### Neutrals & Text
-- **Stone** (`#737373`): Secondary body text, footer links, and de-emphasized content. The primary "muted" tone.
-- **Mid Gray** (`#525252`): Emphasized secondary text, slightly darker than Stone.
-- **Silver** (`#a3a3a3`): Tertiary text, placeholders, and deeply de-emphasized metadata.
-- **Button Text Dark** (`#404040`): Specific to white-surface button text.
+Theme-switching requirements:
 
-### Semantic & Accent
-- **Ring Blue** (`#3b82f6` at 50%): The ONLY non-gray color in the entire system — Tailwind's default focus ring, used exclusively for keyboard accessibility. Never visible in normal interaction flow.
-- **Border Light** (`#d4d4d4`): A slightly darker gray for white-surface button borders.
+- Only switch tokens; do not change layout structure
+- Preserve the same visual hierarchy across dark and light themes
+- The light theme must not be a simple inverted dark theme; it must preserve the same panel logic, border logic, radius logic, and shadow logic
 
-### Gradient System
-- **None.** Ollama uses absolutely no gradients. Visual separation comes from flat color blocks and single-pixel borders. This is a deliberate, almost philosophical design choice.
+## 3. Design Tokens
 
-## 3. Typography Rules
+### 3.1 Typography
 
-### Font Family
-- **Display**: `SF Pro Rounded`, with fallbacks: `system-ui, -apple-system, system-ui`
-- **Body / UI**: `ui-sans-serif`, with fallbacks: `system-ui, Apple Color Emoji, Segoe UI Emoji, Segoe UI Symbol, Noto Color Emoji`
-- **Monospace**: `ui-monospace`, with fallbacks: `SFMono-Regular, Menlo, Monaco, Consolas, Liberation Mono, Courier New`
+- `--font-body`: `Inter`, `-apple-system`, `BlinkMacSystemFont`, `"Segoe UI"`, `Roboto`, `"Helvetica Neue"`, `"PingFang SC"`, `"Hiragino Sans GB"`, `"Microsoft YaHei"`, `Arial`, `sans-serif`
+- `--font-display`: same as `--font-body`
+- `--font-mono`: currently also the same as `--font-body`
 
-*Note: SF Pro Rounded is Apple's system font — it renders with rounded terminals on macOS/iOS and falls back to the system sans-serif on other platforms.*
+Notes:
 
-### Hierarchy
+- Use `Inter` consistently across the system; do not introduce a highly stylized display typeface
+- Distinguish code and prose mainly through containers, borders, backgrounds, and size, not through aggressive font contrast
 
-| Role | Font | Size | Weight | Line Height | Letter Spacing | Notes |
-|------|------|------|--------|-------------|----------------|-------|
-| Display / Hero | SF Pro Rounded | 48px (3rem) | 500 | 1.00 (tight) | normal | Maximum impact, rounded letterforms |
-| Section Heading | SF Pro Rounded | 36px (2.25rem) | 500 | 1.11 (tight) | normal | Feature section titles |
-| Sub-heading | SF Pro Rounded / ui-sans-serif | 30px (1.88rem) | 400–500 | 1.20 (tight) | normal | Card headings, feature names |
-| Card Title | ui-sans-serif | 24px (1.5rem) | 400 | 1.33 | normal | Medium emphasis headings |
-| Body Large | ui-sans-serif | 18px (1.13rem) | 400–500 | 1.56 | normal | Hero descriptions, button text |
-| Body / Link | ui-sans-serif | 16px (1rem) | 400–500 | 1.50 | normal | Standard body text, navigation |
-| Caption | ui-sans-serif | 14px (0.88rem) | 400 | 1.43 | normal | Metadata, descriptions |
-| Small | ui-sans-serif | 12px (0.75rem) | 400 | 1.33 | normal | Smallest sans-serif text |
-| Code Body | ui-monospace | 16px (1rem) | 400 | 1.50 | normal | Inline code, commands |
-| Code Caption | ui-monospace | 14px (0.88rem) | 400 | 1.43 | normal | Code snippets, secondary |
-| Code Small | ui-monospace | 12px (0.75rem) | 400–700 | 1.63 | normal | Tags, labels |
+### 3.2 Dark Theme Core Colors
 
-### Principles
-- **Rounded display, standard body**: SF Pro Rounded carries display headlines with its distinctive rounded terminals, while the standard system sans handles all body text. The rounded font IS the brand expression.
-- **Weight restraint**: Only two weights matter — 400 (regular) for body and 500 (medium) for headings. No bold, no light, no black weight. This extreme restraint reinforces the minimal philosophy.
-- **Tight display, comfortable body**: Headlines compress to 1.0 line-height, while body text relaxes to 1.43–1.56. The contrast creates clear hierarchy without needing weight contrast.
-- **Monospace for developer identity**: Code blocks and terminal commands appear throughout as primary content, using the system monospace stack.
+- Page background `--bg`: `#000000`
+- Elevated background `--bg-elev`: `#0a0a0a`
+- Panel background `--bg-chat`: `#161616`
+- Primary surface `--surface`: `rgba(20, 20, 20, 0.92)`
+- Solid surface `--surface-solid`: `#141414`
+- Glass surface `--glass`: `rgba(20, 20, 20, 0.55)`
+- Strong glass surface `--glass-strong`: `rgba(20, 20, 20, 0.78)`
 
-## 4. Component Stylings
+Borders:
 
-### Buttons
+- `--border`: `rgba(255, 255, 255, 0.05)`
+- `--border-strong`: `rgba(255, 255, 255, 0.09)`
+- `--border-accent`: `rgba(255, 255, 255, 0.16)`
+- `--border-subtle`: `rgba(255, 255, 255, 0.03)`
 
-**Gray Pill (Primary)**
-- Background: Light Gray (`#e5e5e5`)
-- Text: Near Black (`#262626`)
-- Padding: 10px 24px
-- Border: thin solid Light Gray (`1px solid #e5e5e5`)
-- Radius: pill-shaped (9999px)
-- The primary action button — understated, grayscale, always pill-shaped
+Text:
 
-**White Pill (Secondary)**
-- Background: Pure White (`#ffffff`)
-- Text: Button Text Dark (`#404040`)
-- Padding: 10px 24px
-- Border: thin solid Border Light (`1px solid #d4d4d4`)
-- Radius: pill-shaped (9999px)
-- Secondary action — visually lighter than Gray Pill
+- `--text`: `#e4e4e4`
+- `--text-muted`: `#888888`
+- `--text-dim`: `#555555`
 
-**Black Pill (CTA)**
-- Background: Pure Black (`#000000`)
-- Text: Pure White (`#ffffff`)
-- Radius: pill-shaped (9999px)
-- Inferred from "Create account" and "Explore" buttons
-- Maximum emphasis — black on white
+Neutral emphasis:
 
-### Cards & Containers
-- Background: Pure White or Snow (`#fafafa`)
-- Border: thin solid Light Gray (`1px solid #e5e5e5`) when needed
-- Radius: comfortably rounded (12px) — the ONLY non-pill radius in the system
-- Shadow: **none** — zero shadows on any element
-- Hover: likely subtle background shift or border darkening
+- `--accent`: `#a0a0a0`
+- `--accent-strong`: `#d4d4d4`
+- `--accent-glow`: `rgba(255, 255, 255, 0.06)`
 
-### Inputs & Forms
-- Background: Pure White
-- Border: `1px solid #e5e5e5`
-- Radius: pill-shaped (9999px) — search inputs and form fields are pill-shaped
-- Focus: Ring Blue (`#3b82f6` at 50%) ring
-- Placeholder: Silver (`#a3a3a3`)
+Semantic colors:
 
-### Navigation
-- Clean horizontal nav with minimal elements
-- Logo: Ollama llama icon + wordmark in black
-- Links: "Models", "Docs", "Pricing" in black at 16px, weight 400
-- Search bar: pill-shaped with placeholder text
-- Right side: "Sign in" link + "Download" black pill CTA
-- No borders, no background — transparent nav on white page
+- Running / warning `--warm`: `#f97316`
+- Strong warning `--warm-strong`: `#ea580c`
+- Error `--danger`: `#ef4444`
+- Success `--panel-status-success`: `#22c55e`
 
-### Image Treatment
-- The Ollama llama mascot is the only illustration — black line art on white
-- Code screenshots/terminal outputs shown in bordered containers (12px radius)
-- Integration logos displayed as simple icons in a grid
-- No photographs, no gradients, no decorative imagery
+State fills:
 
-### Distinctive Components
+- `--bg-hover`: `rgba(255, 255, 255, 0.06)`
+- `--bg-active`: `rgba(255, 255, 255, 0.08)`
+- `--bg-subtle`: `rgba(255, 255, 255, 0.03)`
 
-**Tab Pills**
-- Pill-shaped tab selectors (e.g., "Coding" | "OpenClaw")
-- Active: Light Gray bg; Inactive: transparent
-- All pill-shaped (9999px)
+### 3.3 Light Theme Core Colors
 
-**Model Tags**
-- Small pill-shaped tags (e.g., "ollama", "launch", "claude")
-- Light Gray background, dark text
-- The primary way to browse models
+- Page background `--bg`: `#f5f5f7`
+- Elevated background `--bg-elev`: `#ffffff`
+- Panel background `--bg-chat`: `#ffffff`
+- Primary surface `--surface`: `rgba(255, 255, 255, 0.92)`
+- Solid surface `--surface-solid`: `#ffffff`
 
-**Terminal Command Block**
-- Monospace code showing `ollama run` commands
-- Minimal styling — just a bordered 12px-radius container
-- Copy button integrated
+Borders:
 
-**Integration Grid**
-- Grid of integration logos (Codex, Claude Code, OpenCode, LangChain, etc.)
-- Each in a bordered pill or card with icon + name
-- Tabbed by category (Coding, Documents & RAG, Automation, Chat)
+- `--border`: `rgba(0, 0, 0, 0.08)`
+- `--border-strong`: `rgba(0, 0, 0, 0.12)`
+- `--border-accent`: `rgba(0, 0, 0, 0.18)`
 
-## 5. Layout Principles
+Text:
 
-### Spacing System
-- Base unit: 8px
-- Scale: 4px, 6px, 8px, 9px, 10px, 12px, 14px, 16px, 20px, 24px, 32px, 40px, 48px, 88px, 112px
-- Button padding: 10px 24px (consistent across all buttons)
-- Card internal padding: approximately 24–32px
-- Section vertical spacing: very generous (88px–112px)
+- `--text`: `#1d1d1f`
+- `--text-muted`: `#86868b`
+- `--text-dim`: `#b0b0b5`
 
-### Grid & Container
-- Max container width: approximately 1024–1280px, centered
-- Hero: centered single-column with llama illustration
-- Feature sections: 2-column layout (text left, code right)
-- Integration grid: responsive multi-column
-- Footer: clean single-row
+Neutral emphasis:
 
-### Whitespace Philosophy
-- **Emptiness as luxury**: The page is remarkably short and sparse — no feature section overstays its welcome. Each concept gets minimal but sufficient space.
-- **Content density is low by design**: Where other AI companies pack feature after feature, Ollama presents three ideas (run models, use with apps, integrations) and stops.
-- **The white space IS the brand**: Pure white space with zero decoration communicates "this tool gets out of your way."
+- `--accent`: `#424245`
+- `--accent-strong`: `#1d1d1f`
+- `--accent-glow`: `rgba(0, 0, 0, 0.04)`
 
-### Border Radius Scale
-- Comfortably rounded (12px): The sole container radius — code blocks, cards, panels
-- Pill-shaped (9999px): Everything interactive — buttons, tabs, inputs, tags, badges
+### 3.4 Shadows and Blur
 
-*This binary system is extreme and distinctive. There is no 4px, no 8px, no gradient of roundness. Elements are either containers (12px) or interactive (pill).*
+Dark theme:
 
-## 6. Depth & Elevation
+- `--shadow-xs`: `0 1px 3px rgba(0, 0, 0, 0.4)`
+- `--shadow-sm`: `0 4px 16px rgba(0, 0, 0, 0.5)`
+- `--shadow-md`: `0 12px 40px rgba(0, 0, 0, 0.6)`
 
-| Level | Treatment | Use |
-|-------|-----------|-----|
-| Flat (Level 0) | No shadow, no border | Page background, most content |
-| Bordered (Level 1) | `1px solid #e5e5e5` | Cards, code blocks, buttons |
+Light theme:
 
-**Shadow Philosophy**: Ollama uses **zero shadows**. This is not an oversight — it's a deliberate design decision. Every other major AI product site uses at least subtle shadows. Ollama's flat, shadowless approach creates a paper-like experience where elements are distinguished purely by background color and single-pixel borders. Depth is communicated through **content hierarchy and typography weight**, not visual layering.
+- `--shadow-xs`: `0 1px 2px rgba(0, 0, 0, 0.05)`
+- `--shadow-sm`: `0 4px 12px rgba(0, 0, 0, 0.06)`
+- `--shadow-md`: `0 12px 32px rgba(0, 0, 0, 0.08)`
 
-## 7. Do's and Don'ts
+Modal layer:
+
+- `--modal-overlay`: dark `rgba(6, 8, 12, 0.62)`, light `rgba(245, 247, 250, 0.82)`
+- `--modal-shadow`: large and soft; do not use aggressive outer glow
+
+Rules:
+
+- Panels may use `backdrop-filter: blur(...)`
+- Shadows are allowed, but they must stay soft, low-contrast, and hierarchy-driven; do not create neon-like glow
+
+### 3.5 Border Radius
+
+- `--radius-xl`: `20px`
+- `--radius-lg`: `16px`
+- `--radius-md`: `12px`
+- `--radius-sm`: `8px`
+- Pill / round buttons: `999px`
+- Image radius: `16px`
+
+Usage:
+
+- App shell, primary panels, modals: `20px`
+- Inputs, edit panels, secondary containers: `16px`
+- Tool buttons, status blocks, code blocks: `8px` to `12px`
+- Circular icon buttons: `34px` diameter with `50%` or `999px` radius
+
+## 4. Typography Rules
+
+Typography should be clear, moderately dense, and stable for long reading.
+
+### 4.1 Type Scale
+
+Confirmed core sizes:
+
+- Empty-state title: `28px / 700`
+- Markdown `h1`: `22px / 600`
+- Markdown `h2`: `18px / 600`
+- Markdown `h3`: `16px / 600`
+- Config-panel title: `18px / 700`
+- Main chat body: `14px`
+- Brand title: `14.5px / 700`
+- General supporting text: `12px` to `13px`
+- Labels / statuses / tool-button text: `11px` to `12px`
+
+### 4.2 Text Style
+
+- Body copy should generally stay between `1.5` and `1.8` line-height
+- Secondary text should be weakened through `--text-muted` and `--text-dim`, not by shrinking it too aggressively
+- Hierarchy should come from weight and spacing, not from saturated color
+- Explanatory copy should stay short; do not stack long paragraphs inside panels
+
+## 5. Layout Rules
+
+### 5.1 App Shell
+
+- Outermost container max width: `1440px`
+- Main chat shell max width: `1260px`
+- Outer horizontal padding: `12px`
+- Desktop vertical offset: `3vh`
+- Main viewport height: `94vh`
+
+Layout characteristics:
+
+- One centered shell; do not turn it into a portal-style multi-column home page
+- Topic sidebar on the left, conversation area on the right
+- The whole interface should feel like one continuous workspace, not a collage of separate cards
+
+### 5.2 Sidebar and Conversation Area
+
+- Expanded sidebar width: `264px`
+- Collapsed sidebar width: `68px`
+- Conversation area fills the remaining space
+- Both panels share one outer silhouette, while the touching inner corners are removed
+
+Specific requirements:
+
+- `topics-panel` keeps only left-side outer radii
+- `conversation-panel` keeps only right-side outer radii
+- Do not introduce an obvious gap between them
+
+### 5.3 Content Width
+
+- Conversation content max width: `900px`
+- Composer max width: `900px`
+- Standard turn max width: follow the conversation content width
+- Chat horizontal gutter: `24px`
+
+Notes:
+
+- Body content should not span the full conversation area; keep it centered and restrained for stable reading
+
+## 6. Component Rules
+
+### 6.1 Primary Panels
+
+Primary chat panels and sidebar panels must follow these rules:
+
+- Use `--bg-chat` as the panel background
+- Use a subtle 1px border
+- Use `20px` outer radius
+- Use soft medium-to-large shadow
+- Support glass-like blur
+
+Do not:
+
+- Use high-contrast outlines
+- Use exaggerated floating shadows
+- Overlay complex textures on panel surfaces
+
+### 6.2 Top Bar
+
+The top bar is a lightweight title bar, not a marketing navigation bar.
+
+Rules:
+
+- Minimum height: `60px`
+- Horizontal layout
+- Model information centered
+- Interface actions on both sides
+- Background should be transparent or near-transparent; do not create a heavy header slab
+
+Model selector button:
+
+- Height around `28px`
+- Pill radius
+- Transparent by default
+- Hover only adds a subtle background change
+- Use caret rotation as the open/close cue
+
+### 6.3 Sidebar
+
+Sidebar controls should feel small, light, and precise.
+
+Rules:
+
+- Top control buttons use a `34px` diameter
+- Default background is transparent or barely visible
+- Border uses `--border-strong`
+- Text and icon color defaults to `--text-muted`
+- `:active` may scale down slightly to `0.94`
+
+Sidebar behavior:
+
+- Support collapse
+- Keep only essential controls when collapsed
+- Use scrim + drawer behavior on mobile
+
+### 6.4 Message Area
+
+Message presentation should be content-first and should not turn into a wall of heavy chat bubbles.
+
+User messages:
+
+- Right-aligned
+- Bubble background uses `--bg-active`
+- Radius `16px`
+- Padding `10px 14px`
+- No obvious outline or shadow
+
+Assistant messages:
+
+- Transparent by default
+- Do not wrap them in heavy cards
+- Header row shows model / service information
+- Footer carries actions like copy, retry, and delete
+
+Multi-model comparison:
+
+- Allow two columns on desktop
+- Collapse to one column below `1200px`
+
+### 6.5 Composer
+
+The composer is a key action panel and must stay stable, restrained, and extensible.
+
+Rules:
+
+- Outer container max width `900px`
+- Panel radius `16px`
+- Use a light border plus an inner pseudo-surface for subtle depth
+- Do not use a glowing blue input field
+- Text area minimum height `52px`
+- Text area maximum height `200px`
+- Input text size `14px`
+- Placeholder must use a softened neutral color
+
+Composer bottom toolbar:
+
+- Button height `34px`
+- Standard tool-button radius `10px`
+- Background uses `--bg-subtle`
+- Hover moves to `--bg-hover`
+- Icon-only and text buttons must share the same visual system
+
+### 6.6 Buttons
+
+Base button:
+
+- Default text size `13px`
+- Font weight `600`
+- Radius `10px`
+- Padding `8px 16px`
+
+Primary button `btn-primary`:
+
+- Background `--accent-strong`
+- Text uses strong contrast against a darker base
+- Hover may slightly increase brightness and shadow
+
+Secondary button `btn-secondary`:
+
+- Background `--bg-subtle`
+- 1px border
+- Default text color `--text-muted`
+
+Floating round button:
+
+- Size `34px`
+- Pill or true round shape
+- `blur(16px)` is allowed
+- Use for floating actions like close preview, image actions, or scroll-to-bottom
+
+Danger button:
+
+- Use only for delete, clear, or destructive confirmation flows
+- Do not spread it into routine actions
+
+### 6.7 Tags and Status
+
+Status blocks and light tags should stay in a low-saturation visual system.
+
+Rules:
+
+- Default status text size `12px`
+- Radius `12px`
+- Left dot size `7px`
+- Use green for success
+- Use orange for running
+- Use red for error
+- Use neutral light gray for complete / idle states
+
+Model tags / chips:
+
+- Pill style
+- Subtle 1px border
+- Very faint background
+- Text must not become brighter than the main content
+
+### 6.8 Markdown and Content Rendering
+
+Chat output and preview content should follow one consistent content style.
+
+Headings:
+
+- `h1`: `22px`
+- `h2`: `18px`
+- `h3`: `16px`
+- `h1` and `h2` include a bottom divider
+
+Paragraphs and lists:
+
+- Paragraph bottom spacing `12px`
+- List left padding `24px`
+
+Inline code:
+
+- Use a subtle background
+- Padding `2px 6px`
+- Radius `4px`
+
+Code blocks:
+
+- Use `--bg-active` or `--bg-subtle` as background
+- Use a subtle 1px border
+- Container radius `8px` to `10px`
+- Toolbar includes language label and copy / preview actions
+
+Blockquotes:
+
+- Left border uses `--accent`
+- Text uses `--text-muted`
+- Italic is allowed
+
+Links:
+
+- Use `--accent-strong`
+- Add underline on hover
+
+Tables:
+
+- Allow horizontal scrolling
+- Use subtle cell borders
+- Use a very light table-header background
+
+Images:
+
+- Radius `16px`
+- Do not frame them with a thick border treatment
+
+### 6.9 Config Panels and Modals
+
+The config panel is a full work area, not a tiny dialog.
+
+Rules:
+
+- The outer overlay uses blur
+- `#configModal` behaves like a near-full shell panel on desktop
+- Max width follows the app shell, and desktop runtime may tighten it to `1160px`
+- Panel radius `20px`
+- Keep clear `header / tabs / content / footer` structure
+- The content area scrolls independently
+
+Inside config panels:
+
+- Tabs use horizontal pill / light-button styling
+- Status strips use pill-shaped `status-pill`
+- On mobile, form controls should drop strong focus glow
+- On smaller screens, the config panel should switch directly to a full-screen layout
+
+Confirmation dialogs:
+
+- Use a tighter width around `420px`
+- Keep the structure simple
+- Destructive confirmation buttons may use stronger contrast, but do not flood the dialog with large red surfaces
+
+## 7. Interaction and Motion
+
+Motion should be short, light, and only serve state changes.
+
+Timing references:
+
+- Quick press-scale feedback: `0.12s` to `0.16s`
+- Hover / color / border transitions: `0.18s` to `0.2s`
+- Composer or edit-panel state transitions: `0.24s`
+- Sidebar expand / collapse: `420ms`
+
+Interaction requirements:
+
+- Hover should primarily change background, border, and text color
+- Active state may use very slight scaling
+- Focus should use a low-intensity ring or remove glow entirely to preserve the calm visual tone
+- Scrollbars stay hidden by default and appear during interaction
+- Shimmer should be reserved for generating / connecting states; do not overuse it
+
+## 8. Responsive Rules
+
+Confirmed key breakpoints:
+
+- Below `1200px`: multi-assistant layouts collapse to one column
+- Above `901px`: config panels use desktop grid layout
+- Below `900px`: config panels switch to full-screen mobile layout
+- Below `1100px`: top spacing and empty-state title scale down slightly
+
+Mobile requirements:
+
+- The web container fills the viewport and drops desktop outer margins
+- The main shell may drop large radii, shadows, and blur in favor of edge-to-edge layout
+- The sidebar becomes a drawer with a scrim
+- Form controls must not go below `16px`, to avoid unwanted browser zoom on focus
+
+## 9. Do / Don't
 
 ### Do
-- Use pure white (`#ffffff`) as the page background — never off-white or cream
-- Use pill-shaped (9999px) radius on all interactive elements — buttons, tabs, inputs, tags
-- Use 12px radius on all non-interactive containers — code blocks, cards, panels
-- Keep the palette strictly grayscale — no chromatic colors except the blue focus ring
-- Use SF Pro Rounded at weight 500 for display headings — the rounded terminals are the brand expression
-- Maintain zero shadows — depth comes from borders and background shifts only
-- Keep content density low — each section should present one clear idea
-- Use monospace for terminal commands and code — it's primary content, not decoration
-- Keep all buttons at 10px 24px padding with pill shape — consistency is absolute
 
-### Don't
-- Don't introduce any chromatic color — no brand blue, no accent green, no warm tones
-- Don't use border-radius between 12px and 9999px — the system is binary
-- Don't add shadows to any element — the flat aesthetic is intentional
-- Don't use font weights above 500 — no bold, no black weight
-- Don't add decorative illustrations beyond the llama mascot
-- Don't use gradients anywhere — flat blocks and borders only
-- Don't overcomplicate the layout — two columns maximum, no complex grids
-- Don't use borders heavier than 1px — containment is always the lightest possible touch
-- Don't add hover animations or transitions — interactions should feel instant and direct
+- Use neutral gray-black as the primary visual language
+- Preserve the desktop-workspace layout and stable content width
+- Use the `20 / 16 / 12 / 8 / pill` radius scale consistently
+- Keep borders and shadows low-contrast
+- Make interaction feedback rely on subtle background changes
+- Maintain readability and hierarchy consistency across dark and light themes
+- Let the message area, composer, and config panels share one token system
 
-## 8. Responsive Behavior
+### Don’t
 
-### Breakpoints
-| Name | Width | Key Changes |
-|------|-------|-------------|
-| Mobile | <640px | Single column, stacked everything, hamburger nav |
-| Small Tablet | 640–768px | Minor adjustments to spacing |
-| Tablet | 768–850px | 2-column layouts begin |
-| Desktop | 850–1024px | Standard layout, expanded features |
-| Large Desktop | 1024–1280px | Maximum content width |
+- Do not use the old pure-white Ollama-like style that previously existed in this repository as a baseline
+- Do not introduce high-saturation brand colors as large-area backgrounds
+- Do not add exaggerated glassmorphism, neon outlines, or colorful glow
+- Do not turn the chat area into a marketing homepage with hero + feature blocks
+- Do not create a wall of heavy message cards
+- Do not introduce oversized titles or highly decorative type
+- Do not make hover, focus, or active feedback overly aggressive
+- Do not make the light theme a mechanical color inversion
 
-### Touch Targets
-- All buttons are pill-shaped with generous padding (10px 24px)
-- Navigation links at comfortable 16px size
-- Minimum touch area easily exceeds 44x44px
+## 10. Prompts for Implementation Agents
 
-### Collapsing Strategy
-- **Navigation**: Collapses to hamburger menu on mobile
-- **Feature sections**: 2-column → stacked single column
-- **Hero text**: 48px → 36px → 30px progressive scaling
-- **Integration grid**: Multi-column → 2-column → single column
-- **Code blocks**: Horizontal scroll maintained
+If you want to keep implementing this visual system, you can use prompts like these:
 
-### Image Behavior
-- Llama mascot scales proportionally
-- Code blocks maintain monospace formatting
-- Integration icons reflow to fewer columns
-- No art direction changes
-
-## 9. Agent Prompt Guide
-
-### Quick Color Reference
-- Primary Text: "Pure Black (#000000)"
-- Page Background: "Pure White (#ffffff)"
-- Secondary Text: "Stone (#737373)"
-- Button Background: "Light Gray (#e5e5e5)"
-- Borders: "Light Gray (#e5e5e5)"
-- Muted Text: "Silver (#a3a3a3)"
-- Dark Text: "Near Black (#262626)"
-- Subtle Surface: "Snow (#fafafa)"
-
-### Example Component Prompts
-- "Create a hero section on pure white (#ffffff) with an illustration centered above a headline at 48px SF Pro Rounded weight 500, line-height 1.0. Use Pure Black (#000000) text. Below, add a black pill-shaped CTA button (9999px radius, 10px 24px padding) and a gray pill button."
-- "Design a code block with a 12px border-radius, 1px solid Light Gray (#e5e5e5) border on white background. Use ui-monospace at 16px for the terminal command. No shadow."
-- "Build a tab bar with pill-shaped tabs (9999px radius). Active tab: Light Gray (#e5e5e5) background, Near Black (#262626) text. Inactive: transparent background, Stone (#737373) text."
-- "Create an integration card grid. Each card is a bordered pill (9999px radius) or a 12px-radius card with 1px solid #e5e5e5 border. Icon + name inside. Grid of 4 columns on desktop."
-- "Design a navigation bar: transparent background, no border. Ollama logo on the left, 3 text links (Pure Black, 16px, weight 400), pill search input in the center, 'Sign in' text link and black pill 'Download' button on the right."
-
-### Iteration Guide
-1. Focus on ONE component at a time
-2. Keep all values grayscale — "Stone (#737373)" not "use a light color"
-3. Always specify pill (9999px) or container (12px) radius — nothing in between
-4. Shadows are always zero — never add them
-5. Weight is always 400 or 500 — never bold
-6. If something feels too decorated, remove it — less is always more for Ollama
+- "Build a desktop-first AI chat workspace with a dark default theme, neutral gray-black colors, and low-contrast glass panels. Avoid strong brand-color dominance."
+- "Use a main shell with max width 1260px, a 264px topic sidebar on the left, and a conversation area on the right. The two panels should read as one continuous surface."
+- "Keep conversation body content centered with a max width of 900px. User messages are right-aligned bubbles; assistant messages stay in a transparent text-flow layout."
+- "Design the composer as a lightly glassy edit panel with 16px radius, 52px starting height, and a bottom toolbar with 34px-tall buttons."
+- "Keep action buttons neutral, with subtle hover states and slight press-scale feedback. Do not use strong blue focus glow."
+- "Treat the config panel as a large work-area modal on desktop and a full-screen panel on mobile."
