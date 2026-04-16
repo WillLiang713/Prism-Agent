@@ -31,22 +31,30 @@ const FOLLOW_CURRENT_SERVICE_VALUE = '__follow_current_service__';
 function SettingsNavButton({
   active,
   title,
+  icon: Icon,
   onClick,
 }: {
   active: boolean;
   title: string;
+  icon: React.ElementType;
   onClick: () => void;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className={`group flex w-full items-center rounded-full px-4 py-2.5 transition-colors focus-visible:outline-none ${
+      className={`group flex w-full touch-manipulation items-center gap-3 rounded-full px-4 py-3 text-left transition-[background-color,color,box-shadow] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-foreground/20 ${
         active
-          ? 'bg-background/90 text-foreground dark:bg-background/70'
-          : 'bg-transparent text-mutedForeground hover:bg-background/65 hover:text-foreground dark:hover:bg-background/45'
+          ? 'bg-background/80 text-foreground shadow-[0_1px_0_rgba(255,255,255,0.05)_inset] dark:bg-background/55'
+          : 'bg-transparent text-mutedForeground hover:bg-background/55 hover:text-foreground dark:hover:bg-background/36'
       }`}
     >
+      <Icon
+        className={`h-4 w-4 shrink-0 transition-colors ${
+          active ? 'text-foreground' : 'text-mutedForeground'
+        }`}
+        aria-hidden="true"
+      />
       <span className="text-sm font-medium">{title}</span>
     </button>
   );
@@ -60,9 +68,9 @@ function SettingsSectionCard({
   children: React.ReactNode;
 }) {
   return (
-    <section className="grid gap-5 rounded-xl bg-card p-6">
+    <section className="grid gap-5 rounded-2xl border border-border/60 bg-background/70 p-6 shadow-[0_1px_0_rgba(255,255,255,0.03)_inset] dark:bg-background/30">
       <div className="space-y-1.5">
-        <h3 className="font-display text-lg font-medium tracking-tight text-foreground">
+        <h3 className="font-display text-lg font-semibold tracking-tight text-foreground">
           {title}
         </h3>
       </div>
@@ -125,8 +133,6 @@ export function SettingsDialog({
     }
   }, [activeSection, isDesktop]);
 
-  const currentSection = sections.find((section) => section.id === activeSection) || sections[0];
-
   function renderRuntimeSection() {
     return (
       <div className="space-y-8">
@@ -142,7 +148,7 @@ export function SettingsDialog({
                   })
                 }
               >
-                <SelectTrigger className="border-0 bg-muted shadow-none">
+                <SelectTrigger className="border-0 bg-muted/90 shadow-none dark:bg-muted/75">
                   <SelectValue placeholder="选择标题模型服务" />
                 </SelectTrigger>
                 <SelectContent className="border-0">
@@ -172,7 +178,7 @@ export function SettingsDialog({
                 updateRuntimeModelConfig({ systemPrompt: event.currentTarget.value })
               }
               rows={7}
-              className="rounded-xl border-0 bg-muted"
+              className="rounded-2xl border-0 bg-muted/90 dark:bg-muted/75"
             />
           </label>
         </SettingsSectionCard>
@@ -184,7 +190,7 @@ export function SettingsDialog({
     return (
       <div className="space-y-8">
         <SettingsSectionCard title="窗口行为">
-          <label className="flex cursor-pointer items-start justify-between gap-4 rounded-xl bg-muted px-6 py-5 text-xs hover:bg-card">
+          <label className="flex cursor-pointer items-start justify-between gap-4 rounded-2xl bg-muted/90 px-6 py-5 text-xs transition-colors hover:bg-background/85 dark:bg-muted/75 dark:hover:bg-background/40">
             <span className="space-y-1">
               <span className="block font-normal text-foreground">关闭时最小化到托盘</span>
               <span className="block text-mutedForeground">
@@ -221,10 +227,10 @@ export function SettingsDialog({
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm" />
-        <Dialog.Content className="fixed left-1/2 top-1/2 z-50 flex h-[min(900px,92vh)] w-[min(1280px,96vw)] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-xl bg-background/95 p-6 backdrop-blur-2xl">
+        <Dialog.Content className="fixed left-1/2 top-1/2 z-50 flex h-[min(900px,92vh)] w-[min(1160px,96vw)] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-[20px] border border-border/60 bg-card/95 p-6 shadow-[0_24px_80px_rgba(0,0,0,0.2)] backdrop-blur-2xl">
           <div className="flex items-start justify-between gap-4">
             <div className="flex-1">
-              <Dialog.Title className="font-display text-lg font-medium tracking-tight text-foreground">
+              <Dialog.Title className="font-display text-lg font-semibold tracking-tight text-foreground">
                 设置
               </Dialog.Title>
             </div>
@@ -236,21 +242,24 @@ export function SettingsDialog({
             </Dialog.Close>
           </div>
 
-          <div className="mt-6 grid min-h-0 flex-1 gap-6 lg:grid-cols-[220px_minmax(0,1fr)]">
-            <aside className="grid content-start gap-3 rounded-xl bg-muted/85 p-3 dark:bg-card/95">
+          <div className="mt-6 grid min-h-0 flex-1 overflow-hidden rounded-[20px] border border-border/60 bg-muted/88 shadow-[0_1px_0_rgba(255,255,255,0.04)_inset] dark:bg-muted/82 lg:grid-cols-[220px_minmax(0,1fr)]">
+            <aside className="grid content-start gap-2 p-3">
               {sections.map((section) => (
                 <SettingsNavButton
                   key={section.id}
                   active={section.id === activeSection}
                   title={section.title}
+                  icon={section.icon}
                   onClick={() => setActiveSection(section.id)}
                 />
               ))}
             </aside>
 
-            <div className="flex min-h-0 flex-col overflow-hidden rounded-xl bg-muted/80 dark:bg-card/95">
-              <ScrollArea className="min-h-0 flex-1 px-8 py-8">
-                <div className="space-y-8 pb-4">{renderSectionContent()}</div>
+            <div className="flex min-h-0 flex-col overflow-hidden bg-background/35 dark:bg-background/10">
+              <ScrollArea className="min-h-0 flex-1">
+                <div className="space-y-8 px-6 py-6 pb-10 lg:px-8 lg:py-8 lg:pb-12">
+                  {renderSectionContent()}
+                </div>
               </ScrollArea>
             </div>
           </div>
