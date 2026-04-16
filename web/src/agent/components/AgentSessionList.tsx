@@ -1,4 +1,4 @@
-import { Trash2, Check, X, Folder } from 'lucide-react';
+import { Trash2, Check, X, Folder, FolderPlus, MessageSquarePlus } from 'lucide-react';
 import { useMemo, useState, useEffect } from 'react';
 import { open } from '@tauri-apps/plugin-dialog';
 
@@ -109,22 +109,26 @@ export function AgentSessionList({
 
   return (
     <aside className="flex h-full w-[260px] shrink-0 flex-col bg-background">
-      <div className="p-4 pb-2 flex flex-col gap-2">
+      <div className="flex items-center gap-2 p-4 pb-2">
         <Button
           type="button"
           variant="surface"
           onClick={handleCreateNew}
-          className="h-10 w-full justify-center rounded-2xl border-border/85 bg-muted/95 text-sm hover:bg-muted"
+          aria-label="新建会话"
+          className="h-9 flex-1 gap-2 rounded-full border-border/85 bg-muted/95 px-4 text-sm font-medium text-foreground hover:bg-muted focus-visible:ring-1 focus-visible:ring-foreground/30 focus-visible:ring-offset-0"
         >
+          <MessageSquarePlus aria-hidden="true" className="h-4 w-4" />
           <span>新会话</span>
         </Button>
         <Button
           type="button"
+          size="icon"
           variant="secondary"
           onClick={handleOpenDirectory}
-          className="h-10 w-full justify-center rounded-2xl border border-dashed border-border/80 bg-muted/85 text-sm text-foreground hover:bg-muted hover:border-border"
+          aria-label="选择其他目录"
+          className="h-9 w-9 shrink-0 rounded-full border-border/80 bg-muted/85 text-mutedForeground hover:border-border hover:bg-muted hover:text-foreground focus-visible:ring-1 focus-visible:ring-foreground/30 focus-visible:ring-offset-0"
         >
-          <span>添加目录</span>
+          <FolderPlus aria-hidden="true" className="h-4 w-4" />
         </Button>
       </div>
 

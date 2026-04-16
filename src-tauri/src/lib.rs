@@ -224,7 +224,7 @@ fn create_tray(app: &tauri::AppHandle) -> Result<(), String> {
         .map_err(|error| format!("创建托盘菜单失败: {error}"))?;
 
     let mut builder = TrayIconBuilder::with_id(TRAY_ID)
-        .tooltip("Prism")
+        .tooltip("Prism Agent")
         .menu(&menu)
         .show_menu_on_left_click(false)
         .on_menu_event(|app, event| match event.id.as_ref() {
@@ -319,7 +319,7 @@ pub fn run() {
             let init_script = build_runtime_script(&runtime).map_err(std::io::Error::other)?;
             let window =
                 WebviewWindowBuilder::new(app, WINDOW_LABEL, WebviewUrl::App("index.html".into()))
-                    .title("Prism")
+                    .title("Prism Agent")
                     .inner_size(1280.0, 820.0)
                     .min_inner_size(1100.0, 760.0)
                     .background_color(Color(0, 0, 0, 255))

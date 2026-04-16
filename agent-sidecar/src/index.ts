@@ -234,7 +234,7 @@ async function shutdown(exitCode: number) {
 function parseArgs(argv: string[]): RuntimeOptions {
   let transport: RuntimeOptions['transport'] = 'stdio';
   let host = '127.0.0.1';
-  let port = 33100;
+  let port = 33200;
   let token = '';
 
   for (let index = 0; index < argv.length; index += 1) {

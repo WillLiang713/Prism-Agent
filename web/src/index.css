@@ -17,9 +17,9 @@
   --success: 0 0% 12%;
   --warning: 0 0% 22%;
   --danger: 0 0% 12%;
-  --font-body: "Inter", "Noto Sans SC", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Source Han Sans SC", "Noto Sans CJK SC", "WenQuanYi Micro Hei", "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji", sans-serif;
-  --font-display: "SF Pro Rounded", "Nunito Sans", "Inter", "Noto Sans SC", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
-  --font-mono: "JetBrains Mono", "ui-monospace", "SFMono-Regular", "Menlo", "Monaco", "Consolas", "Liberation Mono", "Courier New", "Source Han Sans SC", "Noto Sans Mono CJK SC", "Sarasa Mono SC", monospace;
+  --font-body: "Geist Variable", "HarmonyOS Sans SC", "MiSans", "PingFang SC", "Noto Sans SC", -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans GB", "Microsoft YaHei", "Source Han Sans SC", "Apple Color Emoji", "Segoe UI Emoji", sans-serif;
+  --font-display: "Geist Variable", "HarmonyOS Sans SC", "MiSans", "PingFang SC", "Noto Sans SC", -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
+  --font-mono: "Geist Mono Variable", "JetBrains Mono", "ui-monospace", "SFMono-Regular", "Menlo", "Consolas", "Liberation Mono", "Courier New", monospace;
 }
 
 .dark {

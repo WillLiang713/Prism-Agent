@@ -1,10 +1,10 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Prism",
+  "productName": "Prism Agent",
   "version": "0.5.5",
-  "identifier": "com.prism.desktop",
+  "identifier": "com.prism.agent.desktop",
   "build": {
-    "devUrl": "http://127.0.0.1:5183/?platform=desktop",
+    "devUrl": "http://127.0.0.1:5283/?platform=desktop",
     "frontendDist": "../web/dist"
   },
   "app": {
@@ -18,8 +18,8 @@
           "'self'",
           "ipc:",
           "http://ipc.localhost",
-          "http://127.0.0.1:33100",
-          "http://localhost:33100"
+          "http://127.0.0.1:33200",
+          "http://localhost:33200"
         ],
         "font-src": [
           "'self'",

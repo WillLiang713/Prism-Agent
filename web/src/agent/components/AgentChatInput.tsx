@@ -1,4 +1,4 @@
-import { ArrowUp, Lightbulb, Paperclip, Square, X } from 'lucide-react';
+import { ArrowUp, Lightbulb, Paperclip, Play, Square, X } from 'lucide-react';
 import {
   useRef,
   useState,
@@ -155,13 +155,13 @@ export function AgentChatInput({
             <Paperclip className="h-4 w-4" />
           </Button>
           <Select value={reasoningEffort} onValueChange={(value) => setReasoningEffort(value as AgentReasoningEffort)}>
-            <SelectTrigger className="h-10 w-[132px] px-4 text-sm">
+            <SelectTrigger className="h-10 w-[120px] px-4 text-sm">
               <div className="flex items-center gap-2">
                 <Lightbulb className="h-4 w-4" />
                 <span>{reasoningOptions.find((option) => option.value === reasoningEffort)?.label || '高'}</span>
               </div>
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="min-w-0">
               {reasoningOptions.map((option) => (
                 <SelectItem key={option.value} value={option.value}>
                   {option.label}
@@ -170,13 +170,13 @@ export function AgentChatInput({
             </SelectContent>
           </Select>
           <Select value={approvalMode} onValueChange={(value) => onApprovalModeChange(value as AgentApprovalMode)}>
-            <SelectTrigger className="h-10 w-[138px] px-4 text-sm" aria-label="执行模式">
+            <SelectTrigger className="h-10 w-[112px] px-4 text-sm" aria-label="执行模式">
               <div className="flex items-center gap-2">
-                <span className="text-mutedForeground">执行</span>
+                <Play aria-hidden="true" className="h-4 w-4 text-mutedForeground" />
                 <span>{approvalMode === 'auto' ? '自动' : '手动'}</span>
               </div>
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="min-w-0">
               <SelectItem value="auto">自动</SelectItem>
               <SelectItem value="manual">手动</SelectItem>
             </SelectContent>

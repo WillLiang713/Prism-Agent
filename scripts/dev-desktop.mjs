@@ -255,12 +255,12 @@ async function main() {
   };
   const webInvocation = await resolveWebInvocation(runtimeEnv);
   const tauriInvocation = await resolveTauriInvocation(runtimeEnv);
-  const webUrl = 'http://127.0.0.1:5183/?platform=desktop';
+  const webUrl = 'http://127.0.0.1:5283/?platform=desktop';
 
   if (await isServerReady(webUrl)) {
-    console.log('[dev] reusing existing web frontend on http://127.0.0.1:5183');
+    console.log('[dev] reusing existing web frontend on http://127.0.0.1:5283');
   } else {
-    console.log('[dev] starting web frontend on http://127.0.0.1:5183');
+    console.log('[dev] starting web frontend on http://127.0.0.1:5283');
     startProcess(
       'web',
       {

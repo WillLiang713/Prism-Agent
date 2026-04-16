@@ -45,8 +45,8 @@ type RouteMatch =
   | null;
 
 const DEFAULT_ALLOWED_ORIGINS = new Set([
-  'http://127.0.0.1:5183',
-  'http://localhost:5183',
+  'http://127.0.0.1:5283',
+  'http://localhost:5283',
   'http://tauri.localhost',
   'https://tauri.localhost',
   'tauri://localhost',

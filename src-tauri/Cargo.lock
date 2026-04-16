@@ -2567,7 +2567,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "prism_desktop"
+name = "prism_agent_desktop"
 version = "0.5.5"
 dependencies = [
  "serde",

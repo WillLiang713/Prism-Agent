@@ -169,9 +169,9 @@ async function main() {
   const env = { ...process.env };
   const npmInvocation = await resolveNpmInvocation(env);
   const authToken = randomBytes(24).toString('hex');
-  const apiBase = 'http://127.0.0.1:33100';
+  const apiBase = 'http://127.0.0.1:33200';
 
-  console.log('[dev:web] starting agent sidecar on http://127.0.0.1:33100');
+  console.log('[dev:web] starting agent sidecar on http://127.0.0.1:33200');
   startProcess(
     'agent-sidecar',
     {
@@ -187,7 +187,7 @@ async function main() {
         '--host',
         '127.0.0.1',
         '--port',
-        '33100',
+        '33200',
         '--token',
         authToken,
       ],
@@ -201,7 +201,7 @@ async function main() {
     Authorization: `Bearer ${authToken}`,
   });
 
-  console.log('[dev:web] starting web frontend on http://127.0.0.1:5183');
+  console.log('[dev:web] starting web frontend on http://127.0.0.1:5283');
   startProcess(
     'web',
     {
@@ -218,7 +218,7 @@ async function main() {
     },
   );
 
-  await waitForServer('http://127.0.0.1:5183/?platform=web');
+  await waitForServer('http://127.0.0.1:5283/?platform=web');
 }
 
 main().catch(async (error) => {

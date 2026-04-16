@@ -1,13 +1,13 @@
 [package]
-name = "prism_desktop"
+name = "prism_agent_desktop"
 version = "0.5.5"
-description = "Prism desktop client powered by Tauri"
-authors = ["Prism"]
+description = "Prism Agent desktop client powered by Tauri"
+authors = ["Prism Agent"]
 edition = "2021"
-default-run = "prism_desktop"
+default-run = "prism_agent_desktop"
 
 [lib]
-name = "prism_desktop"
+name = "prism_agent_desktop"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]

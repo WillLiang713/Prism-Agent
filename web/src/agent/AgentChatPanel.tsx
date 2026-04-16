@@ -5,9 +5,8 @@ import { ScrollArea } from '../components/ui/scroll-area';
 import { ApprovalDialog } from './components/ApprovalDialog';
 import { AgentChatInput } from './components/AgentChatInput';
 import { AgentMessageList } from './components/AgentMessageList';
-import { AgentSessionList } from './components/AgentSessionList';
 import { SkillsDisplay } from './components/SkillsDisplay';
-import type { AgentApprovalMode, AgentRuntimeStatus, AgentThreadMeta } from './client';
+import type { AgentApprovalMode, AgentRuntimeStatus } from './client';
 import type { AgentSession } from './sessionStore';
 
 const CHAT_SIDE_PADDING = 'calc(1.5rem + 10px)';
@@ -17,34 +16,25 @@ export function AgentChatPanel({
   initialized,
   backendReady,
   backendError,
-  threadList,
-  sessions,
   activeSession,
   approvalMode,
   agentRuntimeStatus,
   agentConfigValidating,
   onApprovalModeChange,
   onOpenSettings,
-  onCreateSession,
-  onResumeThread,
   onSendMessage,
   onStop,
   onRespondApproval,
-  onDeleteThread,
 }: {
   initialized: boolean;
   backendReady: boolean;
   backendError: string;
-  threadList: AgentThreadMeta[];
-  sessions: AgentSession[];
   activeSession: AgentSession | null;
   approvalMode: AgentApprovalMode;
   agentRuntimeStatus: AgentRuntimeStatus;
   agentConfigValidating: boolean;
   onApprovalModeChange: (mode: AgentApprovalMode) => void;
   onOpenSettings: () => void;
-  onCreateSession: (workspaceRoot?: string) => void;
-  onResumeThread: (threadId: string, cwd: string) => void;
   onSendMessage: (payload: {
     text: string;
     images: Array<{ name: string; mediaType: string; dataUrl: string }>;
@@ -53,7 +43,6 @@ export function AgentChatPanel({
   }) => void;
   onStop: () => void;
   onRespondApproval: (approvalId: string, decision: 'allow' | 'deny') => void;
-  onDeleteThread: (threadId: string) => void;
 }) {
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const activeApproval = useMemo(() => activeSession?.approvals[0] || null, [activeSession]);
@@ -76,15 +65,6 @@ export function AgentChatPanel({
 
   return (
     <div className="flex h-full min-h-0 flex-1 overflow-hidden">
-      <AgentSessionList
-        sessions={sessions}
-        threadList={threadList}
-        activeSessionId={activeSession?.sessionId || null}
-        activeThreadId={activeSession?.threadId || null}
-        onCreate={onCreateSession}
-        onResume={onResumeThread}
-        onDelete={onDeleteThread}
-      />
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden bg-background">
         {!backendReady && backendError ? (
           <div className="flex items-center gap-2 bg-danger/5 px-6 py-3 text-sm text-danger">

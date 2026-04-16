@@ -1,6 +1,6 @@
 param(
   [string]$BackendHost = "127.0.0.1",
-  [int]$Port = 33100
+  [int]$Port = 33200
 )
 
 $ErrorActionPreference = "Stop"
@@ -8,7 +8,7 @@ $ErrorActionPreference = "Stop"
 $projectRoot = Split-Path -Parent $PSScriptRoot
 Set-Location $projectRoot
 
-$desktopIdentifier = "com.prism.desktop"
+$desktopIdentifier = "com.prism.agent.desktop"
 $localAppData = if ($env:LOCALAPPDATA) { $env:LOCALAPPDATA } else { "" }
 $desktopCacheDir = if ($localAppData) {
   Join-Path $localAppData $desktopIdentifier
@@ -18,7 +18,7 @@ $desktopCacheDir = if ($localAppData) {
 $devScript = Join-Path $PSScriptRoot "dev-tauri-windows.ps1"
 
 function Stop-PrismDesktopProcess {
-  $desktopProcesses = Get-Process -Name "prism_desktop" -ErrorAction SilentlyContinue
+  $desktopProcesses = Get-Process -Name "prism_agent_desktop" -ErrorAction SilentlyContinue
   if (-not $desktopProcesses) {
     return
   }

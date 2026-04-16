@@ -5,6 +5,7 @@ import { SettingsDialog } from '../components/config/SettingsDialog';
 import { Button } from '../components/ui/button';
 import { useUIStore } from '../store/uiStore';
 import { AgentChatPanel } from './AgentChatPanel';
+import { AgentSessionList } from './components/AgentSessionList';
 import { useAgentChat } from './useAgentChat';
 import { WindowControls } from '../components/layout/WindowControls';
 import { isDesktopRuntime } from '../lib/runtime';
@@ -39,21 +40,27 @@ export function AgentAppLayout() {
   return (
     <>
       <div className="flex h-screen overflow-hidden bg-background">
+        <AgentSessionList
+          sessions={sessions}
+          threadList={threadList}
+          activeSessionId={activeSession?.sessionId || null}
+          activeThreadId={activeSession?.threadId || null}
+          onCreate={(workspaceRoot) => {
+            void startNewSession(workspaceRoot);
+          }}
+          onResume={(threadId, cwd) => {
+            void resumeThread(threadId, cwd);
+          }}
+          onDelete={(threadId) => {
+            void archiveThread(threadId);
+          }}
+        />
         <section className="flex min-w-0 flex-1 flex-col">
-          <header 
+          <header
             className="grid grid-cols-[1fr_auto_1fr] items-center bg-background pr-2 pl-6 py-2 select-none"
             data-tauri-drag-region
           >
-            <div className="flex items-center gap-2 overflow-hidden" data-tauri-drag-region>
-                {activeSession?.workspaceRoot ? (
-                  <div 
-                    className="flex max-w-[420px] items-center gap-1.5 truncate text-xs font-medium tracking-tight text-mutedForeground/80"
-                    title={activeSession.workspaceRoot}
-                  >
-                    <span className="truncate font-mono">{activeSession.workspaceRoot}</span>
-                  </div>
-                ) : null}
-            </div>
+            <div data-tauri-drag-region />
             <div className="flex justify-center overflow-hidden" data-tauri-drag-region>
               {agentRuntimeStatus.model && (
                 <div
@@ -81,20 +88,12 @@ export function AgentAppLayout() {
               initialized={initialized}
               backendReady={backendReady}
               backendError={backendError}
-              threadList={threadList}
-              sessions={sessions}
               activeSession={activeSession}
               approvalMode={approvalMode}
               agentRuntimeStatus={agentRuntimeStatus}
               agentConfigValidating={agentConfigValidating}
               onApprovalModeChange={setApprovalMode}
               onOpenSettings={() => setSettingsOpen(true)}
-              onCreateSession={(workspaceRoot) => {
-                void startNewSession(workspaceRoot);
-              }}
-              onResumeThread={(threadId, cwd) => {
-                void resumeThread(threadId, cwd);
-              }}
               onSendMessage={(payload) => {
                 void sendMessage(payload);
               }}
@@ -103,9 +102,6 @@ export function AgentAppLayout() {
               }}
               onRespondApproval={(approvalId, decision) => {
                 void respondApproval(approvalId, decision);
-              }}
-              onDeleteThread={(threadId) => {
-                void archiveThread(threadId);
               }}
             />
           </div>

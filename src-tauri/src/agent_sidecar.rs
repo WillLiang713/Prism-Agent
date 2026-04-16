@@ -9,7 +9,7 @@ use tokio::process::{Child, Command};
 use tokio::sync::Mutex;
 
 const SIDECAR_HOST: &str = "127.0.0.1";
-const SIDECAR_PORT: u16 = 33100;
+const SIDECAR_PORT: u16 = 33200;
 
 pub struct AgentSidecar {
     child: Mutex<Child>,
