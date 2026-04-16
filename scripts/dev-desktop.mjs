@@ -1,4 +1,4 @@
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { access } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
@@ -11,6 +11,7 @@ const projectRoot = path.resolve(__dirname, '..');
 const isWindows = process.platform === 'win32';
 
 const children = new Map();
+const descendantCache = new Map();
 let shuttingDown = false;
 
 async function pathExists(filePath) {
@@ -141,6 +142,25 @@ async function ensureCargoPath(env) {
   };
 }
 
+function startDescendantTracking(child) {
+  if (!isWindows || !child?.pid) return;
+  const rootPid = child.pid;
+  const refresh = async () => {
+    if (child.exitCode !== null || child.killed) return;
+    try {
+      const pids = await collectProcessTreeWindows(rootPid);
+      descendantCache.set(rootPid, new Set(pids));
+    } catch {
+      // ignore transient wmic failure
+    }
+  };
+  void refresh();
+  const timer = setInterval(refresh, 3000);
+  child.once('exit', () => {
+    clearInterval(timer);
+  });
+}
+
 function startProcess(name, invocation, extra = {}) {
   const child = spawn(invocation.command, invocation.args, {
     cwd: projectRoot,
@@ -151,6 +171,7 @@ function startProcess(name, invocation, extra = {}) {
   });
 
   children.set(name, child);
+  startDescendantTracking(child);
   child.on('error', (error) => {
     children.delete(name);
     if (shuttingDown) {
@@ -164,6 +185,12 @@ function startProcess(name, invocation, extra = {}) {
 
   child.on('exit', (code, signal) => {
     children.delete(name);
+    if (isWindows && child.pid) {
+      const cached = descendantCache.get(child.pid);
+      if (cached && cached.size > 0) {
+        void taskkillPids([...cached]);
+      }
+    }
     if (shuttingDown) {
       return;
     }
@@ -176,17 +203,76 @@ function startProcess(name, invocation, extra = {}) {
   return child;
 }
 
-async function stopProcess(child) {
-  if (!child || child.exitCode !== null || child.killed) {
-    return;
-  }
+async function collectProcessTreeWindows(rootPid) {
+  const relations = await new Promise((resolve) => {
+    const proc = spawn('wmic', ['process', 'get', 'ParentProcessId,ProcessId', '/FORMAT:VALUE'], {
+      stdio: ['ignore', 'pipe', 'ignore'],
+      windowsHide: true,
+    });
+    let output = '';
+    proc.stdout.on('data', (chunk) => {
+      output += chunk.toString();
+    });
+    proc.on('error', () => resolve(new Map()));
+    proc.on('exit', () => {
+      const map = new Map();
+      for (const block of output.split(/\r?\n\r?\n/)) {
+        const ppidMatch = block.match(/ParentProcessId=(\d+)/);
+        const pidMatch = block.match(/ProcessId=(\d+)/);
+        if (!ppidMatch || !pidMatch) continue;
+        const ppid = Number(ppidMatch[1]);
+        const pid = Number(pidMatch[1]);
+        if (!map.has(ppid)) map.set(ppid, []);
+        map.get(ppid).push(pid);
+      }
+      resolve(map);
+    });
+  });
 
-  if (isWindows) {
-    const killer = spawn('taskkill', ['/pid', String(child.pid), '/T', '/F'], {
+  const collected = new Set([rootPid]);
+  const queue = [rootPid];
+  while (queue.length > 0) {
+    const pid = queue.shift();
+    const kids = relations.get(pid) ?? [];
+    for (const kid of kids) {
+      if (!collected.has(kid)) {
+        collected.add(kid);
+        queue.push(kid);
+      }
+    }
+  }
+  return [...collected];
+}
+
+async function taskkillPids(pids) {
+  if (pids.length === 0) return;
+  const args = ['/F'];
+  for (const pid of pids) {
+    args.push('/PID', String(pid));
+  }
+  await new Promise((resolve) => {
+    const killer = spawn('taskkill', args, {
       stdio: 'ignore',
       windowsHide: true,
     });
-    await new Promise((resolve) => killer.on('exit', resolve));
+    killer.on('exit', resolve);
+    killer.on('error', resolve);
+  });
+}
+
+async function stopProcess(child) {
+  if (!child) return;
+
+  if (isWindows) {
+    if (!child.pid) return;
+    const live = await collectProcessTreeWindows(child.pid);
+    const cached = descendantCache.get(child.pid) ?? new Set();
+    const all = new Set([...live, ...cached, child.pid]);
+    await taskkillPids([...all]);
+    return;
+  }
+
+  if (child.exitCode !== null || child.killed) {
     return;
   }
 
@@ -227,23 +313,59 @@ async function isServerReady(url) {
   }
 }
 
+async function killByImageName(imageName) {
+  if (!isWindows) return;
+  await new Promise((resolve) => {
+    const killer = spawn('taskkill', ['/F', '/IM', imageName], {
+      stdio: 'ignore',
+      windowsHide: true,
+    });
+    killer.on('exit', resolve);
+    killer.on('error', resolve);
+  });
+}
+
 async function shutdown(exitCode = 0) {
   if (shuttingDown) {
     return;
   }
   shuttingDown = true;
+  console.log('[dev] shutting down...');
 
   const running = [...children.values()];
   await Promise.all(running.map((child) => stopProcess(child)));
+
+  if (isWindows) {
+    await killByImageName('prism_agent_desktop.exe');
+  }
+
   process.exit(exitCode);
 }
 
+function emergencyKillSync() {
+  if (!isWindows) return;
+  try {
+    spawnSync('taskkill', ['/F', '/IM', 'prism_agent_desktop.exe'], {
+      stdio: 'ignore',
+      windowsHide: true,
+    });
+  } catch {
+    // best-effort
+  }
+}
+
 process.on('SIGINT', () => {
+  emergencyKillSync();
   void shutdown(0);
 });
 
 process.on('SIGTERM', () => {
+  emergencyKillSync();
   void shutdown(0);
+});
+
+process.on('exit', () => {
+  emergencyKillSync();
 });
 
 async function main() {
