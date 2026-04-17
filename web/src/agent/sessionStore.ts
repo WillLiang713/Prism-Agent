@@ -725,6 +725,10 @@ export const useAgentSessionStore = create<AgentSessionState>()(
   removeThread: (threadId) =>
     set((state) => {
       const sessionId = state.findSessionByThreadId(threadId);
+      const session = sessionId ? state.sessionsById[sessionId] : null;
+      const thread = state.threadList.find((t) => t.threadId === threadId);
+      const deletedCwd = session?.workspaceRoot || thread?.cwd;
+
       const nextSessionsById = { ...state.sessionsById };
       let nextSessionOrder = [...state.sessionOrder];
       let nextActiveSessionId = state.activeSessionId;
@@ -733,12 +737,16 @@ export const useAgentSessionStore = create<AgentSessionState>()(
         delete nextSessionsById[sessionId];
         nextSessionOrder = nextSessionOrder.filter((id) => id !== sessionId);
         if (nextActiveSessionId === sessionId) {
-          nextActiveSessionId = nextSessionOrder[0] || null;
+          // 仅在同目录下自动切换
+          const sameCwdSessionId = nextSessionOrder.find(
+            (id) => nextSessionsById[id]?.workspaceRoot === deletedCwd,
+          );
+          nextActiveSessionId = sameCwdSessionId || null;
         }
       }
 
       return {
-        threadList: state.threadList.filter((thread) => thread.threadId !== threadId),
+        threadList: state.threadList.filter((t) => t.threadId !== threadId),
         sessionsById: nextSessionsById,
         sessionOrder: nextSessionOrder,
         activeSessionId: nextActiveSessionId,
@@ -760,7 +768,7 @@ export const useAgentSessionStore = create<AgentSessionState>()(
             sessionsById: {},
             activeSessionId: null,
             requestBindings: {},
-          }) as AgentSessionState,
+          }) as unknown as AgentSessionState,
       ),
     },
   ),
