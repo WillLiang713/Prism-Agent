@@ -104,7 +104,7 @@ export function ServiceManager() {
 
   return (
     <div className="grid items-stretch gap-6 md:grid-cols-[240px_minmax(0,1fr)]">
-      <div className="flex flex-col space-y-3 md:min-h-[520px]">
+      <div className="flex flex-col space-y-3">
         <Button
           onClick={() => upsertService({ name: '新服务' })}
           variant="ghost"
@@ -152,7 +152,7 @@ export function ServiceManager() {
         </ScrollArea>
       </div>
 
-      <div className="space-y-5 border-t border-border/50 pt-6 md:min-h-[520px] md:border-l md:border-t-0 md:pl-6 md:pt-0">
+      <div className="space-y-5 border-t border-border/50 pt-6 md:border-l md:border-t-0 md:pl-6 md:pt-0">
 
         <div className="grid gap-2 text-xs">
           <span className="px-4 text-mutedForeground">名称</span>

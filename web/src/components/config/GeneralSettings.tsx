@@ -89,7 +89,7 @@ export function GeneralSettings() {
   }
 
   return (
-    <div className="space-y-5 pt-6 md:min-h-[520px] md:pt-0">
+    <div className="space-y-5 pt-6 md:pt-0">
       <div className="grid gap-4 md:grid-cols-2">
         <div className="grid gap-2 text-xs">
           <span className="px-4 text-mutedForeground">标题模型服务</span>
