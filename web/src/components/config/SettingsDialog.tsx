@@ -1,13 +1,11 @@
 import { useEffect, useState } from 'react';
 
 import * as Dialog from '@radix-ui/react-dialog';
-import { Bot, Monitor, RefreshCw, Server, X } from 'lucide-react';
+import { Bot, RefreshCw, Server, X } from 'lucide-react';
 
 import { agentListModels } from '../../agent/client';
-import { isDesktopRuntime } from '../../lib/runtime';
 import { resolveSelectedService, useConfigStore } from '../../store/configStore';
 import { Button } from '../ui/button';
-import { Checkbox } from '../ui/checkbox';
 import { Combobox } from '../ui/combobox';
 import { ScrollArea } from '../ui/scroll-area';
 import {
@@ -20,7 +18,7 @@ import {
 import { Textarea } from '../ui/textarea';
 import { ServiceManager } from './ServiceManager';
 
-type SettingsSectionId = 'services' | 'runtime' | 'desktop';
+type SettingsSectionId = 'services' | 'runtime';
 
 type SettingsSectionMeta = {
   id: SettingsSectionId;
@@ -87,14 +85,11 @@ export function SettingsDialog({
   onOpenChange: (open: boolean) => void;
 }) {
   const runtimeModelConfig = useConfigStore((state) => state.runtimeModelConfig);
-  const desktop = useConfigStore((state) => state.desktop);
   const services = useConfigStore((state) => state.services);
   const serviceManagerSelectedId = useConfigStore((state) => state.serviceManagerSelectedId);
   const updateRuntimeModelConfig = useConfigStore((state) => state.updateRuntimeModelConfig);
-  const updateDesktopConfig = useConfigStore((state) => state.updateDesktopConfig);
   const [activeSection, setActiveSection] = useState<SettingsSectionId>('services');
 
-  const isDesktop = isDesktopRuntime();
   const hasTitleServiceOverride = services.some(
     (service) => service.id === runtimeModelConfig.titleModelServiceId,
   );
@@ -113,45 +108,32 @@ export function SettingsDialog({
   const [titleModelOptions, setTitleModelOptions] = useState<string[]>([]);
   const [titleModelLoading, setTitleModelLoading] = useState(false);
   const [titleModelError, setTitleModelError] = useState<string | null>(null);
-  const [titleModelSuccess, setTitleModelSuccess] = useState<string | null>(null);
 
   useEffect(() => {
     setTitleModelOptions([]);
     setTitleModelError(null);
-    setTitleModelSuccess(null);
     if (effectiveTitleService?.model.apiKey && effectiveTitleService?.model.apiUrl) {
       void refreshTitleModelList({ silent: true });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [effectiveTitleService?.id]);
 
-  useEffect(() => {
-    if (!titleModelSuccess) return;
-    const timer = setTimeout(() => setTitleModelSuccess(null), 2500);
-    return () => clearTimeout(timer);
-  }, [titleModelSuccess]);
-
   async function refreshTitleModelList(options: { silent?: boolean } = {}) {
     if (!effectiveTitleService) return;
-    setTitleModelLoading(true);
+    if (!options.silent) setTitleModelLoading(true);
     setTitleModelError(null);
-    setTitleModelSuccess(null);
     try {
       const result = await agentListModels({
         providerSelection: effectiveTitleService.model.providerSelection,
         apiUrl: effectiveTitleService.model.apiUrl,
         apiKey: effectiveTitleService.model.apiKey,
       });
-      const ids = result.models.map((m) => m.id);
-      setTitleModelOptions(ids);
-      if (!options.silent) {
-        setTitleModelSuccess(`已获取 ${ids.length} 个模型`);
-      }
+      setTitleModelOptions(result.models.map((m) => m.id));
     } catch (error) {
       setTitleModelError(error instanceof Error ? error.message : String(error));
       setTitleModelOptions([]);
     } finally {
-      setTitleModelLoading(false);
+      if (!options.silent) setTitleModelLoading(false);
     }
   }
 
@@ -167,20 +149,6 @@ export function SettingsDialog({
       icon: Bot,
     },
   ];
-
-  if (isDesktop) {
-    sections.push({
-      id: 'desktop',
-      title: '桌面',
-      icon: Monitor,
-    });
-  }
-
-  useEffect(() => {
-    if (!isDesktop && activeSection === 'desktop') {
-      setActiveSection('services');
-    }
-  }, [activeSection, isDesktop]);
 
   function renderRuntimeSection() {
     return (
@@ -223,8 +191,6 @@ export function SettingsDialog({
                     >
                       {titleModelError}
                     </span>
-                  ) : titleModelSuccess ? (
-                    <span className="text-[11px] text-success/90">{titleModelSuccess}</span>
                   ) : null}
                   <button
                     type="button"
@@ -274,38 +240,9 @@ export function SettingsDialog({
     );
   }
 
-  function renderDesktopSection() {
-    return (
-      <div className="space-y-8">
-        <SettingsSectionCard title="窗口行为">
-          <label className="flex cursor-pointer items-start justify-between gap-4 rounded-2xl bg-muted/90 px-6 py-5 text-xs transition-colors hover:bg-background/85 dark:bg-muted/75 dark:hover:bg-background/40">
-            <span className="space-y-1">
-              <span className="block font-normal text-foreground">关闭时最小化到托盘</span>
-              <span className="block text-mutedForeground">
-                开启后，点击关闭按钮不会直接退出应用。
-              </span>
-            </span>
-            <Checkbox
-              checked={desktop.closeToTrayOnClose}
-              aria-label="关闭时最小化到托盘"
-              className="border-0"
-              onCheckedChange={(checked) =>
-                updateDesktopConfig({ closeToTrayOnClose: checked === true })
-              }
-            />
-          </label>
-        </SettingsSectionCard>
-      </div>
-    );
-  }
-
   function renderSectionContent() {
     if (activeSection === 'runtime') {
       return renderRuntimeSection();
-    }
-
-    if (activeSection === 'desktop') {
-      return renderDesktopSection();
     }
 
     return <ServiceManager />;

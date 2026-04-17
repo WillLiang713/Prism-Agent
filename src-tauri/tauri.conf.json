@@ -18,8 +18,8 @@
           "'self'",
           "ipc:",
           "http://ipc.localhost",
-          "http://127.0.0.1:33200",
-          "http://localhost:33200"
+          "http://127.0.0.1:*",
+          "http://localhost:*"
         ],
         "font-src": [
           "'self'",

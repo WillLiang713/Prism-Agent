@@ -17,9 +17,9 @@
   --success: 0 0% 12%;
   --warning: 0 0% 22%;
   --danger: 0 0% 12%;
-  --font-body: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei UI", "Microsoft YaHei", system-ui, sans-serif;
-  --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei UI", "Microsoft YaHei", system-ui, sans-serif;
-  --font-mono: ui-monospace, "SFMono-Regular", "SF Mono", Menlo, Consolas, "Liberation Mono", "Courier New", monospace;
+  --font-body: "Geist Variable", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei UI", "Microsoft YaHei", -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
+  --font-display: "Geist Variable", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei UI", "Microsoft YaHei", -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "Geist Mono Variable", ui-monospace, "SFMono-Regular", "SF Mono", Menlo, Consolas, "Liberation Mono", "Courier New", monospace;
 }
 
 .dark {
@@ -64,7 +64,7 @@ body {
   text-rendering: optimizeLegibility;
   font-feature-settings: 'liga' 1, 'kern' 1, 'cv05' 1, 'cv08' 1, 'ss01' 1;
   font-variant-numeric: tabular-nums;
-  letter-spacing: -0.006em;
+  letter-spacing: 0;
   line-height: 1.55;
 }
 
@@ -119,7 +119,7 @@ samp {
   border-radius: 9999px;
 }
 
-.no-drag {
+[data-tauri-drag-region] {
   cursor: default;
 }
 

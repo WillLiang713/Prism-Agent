@@ -14,6 +14,7 @@ export interface ComboboxProps {
   disabled?: boolean;
   className?: string;
   allowCustom?: boolean;
+  mono?: boolean;
 }
 
 export function Combobox({
@@ -25,6 +26,7 @@ export function Combobox({
   disabled,
   className,
   allowCustom = true,
+  mono = true, // Default to true as currently only used for models
 }: ComboboxProps) {
   const [open, setOpen] = React.useState(false);
   const [search, setSearch] = React.useState('');
@@ -44,11 +46,17 @@ export function Combobox({
           type="button"
           disabled={disabled}
           className={cn(
-            'flex h-9 w-full items-center justify-between gap-2 rounded-md border-0 bg-muted/90 px-3 py-2 text-sm text-foreground outline-none transition-colors dark:bg-muted/75 disabled:cursor-not-allowed disabled:opacity-50',
+            'flex h-11 w-full items-center justify-between gap-2 rounded-full border-0 bg-muted/90 px-4 py-3 text-sm text-foreground outline-none transition-colors dark:bg-muted/75 disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1',
             className,
           )}
         >
-          <span className={cn('truncate', !displayValue && 'text-mutedForeground')}>
+          <span
+            className={cn(
+              'truncate',
+              !displayValue && 'text-mutedForeground',
+              displayValue && mono && 'font-mono lowercase tracking-tight',
+            )}
+          >
             {displayValue || placeholder}
           </span>
           <ChevronDown className="h-4 w-4 shrink-0 opacity-60" />
@@ -88,12 +96,14 @@ export function Combobox({
                     onValueChange(selected);
                     setOpen(false);
                   }}
-                  className="relative flex cursor-pointer select-none items-center rounded-md py-1.5 pl-7 pr-2 text-sm text-foreground outline-none transition-colors data-[selected=true]:bg-card"
+                  className="relative flex w-full cursor-pointer select-none items-center rounded-full py-2 pl-8 pr-3 text-sm text-foreground outline-none transition-colors hover:bg-card data-[selected=true]:bg-card"
                 >
-                  <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
-                    {value === option && <Check className="h-3.5 w-3.5" />}
+                  <span className="absolute left-3 flex h-3.5 w-3.5 items-center justify-center">
+                    {value === option && <Check className="h-4 w-4" />}
                   </span>
-                  {option}
+                  <span className={cn('truncate', mono && 'font-mono lowercase tracking-tight')}>
+                    {option}
+                  </span>
                 </Command.Item>
               ))}
             </Command.List>

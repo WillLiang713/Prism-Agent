@@ -1,5 +1,3 @@
-const DESKTOP_DEFAULT_API_BASE = 'http://127.0.0.1:33200';
-
 export interface PrismRuntimeConfig {
   platform: 'web' | 'desktop' | 'mock';
   apiBase: string;
@@ -37,7 +35,7 @@ function resolveRuntimeConfig(): PrismRuntimeConfig {
 
   return {
     platform,
-    apiBase: apiBase || (platform === 'desktop' ? DESKTOP_DEFAULT_API_BASE : ''),
+    apiBase,
     authToken,
     backendManagedByDesktop:
       runtime.backendManagedByDesktop === true || platform === 'desktop',

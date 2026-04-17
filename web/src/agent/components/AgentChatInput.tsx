@@ -137,7 +137,7 @@ export function AgentChatInput({
         rows={1}
         disabled={inputDisabled || isStreaming}
         placeholder="输入你的需求…"
-        className="min-h-[48px] resize-none border-0 bg-transparent px-3 py-1.5 text-base leading-6 shadow-none focus-visible:ring-0"
+        className="min-h-[48px] resize-none border-0 bg-transparent px-3 py-1.5 text-sm leading-6 shadow-none focus-visible:ring-0"
       />
 
       <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
@@ -155,7 +155,7 @@ export function AgentChatInput({
             <Paperclip className="h-4 w-4" />
           </Button>
           <Select value={reasoningEffort} onValueChange={(value) => setReasoningEffort(value as AgentReasoningEffort)}>
-            <SelectTrigger className="h-10 w-[120px] px-4 text-sm">
+            <SelectTrigger className="h-10 w-[120px] px-4 text-xs">
               <div className="flex items-center gap-2">
                 <Lightbulb className="h-4 w-4" />
                 <span>{reasoningOptions.find((option) => option.value === reasoningEffort)?.label || '高'}</span>
@@ -170,7 +170,7 @@ export function AgentChatInput({
             </SelectContent>
           </Select>
           <Select value={approvalMode} onValueChange={(value) => onApprovalModeChange(value as AgentApprovalMode)}>
-            <SelectTrigger className="h-10 w-[112px] px-4 text-sm" aria-label="执行模式">
+            <SelectTrigger className="h-10 w-[112px] px-4 text-xs" aria-label="执行模式">
               <div className="flex items-center gap-2">
                 <Play aria-hidden="true" className="h-4 w-4 text-mutedForeground" />
                 <span>{approvalMode === 'auto' ? '自动' : '手动'}</span>

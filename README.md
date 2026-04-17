@@ -100,3 +100,8 @@ Prism/
 ├── package.json
 └── README.md
 ```
+
+## Third-Party Fonts
+
+- The desktop UI uses Geist / Geist Mono, while CJK text falls back to system UI fonts.
+- See [docs/THIRD_PARTY_FONTS.md](./docs/THIRD_PARTY_FONTS.md).

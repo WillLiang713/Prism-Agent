@@ -1,6 +1,7 @@
 import { randomBytes } from 'node:crypto';
 import { spawn } from 'node:child_process';
 import { access } from 'node:fs/promises';
+import net from 'node:net';
 import path from 'node:path';
 import process from 'node:process';
 import { setTimeout as delay } from 'node:timers/promises';
@@ -233,6 +234,29 @@ async function waitForServer(url, timeoutMs = 30000, headers = undefined) {
   throw new Error(`Timed out waiting for ${url}`);
 }
 
+async function findAvailablePort(host = '127.0.0.1') {
+  return await new Promise((resolve, reject) => {
+    const server = net.createServer();
+    server.unref();
+    server.on('error', reject);
+    server.listen(0, host, () => {
+      const address = server.address();
+      if (!address || typeof address === 'string') {
+        server.close(() => reject(new Error('Failed to resolve an available port.')));
+        return;
+      }
+
+      server.close((error) => {
+        if (error) {
+          reject(error);
+          return;
+        }
+        resolve(address.port);
+      });
+    });
+  });
+}
+
 async function shutdown(exitCode = 0) {
   if (shuttingDown) {
     return;
@@ -255,9 +279,10 @@ async function main() {
   const env = { ...process.env };
   const npmInvocation = await resolveNpmInvocation(env);
   const authToken = randomBytes(24).toString('hex');
-  const apiBase = 'http://127.0.0.1:33200';
+  const port = await findAvailablePort('127.0.0.1');
+  const apiBase = `http://127.0.0.1:${port}`;
 
-  console.log('[dev:web] starting agent sidecar on http://127.0.0.1:33200');
+  console.log(`[dev:web] starting agent sidecar on ${apiBase}`);
   startProcess(
     'agent-sidecar',
     {
@@ -273,7 +298,7 @@ async function main() {
         '--host',
         '127.0.0.1',
         '--port',
-        '33200',
+        String(port),
         '--token',
         authToken,
       ],

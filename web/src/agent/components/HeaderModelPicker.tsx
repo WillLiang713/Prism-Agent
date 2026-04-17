@@ -18,35 +18,35 @@ export function HeaderModelPicker({ currentModel }: { currentModel: string }) {
   const [search, setSearch] = useState('');
   const [modelOptions, setModelOptions] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const fetchedForServiceRef = useRef<string | null>(null);
 
   useEffect(() => {
     setModelOptions([]);
-    setError(null);
     fetchedForServiceRef.current = null;
   }, [selectedService?.id]);
 
   useEffect(() => {
-    if (!open) {
-      setSearch('');
-      return;
-    }
-    if (
-      selectedService &&
-      fetchedForServiceRef.current !== selectedService.id &&
-      modelOptions.length === 0 &&
-      !loading
-    ) {
-      void refreshList();
-    }
+    if (!open) setSearch('');
   }, [open]);
+
+  useEffect(() => {
+    if (!selectedService) return;
+    if (fetchedForServiceRef.current === selectedService.id) return;
+    if (loading) return;
+    if (!selectedService.model.apiKey || !selectedService.model.apiUrl) return;
+    void refreshList();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    selectedService?.id,
+    selectedService?.model.apiKey,
+    selectedService?.model.apiUrl,
+    open,
+  ]);
 
   async function refreshList() {
     if (!selectedService) return;
     setLoading(true);
-    setError(null);
     try {
       const result = await agentListModels({
         providerSelection: selectedService.model.providerSelection,
@@ -55,8 +55,7 @@ export function HeaderModelPicker({ currentModel }: { currentModel: string }) {
       });
       setModelOptions(result.models.map((m) => m.id));
       fetchedForServiceRef.current = selectedService.id;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+    } catch {
       setModelOptions([]);
     } finally {
       setLoading(false);
@@ -82,9 +81,16 @@ export function HeaderModelPicker({ currentModel }: { currentModel: string }) {
         <button
           ref={triggerRef}
           type="button"
-          className="no-drag inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-sm font-mono font-semibold lowercase text-foreground transition-colors hover:bg-muted focus:outline-none focus-visible:ring-1 focus-visible:ring-foreground/20"
+          className="no-drag inline-flex cursor-pointer items-center gap-1 rounded-md px-2 py-0.5 text-sm font-semibold text-foreground transition-colors hover:bg-muted focus:outline-none focus-visible:ring-1 focus-visible:ring-foreground/20"
         >
-          <span className="truncate">{currentModel || '选择模型'}</span>
+          <span
+            className={cn(
+              'truncate',
+              currentModel && 'font-mono font-normal lowercase',
+            )}
+          >
+            {currentModel || '选择模型'}
+          </span>
           <ChevronDown className="h-3.5 w-3.5 shrink-0 opacity-60" />
         </button>
       </PopoverPrimitive.Trigger>
@@ -112,14 +118,6 @@ export function HeaderModelPicker({ currentModel }: { currentModel: string }) {
                 <RefreshCw className={cn('h-3.5 w-3.5', loading && 'animate-spin')} />
               </button>
             </div>
-            {error ? (
-              <div
-                className="px-2 py-1.5 text-[11px] text-danger/80 truncate"
-                title={error}
-              >
-                {error}
-              </div>
-            ) : null}
             <Command.List
               className="mt-1 max-h-72 overflow-y-auto"
               onWheel={(event) => {
@@ -139,7 +137,7 @@ export function HeaderModelPicker({ currentModel }: { currentModel: string }) {
                   <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
                     {currentModel === option && <Check className="h-3.5 w-3.5" />}
                   </span>
-                  <span className="truncate">{option}</span>
+                  <span className="truncate font-mono font-normal lowercase">{option}</span>
                 </Command.Item>
               ))}
             </Command.List>

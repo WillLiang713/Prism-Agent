@@ -1,4 +1,6 @@
 use std::env;
+use std::io::{Read, Write};
+use std::net::{TcpListener, TcpStream};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -9,7 +11,6 @@ use tokio::process::{Child, Command};
 use tokio::sync::Mutex;
 
 const SIDECAR_HOST: &str = "127.0.0.1";
-const SIDECAR_PORT: u16 = 33200;
 
 pub struct AgentSidecar {
     child: Mutex<Child>,
@@ -19,8 +20,9 @@ pub struct AgentSidecar {
 
 impl AgentSidecar {
     pub async fn spawn(app: &AppHandle) -> Result<Arc<Self>, String> {
+        let port = find_available_port()?;
         let auth_token = generate_token();
-        let mut command = build_sidecar_command(app, &auth_token)?;
+        let mut command = build_sidecar_command(app, &auth_token, port)?;
         command.stdout(std::process::Stdio::piped());
         command.stderr(std::process::Stdio::piped());
 
@@ -40,9 +42,15 @@ impl AgentSidecar {
         spawn_log_task(stdout, "stdout");
         spawn_log_task(stderr, "stderr");
 
+        if let Err(error) = wait_for_sidecar_ready(&mut child, port, &auth_token).await {
+            let _ = child.kill().await;
+            let _ = child.wait().await;
+            return Err(error);
+        }
+
         Ok(Arc::new(Self {
             child: Mutex::new(child),
-            api_base: format!("http://{SIDECAR_HOST}:{SIDECAR_PORT}"),
+            api_base: format!("http://{SIDECAR_HOST}:{port}"),
             auth_token,
         }))
     }
@@ -53,7 +61,7 @@ impl AgentSidecar {
     }
 }
 
-fn build_sidecar_command(app: &AppHandle, auth_token: &str) -> Result<Command, String> {
+fn build_sidecar_command(app: &AppHandle, auth_token: &str, port: u16) -> Result<Command, String> {
     let repo_root = normalize_path_for_node(repo_root()?);
     let app_data_dir = app
         .path()
@@ -79,7 +87,7 @@ fn build_sidecar_command(app: &AppHandle, auth_token: &str) -> Result<Command, S
         command.arg("--host");
         command.arg(SIDECAR_HOST);
         command.arg("--port");
-        command.arg(SIDECAR_PORT.to_string());
+        command.arg(port.to_string());
         command.arg("--token");
         command.arg(auth_token);
         command.env("PRISM_AGENT_DATA_DIR", &app_data_dir);
@@ -94,11 +102,20 @@ fn build_sidecar_command(app: &AppHandle, auth_token: &str) -> Result<Command, S
     command.arg("--host");
     command.arg(SIDECAR_HOST);
     command.arg("--port");
-    command.arg(SIDECAR_PORT.to_string());
+    command.arg(port.to_string());
     command.arg("--token");
     command.arg(auth_token);
     command.env("PRISM_AGENT_DATA_DIR", &app_data_dir);
     Ok(command)
+}
+
+fn find_available_port() -> Result<u16, String> {
+    let listener = TcpListener::bind((SIDECAR_HOST, 0))
+        .map_err(|error| format!("为 agent sidecar 选择端口失败: {error}"))?;
+    listener
+        .local_addr()
+        .map(|address| address.port())
+        .map_err(|error| format!("读取 agent sidecar 端口失败: {error}"))
 }
 
 fn spawn_log_task<T>(stream: T, label: &'static str)
@@ -121,6 +138,80 @@ fn generate_token() -> String {
         .map(|value| value.as_nanos())
         .unwrap_or(0);
     format!("prism-{}-{now}", std::process::id())
+}
+
+async fn wait_for_sidecar_ready(child: &mut Child, port: u16, auth_token: &str) -> Result<(), String> {
+    const MAX_ATTEMPTS: usize = 60;
+    const WAIT_MS: u64 = 250;
+
+    for _ in 0..MAX_ATTEMPTS {
+        if let Some(status) = child
+            .try_wait()
+            .map_err(|error| format!("等待 agent sidecar 启动时读取进程状态失败: {error}"))?
+        {
+            return Err(format!(
+                "agent sidecar 提前退出，退出码: {}",
+                status
+                    .code()
+                    .map(|code| code.to_string())
+                    .unwrap_or_else(|| "unknown".to_string())
+            ));
+        }
+
+        match probe_sidecar_health(port, auth_token) {
+            Ok(()) => return Ok(()),
+            Err(ProbeSidecarError::NotReady) => {}
+            Err(ProbeSidecarError::UnexpectedStatus(status)) => {
+                return Err(format!("agent sidecar 健康检查返回异常状态: {status}"));
+            }
+            Err(ProbeSidecarError::Io(error)) => {
+                if error.kind() != std::io::ErrorKind::ConnectionRefused
+                    && error.kind() != std::io::ErrorKind::TimedOut
+                    && error.kind() != std::io::ErrorKind::WouldBlock
+                {
+                    return Err(format!("agent sidecar 健康检查失败: {error}"));
+                }
+            }
+        }
+
+        tokio::time::sleep(tokio::time::Duration::from_millis(WAIT_MS)).await;
+    }
+
+    Err("等待 agent sidecar 就绪超时".to_string())
+}
+
+enum ProbeSidecarError {
+    Io(std::io::Error),
+    NotReady,
+    UnexpectedStatus(String),
+}
+
+fn probe_sidecar_health(port: u16, auth_token: &str) -> Result<(), ProbeSidecarError> {
+    let mut stream = TcpStream::connect((SIDECAR_HOST, port)).map_err(ProbeSidecarError::Io)?;
+    let _ = stream.set_read_timeout(Some(std::time::Duration::from_millis(500)));
+    let _ = stream.set_write_timeout(Some(std::time::Duration::from_millis(500)));
+
+    let request = format!(
+        "GET /api/agent/health HTTP/1.1\r\nHost: {SIDECAR_HOST}:{port}\r\nAuthorization: Bearer {auth_token}\r\nConnection: close\r\n\r\n"
+    );
+    stream
+        .write_all(request.as_bytes())
+        .map_err(ProbeSidecarError::Io)?;
+
+    let mut response = String::new();
+    stream
+        .read_to_string(&mut response)
+        .map_err(ProbeSidecarError::Io)?;
+
+    let status_line = response.lines().next().unwrap_or_default();
+    if status_line.contains(" 200 ") {
+        return Ok(());
+    }
+    if status_line.is_empty() {
+        return Err(ProbeSidecarError::NotReady);
+    }
+
+    Err(ProbeSidecarError::UnexpectedStatus(status_line.to_string()))
 }
 
 fn resolve_node_executable() -> Result<PathBuf, String> {

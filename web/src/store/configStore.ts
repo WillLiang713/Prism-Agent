@@ -231,7 +231,7 @@ export const useConfigStore = create<ConfigStoreState>()(
             normalizeServices(undefined)[0].id,
           services: normalizeServices(persisted.services),
           runtimeModelConfig: persisted.runtime || createDefaultRuntimeConfig(),
-          desktop: persisted.desktop || { closeToTrayOnClose: true },
+          desktop: { closeToTrayOnClose: true },
         }) as ConfigStoreState,
       ),
       merge: (persistedState, currentState) => ({

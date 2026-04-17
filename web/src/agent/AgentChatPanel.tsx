@@ -178,7 +178,7 @@ export function AgentChatPanel({
         </div>
         
         <div className="py-5" style={{ paddingInline: CHAT_SIDE_PADDING }}>
-          <div className="mx-auto max-w-4xl">
+          <div className="mx-auto max-w-3xl">
             {activeSession?.skills && (
               <SkillsDisplay skills={activeSession.skills} />
             )}

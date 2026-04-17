@@ -99,3 +99,8 @@ Prism/
 ├── package.json
 └── README.zh-CN.md
 ```
+
+## 第三方字体
+
+- 桌面界面当前使用 Geist / Geist Mono，CJK 文本回退到系统 UI 字体。
+- 详见 [docs/THIRD_PARTY_FONTS.md](./docs/THIRD_PARTY_FONTS.md)。

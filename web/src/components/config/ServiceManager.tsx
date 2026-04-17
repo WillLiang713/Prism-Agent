@@ -34,40 +34,27 @@ export function ServiceManager() {
   const [modelOptions, setModelOptions] = useState<string[]>([]);
   const [modelListLoading, setModelListLoading] = useState(false);
   const [modelListError, setModelListError] = useState<string | null>(null);
-  const [modelListSuccess, setModelListSuccess] = useState<string | null>(null);
 
   useEffect(() => {
     setModelOptions([]);
     setModelListError(null);
-    setModelListSuccess(null);
     if (selectedService?.model.apiKey && selectedService?.model.apiUrl) {
-      void refreshModelList({ silent: true });
+      void refreshModelList();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedService?.id]);
 
-  useEffect(() => {
-    if (!modelListSuccess) return;
-    const timer = setTimeout(() => setModelListSuccess(null), 2500);
-    return () => clearTimeout(timer);
-  }, [modelListSuccess]);
-
-  async function refreshModelList(options: { silent?: boolean } = {}) {
+  async function refreshModelList() {
     if (!selectedService) return;
     setModelListLoading(true);
     setModelListError(null);
-    setModelListSuccess(null);
     try {
       const result = await agentListModels({
         providerSelection: selectedService.model.providerSelection,
         apiUrl: selectedService.model.apiUrl,
         apiKey: selectedService.model.apiKey,
       });
-      const ids = result.models.map((m) => m.id);
-      setModelOptions(ids);
-      if (!options.silent) {
-        setModelListSuccess(`已获取 ${ids.length} 个模型`);
-      }
+      setModelOptions(result.models.map((m) => m.id));
     } catch (error) {
       setModelListError(error instanceof Error ? error.message : String(error));
       setModelOptions([]);
@@ -223,8 +210,6 @@ export function ServiceManager() {
                   >
                     {modelListError}
                   </span>
-                ) : modelListSuccess ? (
-                  <span className="text-[11px] text-success/90">{modelListSuccess}</span>
                 ) : null}
                 <button
                   type="button"
