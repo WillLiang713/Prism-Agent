@@ -1,6 +1,6 @@
 import * as PopoverPrimitive from '@radix-ui/react-popover';
 import { Command } from 'cmdk';
-import { Check, ChevronDown, RefreshCw } from 'lucide-react';
+import { Brain, Check, ChevronDown, RefreshCw } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
 import { agentListModels } from '../client';
@@ -83,14 +83,8 @@ export function HeaderModelPicker({ currentModel }: { currentModel: string }) {
           type="button"
           className="no-drag inline-flex h-8 cursor-pointer items-center gap-2 rounded-full border border-border bg-card px-3 text-xs font-medium text-foreground outline-none transition-colors hover:bg-muted focus:outline-none focus-visible:ring-1 focus-visible:ring-foreground/20"
         >
-          <span
-            className={cn(
-              'truncate',
-              currentModel && 'font-mono font-normal lowercase',
-            )}
-          >
-            {currentModel || '选择模型'}
-          </span>
+          <Brain className="h-4 w-4 shrink-0 opacity-60" />
+          <span className="truncate">{currentModel || '选择模型'}</span>
           <ChevronDown className="h-4 w-4 shrink-0 opacity-60" />
         </button>
       </PopoverPrimitive.Trigger>

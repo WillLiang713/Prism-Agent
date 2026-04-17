@@ -48,9 +48,9 @@ export function AgentChatPanel({
   const stickToBottomRef = useRef(true);
   const scrollFrameRef = useRef<number | null>(null);
   const activeApproval = useMemo(() => activeSession?.approvals[0] || null, [activeSession]);
-  const inputDisabled = !backendReady || !activeSession;
+  const inputDisabled = !backendReady;
   const submitDisabled = inputDisabled || !agentRuntimeStatus.ready;
-  const isEmptySession = Boolean(activeSession) && (activeSession?.messages.length || 0) === 0;
+  const isWelcomeState = !activeSession || (activeSession?.messages.length || 0) === 0;
   const runtimeStatusMessage = agentConfigValidating
     ? agentRuntimeStatus.ready
       ? ''
@@ -156,16 +156,7 @@ export function AgentChatPanel({
             <div className="flex h-full flex-col items-center justify-center p-8 text-center">
               <Loader2 className="h-8 w-8 animate-spin text-mutedForeground" />
             </div>
-          ) : !activeSession ? (
-            <div className="flex h-full items-center justify-center p-8">
-              <div className="flex w-full max-w-xl flex-col items-center gap-6 rounded-[28px] bg-background px-10 py-12 text-center">
-                <div className="rounded-full bg-background p-6">
-                  <MessageSquarePlus className="h-10 w-10 text-mutedForeground" />
-                </div>
-                <h3 className="text-lg font-medium">开始新的对话</h3>
-              </div>
-            </div>
-          ) : isEmptySession ? (
+          ) : isWelcomeState ? (
             <div className="flex h-full items-center justify-center" style={{ paddingInline: CHAT_SIDE_PADDING }}>
               <div className="mx-auto flex w-full flex-col gap-4" style={{ maxWidth: CHAT_PANEL_MAX_WIDTH }}>
                 <h1 className="text-center text-2xl font-medium text-foreground">
@@ -181,6 +172,7 @@ export function AgentChatPanel({
                   isStreaming={activeSession?.isStreaming || false}
                   approvalMode={approvalMode}
                   fallbackModel={agentRuntimeStatus.model}
+                  workspaceRoot={activeSession?.workspaceRoot}
                   onApprovalModeChange={onApprovalModeChange}
                   onStop={onStop}
                   onSubmit={onSendMessage}
@@ -201,7 +193,7 @@ export function AgentChatPanel({
           )}
         </div>
 
-        {!isEmptySession && (
+        {!isWelcomeState && (
           <div className="py-5" style={{ paddingInline: CHAT_SIDE_PADDING }}>
             <div className="mx-auto w-full flex flex-col gap-4" style={{ maxWidth: CHAT_PANEL_MAX_WIDTH }}>
               {activeSession?.skills && (
@@ -215,6 +207,7 @@ export function AgentChatPanel({
                   isStreaming={activeSession?.isStreaming || false}
                   approvalMode={approvalMode}
                   fallbackModel={agentRuntimeStatus.model}
+                  workspaceRoot={activeSession?.workspaceRoot}
                   onApprovalModeChange={onApprovalModeChange}
                   onStop={onStop}
                   onSubmit={onSendMessage}

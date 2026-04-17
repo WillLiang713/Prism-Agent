@@ -279,17 +279,31 @@ export function useAgentChat() {
     reasoningEffort: AgentReasoningEffort;
     approvalMode: AgentApprovalMode;
   }) {
-    if (!activeSession || !agentRuntimeStatus.ready) {
+    if (!agentRuntimeStatus.ready) {
+      return;
+    }
+
+    let targetSession = activeSession;
+    if (!targetSession) {
+      const pinned = useAgentSessionStore.getState().pinnedDirectories;
+      const defaultCwd = threadList[0]?.cwd || pinned[0] || '';
+      await startNewSession(defaultCwd);
+      
+      const nextState = useAgentSessionStore.getState();
+      targetSession = nextState.activeSessionId ? nextState.sessionsById[nextState.activeSessionId] : null;
+    }
+
+    if (!targetSession) {
       return;
     }
 
     const requestId = crypto.randomUUID();
-    createPendingMessage(activeSession.sessionId, payload.text, requestId);
+    createPendingMessage(targetSession.sessionId, payload.text, requestId);
     try {
       await agentSendMessage(
         {
           requestId,
-          sessionId: activeSession.sessionId,
+          sessionId: targetSession.sessionId,
           text: payload.text,
           images: payload.images,
           reasoningEffort: payload.reasoningEffort,
@@ -305,7 +319,7 @@ export function useAgentChat() {
       applyEvent({
         type: 'error',
         requestId,
-        sessionId: activeSession.sessionId,
+        sessionId: targetSession.sessionId,
         message: error instanceof Error ? error.message : String(error),
       });
     }

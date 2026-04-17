@@ -1,4 +1,4 @@
-import { ArrowUp, Lightbulb, Paperclip, Play, X } from 'lucide-react';
+import { ArrowUp, Folder, Lightbulb, Paperclip, Play, X } from 'lucide-react';
 import {
   useMemo,
   useRef,
@@ -26,6 +26,7 @@ export function AgentChatInput({
   approvalMode,
   fallbackModel,
   onApprovalModeChange,
+  workspaceRoot,
   onSubmit,
   onStop,
 }: {
@@ -36,6 +37,7 @@ export function AgentChatInput({
   approvalMode: AgentApprovalMode;
   fallbackModel?: string;
   onApprovalModeChange: (mode: AgentApprovalMode) => void;
+  workspaceRoot?: string;
   onSubmit: (payload: {
     text: string;
     images: Array<{ name: string; mediaType: string; dataUrl: string }>;
@@ -156,7 +158,7 @@ export function AgentChatInput({
       />
 
       <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <FileInput ref={fileInputRef} accept="image/*" multiple onChange={handleFileChange} />
           <Button
             type="button"
@@ -169,12 +171,41 @@ export function AgentChatInput({
           >
             <Paperclip className="h-4 w-4" />
           </Button>
+
+          {workspaceRoot && (
+            <div
+              className="flex h-8 items-center gap-2 rounded-full border border-border bg-card px-3 text-xs font-medium text-foreground"
+              title={workspaceRoot}
+            >
+              <Folder className="h-3.5 w-3.5" />
+              <span className="max-w-[120px] overflow-hidden text-ellipsis whitespace-nowrap font-medium">
+                {workspaceRoot.split(/[\\/]/).filter(Boolean).pop() || workspaceRoot}
+              </span>
+            </div>
+          )}
+
+          <Select value={approvalMode} onValueChange={(value) => onApprovalModeChange(value as AgentApprovalMode)}>
+            <SelectTrigger className="h-8 w-[96px] cursor-pointer px-3 text-xs" aria-label="执行模式">
+              <div className="flex items-center gap-2">
+                <Play aria-hidden="true" className="h-4 w-4 text-mutedForeground" />
+                <span className="font-medium">{approvalMode === 'auto' ? '自动' : '手动'}</span>
+              </div>
+            </SelectTrigger>
+            <SelectContent side="top" className="min-w-0">
+              <SelectItem value="auto" className="cursor-pointer">自动</SelectItem>
+              <SelectItem value="manual" className="cursor-pointer">手动</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="flex items-center gap-2.5">
           <HeaderModelPicker currentModel={displayModelId} />
+
           <Select value={reasoningEffort} onValueChange={(value) => setReasoningEffort(value as AgentReasoningEffort)}>
             <SelectTrigger className="h-8 w-[100px] cursor-pointer px-3 text-xs">
               <div className="flex items-center gap-2">
                 <Lightbulb className="h-4 w-4" />
-                <span>{reasoningOptions.find((option) => option.value === reasoningEffort)?.label || '高'}</span>
+                <span className="font-medium">{reasoningOptions.find((option) => option.value === reasoningEffort)?.label || '高'}</span>
               </div>
             </SelectTrigger>
             <SelectContent side="top" className="min-w-0">
@@ -185,43 +216,31 @@ export function AgentChatInput({
               ))}
             </SelectContent>
           </Select>
-          <Select value={approvalMode} onValueChange={(value) => onApprovalModeChange(value as AgentApprovalMode)}>
-            <SelectTrigger className="h-8 w-[96px] cursor-pointer px-3 text-xs" aria-label="执行模式">
-              <div className="flex items-center gap-2">
-                <Play aria-hidden="true" className="h-4 w-4 text-mutedForeground" />
-                <span>{approvalMode === 'auto' ? '自动' : '手动'}</span>
-              </div>
-            </SelectTrigger>
-            <SelectContent side="top" className="min-w-0">
-              <SelectItem value="auto" className="cursor-pointer">自动</SelectItem>
-              <SelectItem value="manual" className="cursor-pointer">手动</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
 
-        {isStreaming ? (
-          <Button
-            type="button"
-            variant="primary"
-            onClick={onStop}
-            title="停止"
-            aria-label="停止"
-            className="h-7 w-7 p-0"
-          >
-            <span aria-hidden="true" className="h-2 w-2 rounded-[3px] bg-current" />
-          </Button>
-        ) : (
-          <Button
-            type="submit"
-            variant="primary"
-            disabled={submitDisabled}
-            title={submitHint || '发送'}
-            aria-label="发送"
-            className="h-7 w-7 p-0"
-          >
-            <ArrowUp className="h-3.5 w-3.5" />
-          </Button>
-        )}
+          {isStreaming ? (
+            <Button
+              type="button"
+              variant="primary"
+              onClick={onStop}
+              title="停止"
+              aria-label="停止"
+              className="ml-0.5 h-7 w-7 p-0"
+            >
+              <span aria-hidden="true" className="h-2 w-2 rounded-[3px] bg-current" />
+            </Button>
+          ) : (
+            <Button
+              type="submit"
+              variant="primary"
+              disabled={submitDisabled}
+              title={submitHint || '发送'}
+              aria-label="发送"
+              className="ml-0.5 h-7 w-7 p-0"
+            >
+              <ArrowUp className="h-3.5 w-3.5" />
+            </Button>
+          )}
+        </div>
       </div>
     </form>
   );

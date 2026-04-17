@@ -120,11 +120,11 @@ export function AgentSessionList({
           type="button"
           variant="ghost"
           onClick={handleOpenDirectory}
-          aria-label="载入工作区"
+          aria-label="工作区"
           className="h-9 flex-1 justify-start gap-2 rounded-lg px-3 text-sm font-medium text-foreground hover:bg-muted/60"
         >
           <FolderOpen aria-hidden="true" className="h-4 w-4 text-mutedForeground" />
-          <span>载入工作区</span>
+          <span>工作区</span>
         </Button>
       </div>
 
