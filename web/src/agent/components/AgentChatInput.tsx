@@ -1,4 +1,4 @@
-import { ArrowUp, Lightbulb, Paperclip, Play, Square, X } from 'lucide-react';
+import { ArrowUp, Lightbulb, Paperclip, Play, X } from 'lucide-react';
 import {
   useRef,
   useState,
@@ -186,13 +186,13 @@ export function AgentChatInput({
         {isStreaming ? (
           <Button
             type="button"
-            variant="danger"
+            variant="primary"
             onClick={onStop}
             title="停止"
             aria-label="停止"
             className="h-7 w-7 p-0"
           >
-            <Square className="h-3.5 w-3.5" />
+            <span aria-hidden="true" className="h-2.5 w-2.5 rounded-[3px] bg-current" />
           </Button>
         ) : (
           <Button

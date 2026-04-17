@@ -126,3 +126,40 @@ samp {
 ::selection {
   background: hsl(var(--foreground) / 0.14);
 }
+
+@keyframes thinking-title-sweep {
+  0% {
+    background-position: 130% 0;
+  }
+
+  100% {
+    background-position: -130% 0;
+  }
+}
+
+.thinking-title-shimmer {
+  background-image: linear-gradient(
+    110deg,
+    hsl(var(--foreground) / 0.42) 0%,
+    hsl(var(--foreground) / 0.54) 30%,
+    hsl(var(--foreground) / 1) 44%,
+    hsl(var(--foreground) / 1) 50%,
+    hsl(var(--foreground) / 0.56) 62%,
+    hsl(var(--foreground) / 0.42) 100%
+  );
+  background-size: 260% 100%;
+  background-position: 130% 0;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  animation: thinking-title-sweep 2.15s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .thinking-title-shimmer {
+    background-image: none;
+    animation: none;
+    color: hsl(var(--foreground) / 0.9);
+  }
+}

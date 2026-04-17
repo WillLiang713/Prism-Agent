@@ -10,7 +10,7 @@ import type { AgentApprovalMode, AgentRuntimeStatus } from './client';
 import type { AgentSession } from './sessionStore';
 
 const CHAT_SIDE_PADDING = 'calc(1.5rem + 10px)';
-const CHAT_CONTENT_MAX_WIDTH = '900px';
+const CHAT_PANEL_MAX_WIDTH = '760px';
 const BOTTOM_STICK_THRESHOLD_PX = 160;
 const SUPPRESSED_RUNTIME_REASON = '未指定主模型，请在设置中选择或输入模型名称。';
 
@@ -23,7 +23,6 @@ export function AgentChatPanel({
   agentRuntimeStatus,
   agentConfigValidating,
   onApprovalModeChange,
-  onOpenSettings,
   onSendMessage,
   onStop,
   onRespondApproval,
@@ -36,7 +35,6 @@ export function AgentChatPanel({
   agentRuntimeStatus: AgentRuntimeStatus;
   agentConfigValidating: boolean;
   onApprovalModeChange: (mode: AgentApprovalMode) => void;
-  onOpenSettings: () => void;
   onSendMessage: (payload: {
     text: string;
     images: Array<{ name: string; mediaType: string; dataUrl: string }>;
@@ -51,9 +49,11 @@ export function AgentChatPanel({
   const scrollFrameRef = useRef<number | null>(null);
   const activeApproval = useMemo(() => activeSession?.approvals[0] || null, [activeSession]);
   const inputDisabled = !backendReady || !activeSession;
-  const submitDisabled = inputDisabled || agentConfigValidating || !agentRuntimeStatus.ready;
+  const submitDisabled = inputDisabled || !agentRuntimeStatus.ready;
   const runtimeStatusMessage = agentConfigValidating
-    ? '正在检查模型配置…'
+    ? agentRuntimeStatus.ready
+      ? ''
+      : '正在检查模型配置…'
     : agentRuntimeStatus.reason === SUPPRESSED_RUNTIME_REASON
       ? ''
       : agentRuntimeStatus.reason;
@@ -167,7 +167,7 @@ export function AgentChatPanel({
           ) : (
             <ScrollArea ref={scrollRef} className="h-full">
               <div className="flex min-h-full py-8" style={{ paddingInline: CHAT_SIDE_PADDING }}>
-                <div className="mx-auto flex min-h-full w-full" style={{ maxWidth: CHAT_CONTENT_MAX_WIDTH }}>
+                <div className="mx-auto flex min-h-full w-full" style={{ maxWidth: CHAT_PANEL_MAX_WIDTH }}>
                   <AgentMessageList
                     messages={activeSession?.messages || []}
                     isStreaming={activeSession?.isStreaming || false}
@@ -179,29 +179,10 @@ export function AgentChatPanel({
         </div>
         
         <div className="py-5" style={{ paddingInline: CHAT_SIDE_PADDING }}>
-          <div className="mx-auto w-full" style={{ maxWidth: CHAT_CONTENT_MAX_WIDTH }}>
+          <div className="mx-auto w-full" style={{ maxWidth: CHAT_PANEL_MAX_WIDTH }}>
             {activeSession?.skills && (
               <SkillsDisplay skills={activeSession.skills} />
             )}
-            {activeSession && runtimeStatusMessage && submitDisabled ? (
-              <div
-                aria-live="polite"
-                className="mb-3 flex items-center justify-between gap-1 px-1 text-sm text-amber-500 font-medium"
-              >
-                <div className="flex items-center gap-2">
-                  <AlertCircle className="h-4 w-4" />
-                  <span>{runtimeStatusMessage}</span>
-                </div>
-                {!agentConfigValidating && !agentRuntimeStatus.configured && (
-                  <button
-                    onClick={onOpenSettings}
-                    className="underline underline-offset-4 hover:opacity-80 transition-opacity"
-                  >
-                    前往设置
-                  </button>
-                )}
-              </div>
-            ) : null}
             {activeSession && (
               <AgentChatInput
                 inputDisabled={inputDisabled}

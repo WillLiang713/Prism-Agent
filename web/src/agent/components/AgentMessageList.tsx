@@ -55,7 +55,7 @@ const AgentMessageItem = memo(function AgentMessageItem({
   if (message.role === 'user') {
     return (
       <article className="group/user flex flex-col items-end gap-1">
-        <div className="w-fit max-w-[90%] rounded-2xl border border-border bg-accent px-4 py-2.5 text-sm leading-7 text-accentForeground">
+        <div className="w-fit max-w-[90%] rounded-[10px] border border-border bg-accent px-3 py-2 text-sm leading-6 text-accentForeground">
           <div className="whitespace-pre-wrap break-words">{message.text}</div>
         </div>
         <CopyMessageButton text={message.text} />
@@ -326,29 +326,7 @@ function StreamingMessageBody({ text }: { text: string }) {
   useEffect(() => () => stopStreamingFrame(), []);
 
   const displayText = text.slice(0, displayLength);
-  const { stableMarkdown, trailingText } = useMemo(
-    () => partitionStreamingMarkdown(displayText),
-    [displayText],
-  );
-  const stableBlocks = useMemo(
-    () => splitStableMarkdownBlocks(stableMarkdown),
-    [stableMarkdown],
-  );
-
-  return (
-    <div className="min-w-0 space-y-0">
-      {stableBlocks.length > 0 ? (
-        <div className={cn(MARKDOWN_BODY_CLASS)}>
-          {stableBlocks.map((block, index) => (
-            <MarkdownBlock key={index} text={block} highlight={false} />
-          ))}
-        </div>
-      ) : null}
-      {trailingText ? (
-        <div className={STREAMING_PLAIN_TEXT_CLASS}>{trailingText}</div>
-      ) : null}
-    </div>
-  );
+  return <div className={STREAMING_PLAIN_TEXT_CLASS}>{displayText}</div>;
 }
 
 function splitStableMarkdownBlocks(text: string): string[] {

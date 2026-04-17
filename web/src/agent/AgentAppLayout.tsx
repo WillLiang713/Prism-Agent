@@ -99,7 +99,6 @@ export function AgentAppLayout() {
               agentRuntimeStatus={agentRuntimeStatus}
               agentConfigValidating={agentConfigValidating}
               onApprovalModeChange={setApprovalMode}
-              onOpenSettings={() => setSettingsOpen(true)}
               onSendMessage={(payload) => {
                 void sendMessage(payload);
               }}

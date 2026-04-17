@@ -43,6 +43,37 @@ function extractCommand(args: unknown) {
   return null;
 }
 
+function extractPattern(args: unknown) {
+  const normalized = normalizeArgs(args);
+  if (normalized && typeof normalized === 'object') {
+    const candidate = normalized as Record<string, unknown>;
+    if (typeof candidate.pattern === 'string' && candidate.pattern.trim()) {
+      return candidate.pattern.trim();
+    }
+  }
+  return null;
+}
+
+function shortenText(value: string, limit: number) {
+  return value.length > limit ? `${value.slice(0, limit - 1)}…` : value;
+}
+
+function buildCompactTitle(event: AgentToolEvent, commandText: string | null) {
+  if (commandText) {
+    return commandText;
+  }
+
+  const toolName = event.name.toLowerCase();
+  if (toolName === 'grep' || toolName === 'find') {
+    const pattern = extractPattern(event.args);
+    if (pattern) {
+      return `${toolName === 'grep' ? '搜索' : '查找'} ${shortenText(pattern, 48)}`;
+    }
+  }
+
+  return event.summary || event.name;
+}
+
 export function ToolCallCard({ event }: { event: AgentToolEvent }) {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -53,8 +84,14 @@ export function ToolCallCard({ event }: { event: AgentToolEvent }) {
   }, [event.ok]);
 
   const commandText = useMemo(() => extractCommand(event.args), [event.args]);
-  const isCommandLike = Boolean(commandText) || event.name.toLowerCase().includes('bash');
-  const compactTitle = commandText || event.summary || event.name;
+  const toolName = event.name.toLowerCase();
+  const isCommandLike = Boolean(commandText) || toolName.includes('bash');
+  const isPlainTextOutput = toolName === 'grep' || toolName === 'find' || toolName === 'ls';
+  const compactTitle = useMemo(() => buildCompactTitle(event, commandText), [event, commandText]);
+  const shouldRenderSummaryBody =
+    typeof event.summary === 'string' &&
+    event.summary.trim().length > 0 &&
+    event.summary.trim() !== compactTitle.trim();
 
   const formattedOutput = event.diff
     ? `\`\`\`diff\n${event.diff}\n\`\`\`${event.output ? `\n\n${event.output}` : ''}`
@@ -72,7 +109,7 @@ export function ToolCallCard({ event }: { event: AgentToolEvent }) {
       </summary>
       {isOpen ? (
         <div className="mt-2 space-y-2 min-w-0">
-          {event.summary ? (
+          {shouldRenderSummaryBody ? (
             <div className="break-words text-xs leading-6 text-foreground/90">
               {event.summary}
             </div>
@@ -83,10 +120,16 @@ export function ToolCallCard({ event }: { event: AgentToolEvent }) {
             </pre>
           ) : null}
           {event.output || event.diff ? (
-            <MarkdownContent
-              text={formattedOutput}
-              className="min-w-0 text-sm leading-6 [&_pre]:rounded-lg [&_pre]:border-border/60 [&_pre]:bg-background/50 [&_pre]:px-3 [&_pre]:py-2.5 [&_pre]:text-xs"
-            />
+            isPlainTextOutput ? (
+              <pre className="overflow-x-auto whitespace-pre-wrap break-all rounded-lg border border-border/60 bg-background/40 px-3 py-2.5 text-xs leading-6 text-foreground font-mono">
+                {formattedOutput}
+              </pre>
+            ) : (
+              <MarkdownContent
+                text={formattedOutput}
+                className="min-w-0 text-sm leading-6 [&_pre]:rounded-lg [&_pre]:border-border/60 [&_pre]:bg-background/50 [&_pre]:px-3 [&_pre]:py-2.5 [&_pre]:text-xs"
+              />
+            )
           ) : null}
           {typeof event.exitCode === 'number' ? (
             <div className="text-xs font-mono text-mutedForeground">

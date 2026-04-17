@@ -81,12 +81,12 @@ export function HeaderModelPicker({ currentModel }: { currentModel: string }) {
         <button
           ref={triggerRef}
           type="button"
-          className="no-drag inline-flex cursor-pointer items-center gap-1 rounded-md px-2 py-0.5 text-sm font-semibold text-foreground transition-colors hover:bg-muted focus:outline-none focus-visible:ring-1 focus-visible:ring-foreground/20"
+          className="no-drag inline-flex cursor-pointer items-center gap-1 rounded-md px-2 py-0.5 text-[13px] font-medium text-mutedForeground/90 transition-colors hover:bg-muted hover:text-foreground/90 focus:outline-none focus-visible:ring-1 focus-visible:ring-foreground/20"
         >
           <span
             className={cn(
               'truncate',
-              currentModel && 'font-mono font-normal lowercase',
+              currentModel && 'font-mono font-normal lowercase text-mutedForeground/85',
             )}
           >
             {currentModel || '选择模型'}
