@@ -4,6 +4,7 @@ import { open } from '@tauri-apps/plugin-dialog';
 
 import { Button } from '../../components/ui/button';
 import { ScrollArea } from '../../components/ui/scroll-area';
+import { Tooltip, TooltipContent, TooltipTrigger } from '../../components/ui/tooltip';
 import { isDesktopRuntime } from '../../lib/runtime';
 import type { AgentThreadMeta } from '../client';
 import type { AgentSession } from '../sessionStore';
@@ -106,14 +107,13 @@ export function AgentSessionList({
           onClick={handleOpenDirectory}
           aria-label="选择其他目录"
           className="h-9 w-9 shrink-0 rounded-lg p-0 text-mutedForeground hover:bg-muted/60 hover:text-foreground"
-          title="选择其他目录"
         >
           <FolderOpen aria-hidden="true" className="h-4 w-4" />
         </Button>
       </div>
 
-      <ScrollArea className="mt-2 flex-1 px-2">
-        <div className="space-y-0.5 pb-4 pt-2">
+      <ScrollArea className="flex-1 px-2">
+        <div className="space-y-0.5 pb-4">
           {sortedThreads.map((thread) => {
             const loadedSession = sessions.find((session) => session.threadId === thread.threadId);
             const active =
@@ -134,7 +134,6 @@ export function AgentSessionList({
                   role="button"
                   tabIndex={0}
                   onClick={() => onResume(thread.threadId, thread.cwd)}
-                  title={`${label}\n${thread.cwd}`}
                   className="min-w-0 cursor-pointer flex flex-col gap-0.5"
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' || e.key === ' ') {
@@ -142,9 +141,19 @@ export function AgentSessionList({
                     }
                   }}
                 >
-                  <div className="truncate text-sm font-medium leading-tight">
-                    {label}
-                  </div>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="truncate text-sm font-medium leading-tight w-fit max-w-full">
+                        {label}
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom" align="start" sideOffset={4}>
+                      <div className="font-medium">{label}</div>
+                      <div className="mt-0.5 text-[11px] text-mutedForeground break-all">
+                        {thread.cwd}
+                      </div>
+                    </TooltipContent>
+                  </Tooltip>
                   {dirLabel && dirLabel !== '未归类' && (
                     <div className="truncate text-[11px] text-mutedForeground/60">
                       {dirLabel}
@@ -160,7 +169,6 @@ export function AgentSessionList({
                           handleDeleteThread(thread.threadId);
                         }}
                         className="p-1 hover:bg-success/20 text-success rounded-md transition-all"
-                        title="确认删除"
                       >
                         <Check className="h-3 w-3" />
                       </button>
@@ -170,7 +178,6 @@ export function AgentSessionList({
                           setPendingDeleteId(null);
                         }}
                         className="p-1 hover:bg-muted text-mutedForeground rounded-md transition-all"
-                        title="取消"
                       >
                         <X className="h-3 w-3" />
                       </button>
@@ -183,7 +190,6 @@ export function AgentSessionList({
                         setPendingDeleteId(thread.threadId);
                       }}
                       className="opacity-0 group-hover:opacity-100 p-1.5 hover:bg-danger/10 hover:text-danger rounded-md transition-all text-mutedForeground/80"
-                      title="归档此任务"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                     </button>
