@@ -10,6 +10,7 @@ import type { AgentApprovalMode, AgentRuntimeStatus } from './client';
 import type { AgentSession } from './sessionStore';
 
 const CHAT_SIDE_PADDING = 'calc(1.5rem + 10px)';
+const CHAT_CONTENT_MAX_WIDTH = '900px';
 const BOTTOM_STICK_THRESHOLD_PX = 160;
 const SUPPRESSED_RUNTIME_REASON = '未指定主模型，请在设置中选择或输入模型名称。';
 
@@ -166,7 +167,7 @@ export function AgentChatPanel({
           ) : (
             <ScrollArea ref={scrollRef} className="h-full">
               <div className="flex min-h-full py-8" style={{ paddingInline: CHAT_SIDE_PADDING }}>
-                <div className="mx-auto flex min-h-full w-full max-w-4xl">
+                <div className="mx-auto flex min-h-full w-full" style={{ maxWidth: CHAT_CONTENT_MAX_WIDTH }}>
                   <AgentMessageList
                     messages={activeSession?.messages || []}
                     isStreaming={activeSession?.isStreaming || false}
@@ -178,7 +179,7 @@ export function AgentChatPanel({
         </div>
         
         <div className="py-5" style={{ paddingInline: CHAT_SIDE_PADDING }}>
-          <div className="mx-auto max-w-3xl">
+          <div className="mx-auto w-full" style={{ maxWidth: CHAT_CONTENT_MAX_WIDTH }}>
             {activeSession?.skills && (
               <SkillsDisplay skills={activeSession.skills} />
             )}

@@ -482,6 +482,14 @@ async function runPrompt(runtime: RuntimeSessionRecord, requestId: string, paylo
       images: normalizeImages(payload.images ?? []),
     });
 
+    const assistantOutcome = getLatestAssistantOutcome(runtime);
+    if (assistantOutcome?.usage) {
+      runtime.snapshot.lastUsage = normalizeAssistantUsage(assistantOutcome.usage);
+    }
+    if (assistantOutcome?.stopReason === 'error') {
+      throw new Error(assistantOutcome.errorMessage || '模型请求失败。');
+    }
+
     if (!sessionRegistry.isCancelled(runtime.sessionId, requestId)) {
       emit({
         type: 'done',
@@ -1077,6 +1085,45 @@ function normalizeModelIds(ids: Array<string | undefined> | undefined) {
   return Array.from(unique)
     .sort()
     .map((id) => ({ id }));
+}
+
+function getLatestAssistantOutcome(runtime: RuntimeSessionRecord) {
+  const messages = runtime.session.agent.state.messages as Array<{
+    role?: string;
+    stopReason?: string;
+    errorMessage?: string;
+    usage?: {
+      input?: number;
+      output?: number;
+      cacheRead?: number;
+      cacheWrite?: number;
+      totalTokens?: number;
+    };
+  }>;
+
+  for (let index = messages.length - 1; index >= 0; index -= 1) {
+    const message = messages[index];
+    if (message?.role === 'assistant') {
+      return message;
+    }
+  }
+
+  return null;
+}
+
+function normalizeAssistantUsage(usage: {
+  input?: number;
+  output?: number;
+  cacheRead?: number;
+  cacheWrite?: number;
+  totalTokens?: number;
+}) {
+  return {
+    input: usage.input ?? 0,
+    output: usage.output ?? 0,
+    cachedInput: usage.cacheRead ?? usage.cacheWrite ?? 0,
+    total: usage.totalTokens,
+  };
 }
 
 void main().catch(async (error) => {
