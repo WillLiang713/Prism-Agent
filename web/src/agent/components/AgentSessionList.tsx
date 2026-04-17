@@ -205,21 +205,19 @@ export function AgentSessionList({
                   return (
                     <div
                       key={thread.threadId}
-                      className={`group grid w-full grid-cols-[1fr_auto] items-center gap-1 rounded-lg px-3 py-2 transition-colors ${
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => onResume(thread.threadId, thread.cwd)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          onResume(thread.threadId, thread.cwd);
+                        }
+                      }}
+                      className={`group grid w-full grid-cols-[1fr_auto] items-center gap-1 rounded-lg px-3 py-2 transition-colors cursor-pointer ${
                         active ? 'bg-foreground/[0.08]' : 'hover:bg-muted/60'
                       }`}
                     >
-                      <div
-                        role="button"
-                        tabIndex={0}
-                        onClick={() => onResume(thread.threadId, thread.cwd)}
-                        className="min-w-0 cursor-pointer flex flex-col gap-0.5"
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' || e.key === ' ') {
-                            onResume(thread.threadId, thread.cwd);
-                          }
-                        }}
-                      >
+                      <div className="min-w-0 flex flex-col gap-0.5">
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <span
