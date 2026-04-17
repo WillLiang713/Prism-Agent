@@ -12,7 +12,7 @@ import type { AgentThreadMeta } from '../client';
 import type { AgentSession } from '../sessionStore';
 
 function previewLabel(thread: AgentThreadMeta) {
-  return thread.name || thread.preview || '未命名任务';
+  return thread.name || thread.preview || '新任务';
 }
 
 function getBasename(path: string) {
