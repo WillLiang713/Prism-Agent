@@ -166,7 +166,7 @@ export function AgentChatInput({
             onClick={() => fileInputRef.current?.click()}
             disabled={inputDisabled || isStreaming}
             title="上传图片"
-            className="h-8 w-8 shrink-0 bg-card p-0 shadow-none hover:bg-card"
+            className="h-8 w-8 shrink-0 bg-card p-0 shadow-none"
             aria-label="上传图片"
           >
             <Paperclip className="h-4 w-4" />
