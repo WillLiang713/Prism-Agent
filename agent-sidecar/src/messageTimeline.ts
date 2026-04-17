@@ -5,7 +5,6 @@ import type {
   AgentTimelineItem,
 } from './types.js';
 
-type ThinkingStatus = 'streaming' | 'done' | 'aborted';
 type FinalThinkingStatus = 'done' | 'aborted';
 
 export function createAssistantSessionMessage(id: string, createdAt = Date.now()): AgentSessionMessage {

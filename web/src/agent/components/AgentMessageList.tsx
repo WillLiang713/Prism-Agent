@@ -3,6 +3,7 @@ import { Check, Copy } from 'lucide-react';
 
 import { MarkdownContent } from './MarkdownContent';
 import { STREAMING_PLAIN_TEXT_CLASS } from './MarkdownContent.styles';
+import { normalizeAssistantMarkdown } from './assistantMarkdown';
 import { ToolCallCard } from './ToolCallCard';
 import { ThinkingBlock } from './ThinkingBlock';
 import { splitStreamingMarkdownForRender } from './streamingMarkdown';
@@ -158,8 +159,9 @@ function MessageBody({ text, isStreaming }: { text: string; isStreaming: boolean
 
 function CompletedMessageBody({ text }: { text: string }) {
   const deferredText = useDeferredValue(text);
+  const normalizedText = normalizeAssistantMarkdown(deferredText);
 
-  return <MarkdownContent text={deferredText} />;
+  return <MarkdownContent text={normalizedText} />;
 }
 
 function StreamingMessageBody({ text }: { text: string }) {
@@ -335,7 +337,7 @@ function StreamingMessageBody({ text }: { text: string }) {
 
   useEffect(() => () => stopStreamingFrame(), []);
 
-  const displayText = text.slice(0, displayLength);
+  const displayText = normalizeAssistantMarkdown(text.slice(0, displayLength));
   const { stableMarkdown, trailingText } = splitStreamingMarkdownForRender(displayText);
 
   if (!stableMarkdown) {
