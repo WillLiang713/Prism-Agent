@@ -1,6 +1,7 @@
 ## Agent Communication Preferences
 - Respond in Chinese by default when interacting with the user.
 - Avoid heavy jargon; explain technical points in plain language without assuming deep prior knowledge.
+- Use Chinese commit messages by default when creating git commits for this repository.
 
 ## UI Design Compliance
 
