@@ -23,6 +23,14 @@ import {
 import { classifyCommandRisk, classifyPathRisk, shouldAutoApproveCommand } from './approval.js';
 import { createBridge } from './bridge.js';
 import { createHttpServer } from './http.js';
+import {
+  appendThinkingDelta as appendThinkingTimelineDelta,
+  closeOpenThinking,
+  ensureToolTimelineItem,
+  finalizeRunningTools,
+  normalizeToolStatus,
+  startThinking,
+} from './messageTimeline.js';
 import { SessionRegistry, type PersistedSessionSnapshot, type RuntimeSessionRecord } from './sessions.js';
 import type {
   AgentApprovalMode,
@@ -389,8 +397,15 @@ function bindSessionEvents(runtime: RuntimeSessionRecord) {
           return;
         }
         if (event.assistantMessageEvent.type === 'thinking_start') {
-          assistantMessage.thinkingStartedAt = Date.now();
-          assistantMessage.thinkingDurationSec = undefined;
+          const startedAt = Date.now();
+          startThinking(assistantMessage, startedAt);
+          emit({
+            type: 'thinking_start',
+            requestId,
+            sessionId: runtime.sessionId,
+            itemId: assistantMessage.id,
+            startedAt,
+          });
         }
         if (event.assistantMessageEvent.type === 'text_delta') {
           assistantMessage.text += event.assistantMessageEvent.delta;
@@ -404,23 +419,23 @@ function bindSessionEvents(runtime: RuntimeSessionRecord) {
           });
         }
         if (event.assistantMessageEvent.type === 'thinking_delta') {
-          assistantMessage.thinking = `${assistantMessage.thinking || ''}${event.assistantMessageEvent.delta}`;
           emit({
-            type: 'delta',
+            type: 'thinking_delta',
             requestId,
             sessionId: runtime.sessionId,
             itemId: assistantMessage.id,
-            kind: 'thinking',
             text: event.assistantMessageEvent.delta,
           });
+          appendThinkingTimelineDelta(assistantMessage, event.assistantMessageEvent.delta);
         }
         if (event.assistantMessageEvent.type === 'thinking_end') {
-          finalizeAssistantThinking(assistantMessage);
+          emitThinkingEndIfNeeded(runtime, requestId, 'done');
         }
         persistSnapshot(runtime);
         return;
       }
       case 'tool_execution_start': {
+        emitThinkingEndIfNeeded(runtime, requestId, 'done');
         ensureToolEvent(runtime, {
           id: event.toolCallId,
           name: event.toolName,
@@ -490,6 +505,8 @@ async function runPrompt(runtime: RuntimeSessionRecord, requestId: string, paylo
       throw new Error(assistantOutcome.errorMessage || '模型请求失败。');
     }
 
+    emitThinkingEndIfNeeded(runtime, requestId, 'done');
+    finalizeLatestToolStates(runtime, 'done');
     if (!sessionRegistry.isCancelled(runtime.sessionId, requestId)) {
       emit({
         type: 'done',
@@ -507,11 +524,13 @@ async function runPrompt(runtime: RuntimeSessionRecord, requestId: string, paylo
       });
     }
   } catch (error) {
+    emitThinkingEndIfNeeded(runtime, requestId, 'aborted');
+    finalizeLatestToolStates(runtime, 'error');
     if (!sessionRegistry.isCancelled(runtime.sessionId, requestId)) {
       runtime.snapshot.status = 'error';
       persistSnapshot(runtime);
       emit({
-        type: 'error',
+          type: 'error',
         requestId,
         sessionId: runtime.sessionId,
         message: error instanceof Error ? error.message : String(error),
@@ -525,10 +544,7 @@ async function runPrompt(runtime: RuntimeSessionRecord, requestId: string, paylo
       });
     }
   } finally {
-    const assistantMessage = sessionRegistry.getLatestAssistantMessage(runtime.sessionId);
-    if (assistantMessage) {
-      finalizeAssistantThinking(assistantMessage);
-    }
+    emitThinkingEndIfNeeded(runtime, requestId, sessionRegistry.isCancelled(runtime.sessionId, requestId) ? 'aborted' : 'done');
     requestApprovalModes.delete(requestId);
     sessionRegistry.clearRequest(runtime.sessionId, requestId);
     await sessionRegistry.saveSnapshot(runtime.snapshot);
@@ -859,13 +875,7 @@ function ensureToolEvent(runtime: RuntimeSessionRecord, seed: AgentSessionToolEv
     throw new Error('No assistant message available for tool event.');
   }
 
-  assistantMessage.toolEvents = assistantMessage.toolEvents || [];
-  let existing = assistantMessage.toolEvents.find((event) => event.id === seed.id);
-  if (!existing) {
-    existing = { ...seed };
-    assistantMessage.toolEvents.push(existing);
-  }
-  return existing;
+  return ensureToolTimelineItem(assistantMessage, seed);
 }
 
 function finalizeToolEvent(
@@ -892,7 +902,7 @@ function finalizeToolEvent(
     exitCode: result.exitCode,
     summary: result.summary,
   });
-  existing.status = result.status;
+  existing.status = normalizeToolStatus(result.status);
   existing.output = result.output;
   existing.ok = result.ok;
   existing.diff = result.diff;
@@ -1006,17 +1016,45 @@ function persistSnapshot(runtime: RuntimeSessionRecord) {
   sessionRegistry.scheduleSnapshotSave(runtime.snapshot);
 }
 
-function finalizeAssistantThinking(assistantMessage: { thinking?: string; thinkingStartedAt?: number; thinkingDurationSec?: number }) {
-  if (assistantMessage.thinkingDurationSec !== undefined) {
+function emitThinkingEndIfNeeded(
+  runtime: RuntimeSessionRecord,
+  requestId: string,
+  status: 'done' | 'aborted',
+) {
+  const assistantMessage =
+    sessionRegistry.getAssistantMessage(runtime.sessionId) ??
+    sessionRegistry.getLatestAssistantMessage(runtime.sessionId);
+  if (!assistantMessage) {
     return;
   }
-  if (!assistantMessage.thinking?.trim() || !assistantMessage.thinkingStartedAt) {
+
+  const endedItem = closeOpenThinking(assistantMessage, {
+    status,
+  });
+  if (!endedItem) {
     return;
   }
-  assistantMessage.thinkingDurationSec = Math.max(
-    1,
-    Math.round((Date.now() - assistantMessage.thinkingStartedAt) / 1000),
-  );
+
+  emit({
+    type: 'thinking_end',
+    requestId,
+    sessionId: runtime.sessionId,
+    itemId: assistantMessage.id,
+    endedAt: endedItem.endedAt ?? Date.now(),
+    durationSec: endedItem.durationSec ?? 1,
+    status,
+  });
+}
+
+function finalizeLatestToolStates(runtime: RuntimeSessionRecord, outcome: 'done' | 'error') {
+  const assistantMessage =
+    sessionRegistry.getAssistantMessage(runtime.sessionId) ??
+    sessionRegistry.getLatestAssistantMessage(runtime.sessionId);
+  if (!assistantMessage) {
+    return;
+  }
+
+  finalizeRunningTools(assistantMessage, outcome);
 }
 
 function getRuntimeSessions() {

@@ -4,6 +4,7 @@ import path from 'node:path';
 
 import type { AgentSession, DefaultResourceLoader } from '@mariozechner/pi-coding-agent';
 
+import { createAssistantSessionMessage } from './messageTimeline.js';
 import type {
   AgentSessionMessage,
   AgentThreadMeta,
@@ -135,14 +136,7 @@ export class SessionRegistry {
       text: userText,
       createdAt: Date.now(),
     });
-    session.snapshot.messages.push({
-      id: assistantMessageId,
-      role: 'assistant',
-      text: '',
-      thinking: '',
-      createdAt: Date.now(),
-      toolEvents: [],
-    });
+    session.snapshot.messages.push(createAssistantSessionMessage(assistantMessageId));
     this.refreshPreview(session.snapshot);
     return assistantMessageId;
   }

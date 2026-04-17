@@ -4,21 +4,14 @@ import type {
   AgentEvent,
   AgentSessionBootstrap,
   AgentThreadMeta,
+  AgentTimelineItem,
+  AgentToolTimelineItem,
   AgentUsage,
 } from './client';
 
-export interface AgentToolEvent {
-  id: string;
-  name: string;
-  status: string;
-  args: unknown;
-  output: string;
-  ok: boolean | null;
-  diff?: string;
-  exitCode?: number | null;
-  summary?: string;
-  skillName?: string | null;
-}
+export type AgentToolStatus = 'running' | 'done' | 'error' | 'blocked';
+
+export interface AgentToolEvent extends AgentToolTimelineItem {}
 
 export interface AgentSkillsSnapshot {
   items: Array<{
@@ -44,11 +37,8 @@ export interface AgentMessage {
   id: string;
   role: 'user' | 'assistant';
   text: string;
-  thinking: string;
   createdAt: number;
-  thinkingStartedAt?: number;
-  thinkingDurationSec?: number;
-  toolEvents: AgentToolEvent[];
+  timeline: AgentTimelineItem[];
   error?: string;
 }
 
@@ -96,11 +86,18 @@ function createAssistantMessage(id: string): AgentMessage {
     id,
     role: 'assistant',
     text: '',
-    thinking: '',
     createdAt: Date.now(),
-    thinkingStartedAt: undefined,
-    thinkingDurationSec: undefined,
-    toolEvents: [],
+    timeline: [],
+  };
+}
+
+function createUserMessage(id: string, text: string): AgentMessage {
+  return {
+    id,
+    role: 'user',
+    text,
+    createdAt: Date.now(),
+    timeline: [],
   };
 }
 
@@ -111,27 +108,340 @@ function findAssistantMessageIndex(messages: AgentMessage[], assistantMessageId?
   return messages.length - 1;
 }
 
+function createThinkingTimelineItem(options?: {
+  id?: string;
+  text?: string;
+  status?: 'streaming' | 'done' | 'aborted';
+  startedAt?: number;
+  endedAt?: number;
+  durationSec?: number;
+}) {
+  const startedAt = options?.startedAt ?? Date.now();
+  return {
+    id: options?.id ?? `thinking-${startedAt}-${Math.random().toString(36).slice(2, 8)}`,
+    type: 'thinking' as const,
+    text: options?.text ?? '',
+    status: options?.status ?? 'streaming',
+    startedAt,
+    endedAt: options?.endedAt,
+    durationSec: options?.durationSec,
+  };
+}
+
+function normalizeToolStatus(status?: string): AgentToolStatus {
+  switch (status) {
+    case 'done':
+    case 'completed':
+      return 'done';
+    case 'error':
+      return 'error';
+    case 'blocked':
+      return 'blocked';
+    default:
+      return 'running';
+  }
+}
+
+function createToolTimelineItem(seed: {
+  id: string;
+  toolCallId?: string;
+  name: string;
+  status?: string;
+  args: unknown;
+  output: string;
+  ok: boolean | null;
+  diff?: string;
+  exitCode?: number | null;
+  summary?: string;
+  skillName?: string | null;
+}): AgentToolTimelineItem {
+  return {
+    id: seed.id,
+    type: 'tool',
+    toolCallId: seed.toolCallId ?? seed.id,
+    name: seed.name,
+    status: normalizeToolStatus(seed.status),
+    args: seed.args,
+    output: seed.output,
+    ok: seed.ok,
+    diff: seed.diff,
+    exitCode: seed.exitCode,
+    summary: seed.summary,
+    skillName: seed.skillName,
+  };
+}
+
+function resolveDurationSec(startedAt: number | undefined, endedAt: number, durationSec?: number) {
+  if (typeof durationSec === 'number' && durationSec > 0) {
+    return durationSec;
+  }
+  if (!startedAt) {
+    return undefined;
+  }
+  return Math.max(1, Math.round((endedAt - startedAt) / 1000));
+}
+
+function findOpenThinkingIndex(timeline: AgentTimelineItem[]) {
+  for (let index = timeline.length - 1; index >= 0; index -= 1) {
+    const item = timeline[index];
+    if (item.type === 'thinking' && item.status === 'streaming') {
+      return index;
+    }
+  }
+  return -1;
+}
+
+function closeOpenThinkingItem(
+  message: AgentMessage,
+  options: { status: 'done' | 'aborted'; endedAt?: number; durationSec?: number },
+) {
+  const openIndex = findOpenThinkingIndex(message.timeline);
+  if (openIndex === -1) {
+    return message;
+  }
+
+  const endedAt = options.endedAt ?? Date.now();
+  const current = message.timeline[openIndex];
+  if (current.type !== 'thinking') {
+    return message;
+  }
+
+  const nextTimeline = [...message.timeline];
+  nextTimeline[openIndex] = {
+    ...current,
+    status: options.status,
+    endedAt,
+    durationSec: resolveDurationSec(current.startedAt, endedAt, options.durationSec),
+  };
+
+  return {
+    ...message,
+    timeline: nextTimeline,
+  };
+}
+
+function startThinkingItem(message: AgentMessage, startedAt: number) {
+  const closedMessage = closeOpenThinkingItem(message, {
+    status: 'aborted',
+    endedAt: startedAt,
+  });
+
+  return {
+    ...closedMessage,
+    timeline: [
+      ...closedMessage.timeline,
+      createThinkingTimelineItem({
+        startedAt,
+      }),
+    ],
+  };
+}
+
+function appendThinkingDelta(message: AgentMessage, text: string, startedAt = Date.now()) {
+  const openIndex = findOpenThinkingIndex(message.timeline);
+  if (openIndex === -1) {
+    return {
+      ...message,
+      timeline: [
+        ...message.timeline,
+        createThinkingTimelineItem({
+          startedAt,
+          text,
+        }),
+      ],
+    };
+  }
+
+  const current = message.timeline[openIndex];
+  if (current.type !== 'thinking') {
+    return message;
+  }
+
+  const nextTimeline = [...message.timeline];
+  nextTimeline[openIndex] = {
+    ...current,
+    text: current.text + text,
+  };
+
+  return {
+    ...message,
+    timeline: nextTimeline,
+  };
+}
+
+function appendToolCall(
+  message: AgentMessage,
+  event: Extract<AgentEvent, { type: 'tool_call' }>,
+) {
+  const closedMessage = closeOpenThinkingItem(message, { status: 'done' });
+  return {
+    ...closedMessage,
+    timeline: [
+      ...closedMessage.timeline,
+      createToolTimelineItem({
+        id: event.toolCallId,
+        toolCallId: event.toolCallId,
+        name: event.name,
+        status: 'running',
+        args: event.args,
+        output: '',
+        ok: null,
+        summary: event.summary,
+        skillName: event.skillName,
+      }),
+    ],
+  };
+}
+
+function applyToolResult(
+  message: AgentMessage,
+  event: Extract<AgentEvent, { type: 'tool_result' }>,
+) {
+  const toolIndex = message.timeline.findIndex(
+    (item) => item.type === 'tool' && item.toolCallId === event.toolCallId,
+  );
+
+  if (toolIndex === -1) {
+    return {
+      ...message,
+      timeline: [
+        ...message.timeline,
+        createToolTimelineItem({
+          id: event.toolCallId,
+          toolCallId: event.toolCallId,
+          name: 'tool',
+          status: event.status,
+          args: {},
+          output: event.output,
+          ok: event.ok,
+          diff: event.diff,
+          exitCode: event.exitCode,
+          summary: event.summary,
+          skillName: event.skillName,
+        }),
+      ],
+    };
+  }
+
+  const current = message.timeline[toolIndex];
+  if (current.type !== 'tool') {
+    return message;
+  }
+
+  const nextTimeline = [...message.timeline];
+  nextTimeline[toolIndex] = {
+    ...current,
+    status: normalizeToolStatus(event.status),
+    output: event.output,
+    ok: event.ok,
+    diff: event.diff,
+    exitCode: event.exitCode,
+    summary: event.summary,
+    skillName: event.skillName,
+  };
+
+  return {
+    ...message,
+    timeline: nextTimeline,
+  };
+}
+
+function finalizeTimeline(message: AgentMessage, outcome: 'done' | 'aborted') {
+  const nextMessage = closeOpenThinkingItem(message, { status: outcome });
+  const nextTimeline: AgentTimelineItem[] = nextMessage.timeline.map((item) => {
+    if (item.type !== 'tool' || item.status !== 'running') {
+      return item;
+    }
+    return {
+      ...item,
+      status: outcome === 'done' ? ('done' as const) : ('error' as const),
+    };
+  });
+
+  if (nextTimeline === nextMessage.timeline) {
+    return nextMessage;
+  }
+
+  return {
+    ...nextMessage,
+    timeline: nextTimeline,
+  };
+}
+
+function normalizeBootstrapTimeline(message: AgentSessionBootstrap['messages'][number]) {
+  if (message.timeline?.length) {
+    return message.timeline.map((item) => {
+      if (item.type === 'thinking') {
+        return createThinkingTimelineItem({
+          id: item.id,
+          text: item.text,
+          status: item.status,
+          startedAt: item.startedAt,
+          endedAt: item.endedAt,
+          durationSec: item.durationSec,
+        });
+      }
+
+      return createToolTimelineItem({
+        id: item.id,
+        toolCallId: item.toolCallId,
+        name: item.name,
+        status: item.status,
+        args: item.args,
+        output: item.output,
+        ok: item.ok,
+        diff: item.diff,
+        exitCode: item.exitCode,
+        summary: item.summary,
+        skillName: item.skillName,
+      });
+    });
+  }
+
+  const timeline: AgentTimelineItem[] = [];
+  if (message.thinking || message.thinkingStartedAt || message.thinkingDurationSec) {
+    timeline.push(
+      createThinkingTimelineItem({
+        id: `${message.id}-thinking`,
+        text: message.thinking || '',
+        status: 'done',
+        startedAt: message.thinkingStartedAt ?? message.createdAt ?? Date.now(),
+        durationSec: message.thinkingDurationSec,
+        endedAt:
+          message.thinkingStartedAt && message.thinkingDurationSec
+            ? message.thinkingStartedAt + message.thinkingDurationSec * 1000
+            : undefined,
+      }),
+    );
+  }
+
+  for (const event of message.toolEvents || []) {
+    timeline.push(
+      createToolTimelineItem({
+        id: event.id,
+        name: event.name,
+        status: event.status,
+        args: event.args,
+        output: event.output,
+        ok: event.ok,
+        diff: event.diff,
+        exitCode: event.exitCode,
+        summary: event.summary,
+        skillName: event.skillName,
+      }),
+    );
+  }
+
+  return timeline;
+}
+
 function normalizeBootstrapMessages(messages: AgentSessionBootstrap['messages']): AgentMessage[] {
   return messages.map((message) => ({
     id: message.id,
     role: message.role,
     text: message.text,
-    thinking: message.thinking || '',
     createdAt: message.createdAt || Date.now(),
-    thinkingStartedAt: message.thinkingStartedAt,
-    thinkingDurationSec: message.thinkingDurationSec,
-    toolEvents: (message.toolEvents || []).map((event) => ({
-      id: event.id,
-      name: event.name,
-      status: event.status,
-      args: event.args,
-      output: event.output,
-      ok: event.ok,
-      diff: event.diff,
-      exitCode: event.exitCode,
-      summary: event.summary,
-      skillName: event.skillName,
-    })),
+    timeline: normalizeBootstrapTimeline(message),
   }));
 }
 
@@ -184,14 +494,7 @@ export const useAgentSessionStore = create<AgentSessionState>((set, get) => ({
             lastError: undefined,
             messages: [
               ...session.messages,
-              {
-                id: `user-${requestId}`,
-                role: 'user',
-                text,
-                thinking: '',
-                createdAt: Date.now(),
-                toolEvents: [],
-              },
+              createUserMessage(`user-${requestId}`, text),
               createAssistantMessage(assistantMessageId),
             ],
           },
@@ -251,9 +554,7 @@ export const useAgentSessionStore = create<AgentSessionState>((set, get) => ({
       let nextSession = session;
       let nextBindings = state.requestBindings;
 
-      const updateAssistantMessage = (
-        updater: (message: AgentMessage) => AgentMessage,
-      ) => {
+      const updateAssistantMessage = (updater: (message: AgentMessage) => AgentMessage) => {
         if (assistantMessageIndex < 0) {
           return;
         }
@@ -275,71 +576,35 @@ export const useAgentSessionStore = create<AgentSessionState>((set, get) => ({
       if (event.type === 'delta') {
         updateAssistantMessage((message) =>
           event.kind === 'thinking'
-            ? { ...message, thinking: message.thinking + event.text }
+            ? appendThinkingDelta(message, event.text)
             : { ...message, text: message.text + event.text },
         );
       }
 
+      if (event.type === 'thinking_start') {
+        updateAssistantMessage((message) => startThinkingItem(message, event.startedAt));
+      }
+
+      if (event.type === 'thinking_delta') {
+        updateAssistantMessage((message) => appendThinkingDelta(message, event.text));
+      }
+
+      if (event.type === 'thinking_end') {
+        updateAssistantMessage((message) =>
+          closeOpenThinkingItem(message, {
+            status: event.status,
+            endedAt: event.endedAt,
+            durationSec: event.durationSec,
+          }),
+        );
+      }
+
       if (event.type === 'tool_call') {
-        updateAssistantMessage((message) => ({
-          ...message,
-          toolEvents: [
-            ...message.toolEvents,
-            {
-              id: event.toolCallId,
-              name: event.name,
-              status: 'started',
-              args: event.args,
-              output: '',
-              ok: null,
-              summary: event.summary,
-              skillName: event.skillName,
-            },
-          ],
-        }));
+        updateAssistantMessage((message) => appendToolCall(message, event));
       }
 
       if (event.type === 'tool_result') {
-        updateAssistantMessage((message) => {
-          const toolIndex = message.toolEvents.findIndex((tool) => tool.id === event.toolCallId);
-          if (toolIndex === -1) {
-            return {
-              ...message,
-              toolEvents: [
-                ...message.toolEvents,
-                {
-                  id: event.toolCallId,
-                  name: 'tool',
-                  status: event.status,
-                  args: {},
-                  output: event.output,
-                  ok: event.ok,
-                  diff: event.diff,
-                  exitCode: event.exitCode,
-                  summary: event.summary,
-                  skillName: event.skillName,
-                },
-              ],
-            };
-          }
-
-          const currentTool = message.toolEvents[toolIndex];
-          const nextToolEvents = [...message.toolEvents];
-          nextToolEvents[toolIndex] = {
-            ...currentTool,
-            status: event.status,
-            output: event.output,
-            ok: event.ok,
-            diff: event.diff,
-            exitCode: event.exitCode,
-            summary: event.summary,
-            skillName: event.skillName,
-          };
-          return {
-            ...message,
-            toolEvents: nextToolEvents,
-          };
-        });
+        updateAssistantMessage((message) => applyToolResult(message, event));
       }
 
       if (event.type === 'approval_request') {
@@ -360,6 +625,7 @@ export const useAgentSessionStore = create<AgentSessionState>((set, get) => ({
       }
 
       if (event.type === 'done') {
+        updateAssistantMessage((message) => finalizeTimeline(message, 'done'));
         nextSession = {
           ...nextSession,
           isStreaming: false,
@@ -376,6 +642,17 @@ export const useAgentSessionStore = create<AgentSessionState>((set, get) => ({
       }
 
       if (event.type === 'error') {
+        updateAssistantMessage((message) => {
+          const nextMessage = finalizeTimeline(message, 'aborted');
+          if (nextMessage.text.trim()) {
+            return nextMessage;
+          }
+          return {
+            ...nextMessage,
+            error: event.message,
+          };
+        });
+
         nextSession = {
           ...nextSession,
           isStreaming: false,
@@ -383,16 +660,6 @@ export const useAgentSessionStore = create<AgentSessionState>((set, get) => ({
           lastError: event.message,
           approvals: nextSession.approvals.filter((approval) => approval.requestId !== event.requestId),
         };
-
-        updateAssistantMessage((message) => {
-          if (message.text.trim()) {
-            return message;
-          }
-          return {
-            ...message,
-            error: event.message,
-          };
-        });
 
         if (event.requestId in state.requestBindings) {
           nextBindings = { ...state.requestBindings };
@@ -428,7 +695,7 @@ export const useAgentSessionStore = create<AgentSessionState>((set, get) => ({
       }
 
       return {
-        threadList: state.threadList.filter((t) => t.threadId !== threadId),
+        threadList: state.threadList.filter((thread) => thread.threadId !== threadId),
         sessionsById: nextSessionsById,
         sessionOrder: nextSessionOrder,
         activeSessionId: nextActiveSessionId,

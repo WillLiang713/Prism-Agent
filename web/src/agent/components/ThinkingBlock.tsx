@@ -1,49 +1,48 @@
 import { ChevronRight } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { cn } from '../../lib/utils';
 import { MarkdownContent } from './MarkdownContent';
 
 export function ThinkingBlock({
   text,
-  isGenerating,
-  hasText,
+  status,
+  startedAt,
   durationSec,
 }: {
   text: string;
-  isGenerating?: boolean;
-  hasText?: boolean;
+  status: 'streaming' | 'done' | 'aborted';
+  startedAt: number;
   durationSec?: number;
 }) {
-  const isThinking = isGenerating && !hasText;
-  const startTimeRef = useRef<number | null>(null);
-  const [elapsedSec, setElapsedSec] = useState(0);
+  const [elapsedSec, setElapsedSec] = useState(() => resolveElapsedSec(startedAt));
   const [isOpen, setIsOpen] = useState(false);
 
   useEffect(() => {
-    if (isThinking && startTimeRef.current === null) {
-      startTimeRef.current = Date.now();
-      setElapsedSec(1);
+    if (status !== 'streaming') {
+      setElapsedSec(resolveElapsedSec(startedAt));
+      return;
     }
 
-    if (isThinking) {
-      const interval = setInterval(() => {
-        if (startTimeRef.current) {
-          setElapsedSec(Math.max(1, Math.floor((Date.now() - startTimeRef.current) / 1000)));
-        }
-      }, 1000);
-      return () => clearInterval(interval);
+    setElapsedSec(resolveElapsedSec(startedAt));
+    const interval = window.setInterval(() => {
+      setElapsedSec(resolveElapsedSec(startedAt));
+    }, 1000);
+    return () => window.clearInterval(interval);
+  }, [startedAt, status]);
+
+  const label = useMemo(() => {
+    if (status === 'aborted') {
+      return '思考已中断';
     }
-  }, [isThinking]);
 
-  if (!isThinking && !text.trim()) {
-    return null;
-  }
+    const seconds = durationSec ?? elapsedSec;
+    if (status === 'streaming') {
+      return `思考中 ${seconds} 秒`;
+    }
 
-  const resolvedDurationSec = durationSec ?? elapsedSec;
-  const statusTitle = isThinking ? '思考中' : resolvedDurationSec > 0 ? '思考完成，用时' : '思考过程';
-  const statusSeconds = isThinking ? elapsedSec : resolvedDurationSec > 0 ? resolvedDurationSec : null;
-  const thinkingStatusLabel = statusSeconds !== null ? `${statusTitle} ${statusSeconds} 秒` : statusTitle;
+    return `已思考 ${seconds} 秒`;
+  }, [durationSec, elapsedSec, status]);
 
   return (
     <details
@@ -51,33 +50,29 @@ export function ThinkingBlock({
       onToggle={(event) => setIsOpen((event.currentTarget as HTMLDetailsElement).open)}
     >
       <summary className="flex w-fit cursor-pointer list-none items-center gap-1.5 font-medium text-mutedForeground/80 hover:text-foreground">
-        {isThinking ? (
-          <span className={cn('inline-block', 'thinking-title-shimmer')}>{thinkingStatusLabel}</span>
-        ) : (
-          <span className="inline-flex items-center gap-1">
-            <span>{statusTitle}</span>
-            {statusSeconds !== null ? (
-              <span className="inline-flex items-center gap-1">
-                <span>{statusSeconds}</span>
-                <span>秒</span>
-              </span>
-            ) : null}
-          </span>
-        )}
+        <span className={cn(status === 'streaming' && 'thinking-title-shimmer')}>{label}</span>
         <ChevronRight className="h-4 w-4 group-open:rotate-90" />
       </summary>
       {isOpen ? (
-        isThinking ? (
-          <div className="mt-2 whitespace-pre-wrap break-words text-sm leading-[1.8] text-mutedForeground">
-            {text}
-          </div>
+        text.trim() ? (
+          status === 'streaming' ? (
+            <div className="mt-2 whitespace-pre-wrap break-words text-sm leading-[1.8] text-mutedForeground">
+              {text}
+            </div>
+          ) : (
+            <MarkdownContent
+              text={text}
+              className="mt-2 text-sm leading-[1.8] text-mutedForeground [&_pre]:text-foreground"
+            />
+          )
         ) : (
-          <MarkdownContent
-            text={text}
-            className="mt-2 text-sm leading-[1.8] text-mutedForeground [&_pre]:text-foreground"
-          />
+          <div className="mt-2" />
         )
       ) : null}
     </details>
   );
+}
+
+function resolveElapsedSec(startedAt: number) {
+  return Math.max(1, Math.floor((Date.now() - startedAt) / 1000));
 }

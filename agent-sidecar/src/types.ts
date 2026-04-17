@@ -132,11 +132,39 @@ export interface AgentSessionToolEvent {
   skillName?: string | null;
 }
 
+export interface AgentThinkingTimelineItem {
+  id: string;
+  type: 'thinking';
+  text: string;
+  status: 'streaming' | 'done' | 'aborted';
+  startedAt: number;
+  endedAt?: number;
+  durationSec?: number;
+}
+
+export interface AgentToolTimelineItem {
+  id: string;
+  type: 'tool';
+  toolCallId: string;
+  name: string;
+  status: 'running' | 'done' | 'error' | 'blocked';
+  args: unknown;
+  output: string;
+  ok: boolean | null;
+  diff?: string;
+  exitCode?: number | null;
+  summary?: string;
+  skillName?: string | null;
+}
+
+export type AgentTimelineItem = AgentThinkingTimelineItem | AgentToolTimelineItem;
+
 export interface AgentSessionMessage {
   id: string;
   role: 'user' | 'assistant';
   text: string;
   createdAt: number;
+  timeline?: AgentTimelineItem[];
   thinking?: string;
   thinkingStartedAt?: number;
   thinkingDurationSec?: number;
@@ -162,6 +190,29 @@ export type AgentEvent =
       itemId: string;
       kind: 'text' | 'thinking';
       text: string;
+    }
+  | {
+      type: 'thinking_start';
+      requestId: string;
+      sessionId: string;
+      itemId: string;
+      startedAt: number;
+    }
+  | {
+      type: 'thinking_delta';
+      requestId: string;
+      sessionId: string;
+      itemId: string;
+      text: string;
+    }
+  | {
+      type: 'thinking_end';
+      requestId: string;
+      sessionId: string;
+      itemId: string;
+      endedAt: number;
+      durationSec: number;
+      status: 'done' | 'aborted';
     }
   | {
       type: 'tool_call';

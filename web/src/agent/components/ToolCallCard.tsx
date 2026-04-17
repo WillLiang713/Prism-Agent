@@ -78,10 +78,10 @@ export function ToolCallCard({ event }: { event: AgentToolEvent }) {
   const [isOpen, setIsOpen] = useState(false);
 
   useEffect(() => {
-    if (event.ok === false) {
+    if (event.ok === false || event.status === 'error' || event.status === 'blocked') {
       setIsOpen(true);
     }
-  }, [event.ok]);
+  }, [event.ok, event.status]);
 
   const commandText = useMemo(() => extractCommand(event.args), [event.args]);
   const toolName = event.name.toLowerCase();

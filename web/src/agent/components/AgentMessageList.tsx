@@ -1,12 +1,13 @@
-import { memo, useDeferredValue, useEffect, useEffectEvent, useMemo, useRef, useState } from 'react';
+import { memo, useDeferredValue, useEffect, useEffectEvent, useRef, useState } from 'react';
 import { Check, Copy } from 'lucide-react';
 
-import { MarkdownBlock, MarkdownContent } from './MarkdownContent';
-import { MARKDOWN_BODY_CLASS, STREAMING_PLAIN_TEXT_CLASS } from './MarkdownContent.styles';
-import { cn } from '../../lib/utils';
+import { MarkdownContent } from './MarkdownContent';
+import { STREAMING_PLAIN_TEXT_CLASS } from './MarkdownContent.styles';
 import { ToolCallCard } from './ToolCallCard';
 import { ThinkingBlock } from './ThinkingBlock';
+import { splitStreamingMarkdownForRender } from './streamingMarkdown';
 import type { AgentMessage } from '../sessionStore';
+import type { AgentTimelineItem } from '../client';
 
 const STREAMING_FRAME_MAX_DELTA_MS = 34;
 const STREAMING_MIN_CHARS_PER_SEC = 90;
@@ -65,16 +66,10 @@ const AgentMessageItem = memo(function AgentMessageItem({
 
   return (
     <article className="space-y-4 min-w-0 overflow-hidden">
-      <ThinkingBlock
-        text={message.thinking}
-        isGenerating={generating}
-        hasText={message.text.trim().length > 0}
-        durationSec={message.thinkingDurationSec}
-      />
-      {message.toolEvents.length > 0 ? (
+      {message.timeline.length > 0 ? (
         <div className="space-y-2 min-w-0">
-          {message.toolEvents.map((event) => (
-            <ToolCallCard key={event.id} event={event} />
+          {message.timeline.map((item) => (
+            <TimelineItem key={item.id} item={item} />
           ))}
         </div>
       ) : null}
@@ -89,6 +84,21 @@ const AgentMessageItem = memo(function AgentMessageItem({
     </article>
   );
 });
+
+function TimelineItem({ item }: { item: AgentTimelineItem }) {
+  if (item.type === 'thinking') {
+    return (
+      <ThinkingBlock
+        text={item.text}
+        status={item.status}
+        startedAt={item.startedAt}
+        durationSec={item.durationSec}
+      />
+    );
+  }
+
+  return <ToolCallCard event={item} />;
+}
 
 function CopyMessageButton({ text }: { text: string }) {
   const [copied, setCopied] = useState(false);
@@ -326,61 +336,20 @@ function StreamingMessageBody({ text }: { text: string }) {
   useEffect(() => () => stopStreamingFrame(), []);
 
   const displayText = text.slice(0, displayLength);
-  return <div className={STREAMING_PLAIN_TEXT_CLASS}>{displayText}</div>;
-}
+  const { stableMarkdown, trailingText } = splitStreamingMarkdownForRender(displayText);
 
-function splitStableMarkdownBlocks(text: string): string[] {
-  if (!text) {
-    return [];
+  if (!stableMarkdown) {
+    return <div className={STREAMING_PLAIN_TEXT_CLASS}>{trailingText}</div>;
   }
 
-  const blocks: string[] = [];
-  let buffer: string[] = [];
-  let inFence = false;
-  let fenceChar = '';
-
-  const flush = () => {
-    if (buffer.length === 0) {
-      return;
-    }
-    const joined = buffer.join('\n');
-    if (joined.trim()) {
-      blocks.push(joined);
-    }
-    buffer = [];
-  };
-
-  const lines = text.split('\n');
-  for (const line of lines) {
-    const fenceMatch = line.match(/^\s*(```+|~~~+)/);
-
-    if (!inFence && fenceMatch) {
-      inFence = true;
-      fenceChar = fenceMatch[1][0];
-      buffer.push(line);
-      continue;
-    }
-
-    if (inFence) {
-      buffer.push(line);
-      if (fenceMatch && fenceMatch[1][0] === fenceChar) {
-        inFence = false;
-        fenceChar = '';
-        flush();
-      }
-      continue;
-    }
-
-    if (line.trim() === '') {
-      flush();
-      continue;
-    }
-
-    buffer.push(line);
-  }
-
-  flush();
-  return blocks;
+  return (
+    <div className="min-w-0">
+      <MarkdownContent text={stableMarkdown} highlight={false} />
+      {trailingText ? (
+        <div className={STREAMING_PLAIN_TEXT_CLASS}>{trailingText}</div>
+      ) : null}
+    </div>
+  );
 }
 
 function normalizeStreamingLength(text: string, nextLength: number) {
@@ -420,205 +389,4 @@ function resolveBufferedChars(baseBufferChars: number, sourceIdleMs: number) {
   );
 
   return Math.round(baseBufferChars * (1 - decayProgress));
-}
-
-function partitionStreamingMarkdown(text: string) {
-  if (!text) {
-    return {
-      stableMarkdown: '',
-      trailingText: '',
-    };
-  }
-
-  let cursor = 0;
-  let lastStableIndex = 0;
-  let inFence = false;
-  let fenceMarker = '';
-  let inList = false;
-  let listItemCount = 0;
-  let inQuote = false;
-  let inTable = false;
-  let previousLineContent = '';
-  let previousLineHadNewline = false;
-
-  while (cursor < text.length) {
-    const newlineIndex = text.indexOf('\n', cursor);
-    const nextCursor = newlineIndex === -1 ? text.length : newlineIndex + 1;
-    const line = text.slice(cursor, nextCursor);
-    const lineContent = line.endsWith('\n') ? line.slice(0, -1) : line;
-    const hasNewline = line.endsWith('\n');
-    const trimmedLine = lineContent.trim();
-    const fenceMatch = lineContent.match(/^\s*(```+|~~~+)/);
-
-    if (!inFence && fenceMatch) {
-      if (cursor > lastStableIndex) {
-        lastStableIndex = cursor;
-      }
-      inList = false;
-      listItemCount = 0;
-      inQuote = false;
-      inTable = false;
-      inFence = true;
-      fenceMarker = fenceMatch[1][0];
-      cursor = nextCursor;
-      previousLineContent = lineContent;
-      previousLineHadNewline = hasNewline;
-      continue;
-    }
-
-    if (inFence) {
-      if (fenceMatch && fenceMatch[1][0] === fenceMarker) {
-        inFence = false;
-        fenceMarker = '';
-        lastStableIndex = nextCursor;
-      }
-      cursor = nextCursor;
-      previousLineContent = lineContent;
-      previousLineHadNewline = hasNewline;
-      continue;
-    }
-
-    if (trimmedLine === '') {
-      lastStableIndex = nextCursor;
-      inList = false;
-      listItemCount = 0;
-      inQuote = false;
-      inTable = false;
-      cursor = nextCursor;
-      previousLineContent = lineContent;
-      previousLineHadNewline = hasNewline;
-      continue;
-    }
-
-    if (inTable) {
-      if (looksLikeTableRow(lineContent) && hasNewline) {
-        lastStableIndex = nextCursor;
-        cursor = nextCursor;
-        previousLineContent = lineContent;
-        previousLineHadNewline = hasNewline;
-        continue;
-      }
-
-      lastStableIndex = cursor;
-      inTable = false;
-    }
-
-    if (
-      isTableDelimiter(lineContent) &&
-      previousLineHadNewline &&
-      looksLikeTableRow(previousLineContent)
-    ) {
-      lastStableIndex = nextCursor;
-      inList = false;
-      listItemCount = 0;
-      inQuote = false;
-      inTable = true;
-      cursor = nextCursor;
-      previousLineContent = lineContent;
-      previousLineHadNewline = hasNewline;
-      continue;
-    }
-
-    if (isListItem(lineContent)) {
-      if (!inList && cursor > lastStableIndex) {
-        lastStableIndex = cursor;
-      } else if (inList && listItemCount > 0) {
-        lastStableIndex = cursor;
-      }
-
-      inList = true;
-      listItemCount += 1;
-      inQuote = false;
-      cursor = nextCursor;
-      previousLineContent = lineContent;
-      previousLineHadNewline = hasNewline;
-      continue;
-    }
-
-    if (inList) {
-      if (isListContinuationLine(lineContent)) {
-        cursor = nextCursor;
-        previousLineContent = lineContent;
-        previousLineHadNewline = hasNewline;
-        continue;
-      }
-
-      lastStableIndex = cursor;
-      inList = false;
-      listItemCount = 0;
-    }
-
-    if (isQuoteLine(lineContent)) {
-      if (!inQuote && cursor > lastStableIndex) {
-        lastStableIndex = cursor;
-      }
-
-      inQuote = true;
-      cursor = nextCursor;
-      previousLineContent = lineContent;
-      previousLineHadNewline = hasNewline;
-      continue;
-    }
-
-    if (inQuote) {
-      lastStableIndex = cursor;
-      inQuote = false;
-    }
-
-    if (hasNewline && (isHorizontalRule(lineContent) || isStandaloneHeading(lineContent))) {
-      lastStableIndex = nextCursor;
-    }
-
-    cursor = nextCursor;
-    previousLineContent = lineContent;
-    previousLineHadNewline = hasNewline;
-  }
-
-  return {
-    stableMarkdown: text.slice(0, lastStableIndex),
-    trailingText: text.slice(lastStableIndex),
-  };
-}
-
-function isHorizontalRule(line: string) {
-  return /^\s{0,3}(?:-{3,}|\*{3,}|_{3,})\s*$/.test(line);
-}
-
-function isStandaloneHeading(line: string) {
-  return /^\s{0,3}#{1,6}\s+\S/.test(line);
-}
-
-function isListItem(line: string) {
-  return /^\s{0,3}(?:[-+*]|\d+[.)])\s+\S/.test(line);
-}
-
-function isListContinuationLine(line: string) {
-  return /^(?:\s{2,}|\t+)\S/.test(line);
-}
-
-function isQuoteLine(line: string) {
-  return /^\s{0,3}>\s?.*$/.test(line);
-}
-
-function looksLikeTableRow(line: string) {
-  const trimmed = line.trim();
-  if (!trimmed || !trimmed.includes('|')) {
-    return false;
-  }
-
-  const cellCount = trimmed
-    .replace(/^\||\|$/g, '')
-    .split('|')
-    .filter((cell) => cell.trim().length > 0).length;
-
-  return cellCount >= 2;
-}
-
-function isTableDelimiter(line: string) {
-  const trimmed = line.trim();
-  if (!trimmed) {
-    return false;
-  }
-
-  return /^\|?(?:\s*:?-{3,}:?\s*\|)+(?:\s*:?-{3,}:?\s*)?$/.test(trimmed);
 }
