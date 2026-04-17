@@ -59,7 +59,7 @@ export function SkillsDisplay({ skills }: { skills: AgentSkillsSnapshot }) {
             WebkitMaskImage: 'linear-gradient(to right, black calc(100% - 24px), transparent)'
           }}
         >
-          <ScrollArea className="w-full whitespace-nowrap group" orientation="horizontal">
+          <ScrollArea className="w-full whitespace-nowrap group">
             <div className="flex w-max gap-2 pb-2 px-1">
               {skillsWithMetadata.map((skill) => (
                 <Tooltip key={skill.id}>

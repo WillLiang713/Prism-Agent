@@ -169,7 +169,7 @@ export function AgentChatInput({
             className="h-8 w-8 shrink-0 bg-card p-0 shadow-none"
             aria-label="上传图片"
           >
-            <Paperclip className="h-4 w-4" />
+            <Paperclip className="h-4 w-4 text-mutedForeground" />
           </Button>
 
           {workspaceRoot && (
@@ -177,7 +177,7 @@ export function AgentChatInput({
               className="flex h-8 items-center gap-2 rounded-full border border-border bg-card px-3 text-xs font-medium text-foreground"
               title={workspaceRoot}
             >
-              <Folder className="h-3.5 w-3.5" />
+              <Folder className="h-4 w-4 text-mutedForeground" />
               <span className="max-w-[120px] overflow-hidden text-ellipsis whitespace-nowrap font-medium">
                 {workspaceRoot.split(/[\\/]/).filter(Boolean).pop() || workspaceRoot}
               </span>
@@ -204,7 +204,7 @@ export function AgentChatInput({
           <Select value={reasoningEffort} onValueChange={(value) => setReasoningEffort(value as AgentReasoningEffort)}>
             <SelectTrigger className="h-8 w-[100px] cursor-pointer px-3 text-xs">
               <div className="flex items-center gap-2">
-                <Lightbulb className="h-4 w-4" />
+                <Lightbulb className="h-4 w-4 text-mutedForeground" />
                 <span className="font-medium">{reasoningOptions.find((option) => option.value === reasoningEffort)?.label || '高'}</span>
               </div>
             </SelectTrigger>

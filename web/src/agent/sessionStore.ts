@@ -755,7 +755,7 @@ export const useAgentSessionStore = create<AgentSessionState>()(
     }),
     {
       name: 'prism-session-store',
-      storage: createAgentSessionPersistStorage(
+      storage: createAgentSessionPersistStorage<AgentSessionState>(
         (state) => ({ pinnedDirectories: state.pinnedDirectories }),
         (pinnedDirectories) =>
           ({

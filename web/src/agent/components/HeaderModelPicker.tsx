@@ -83,9 +83,9 @@ export function HeaderModelPicker({ currentModel }: { currentModel: string }) {
           type="button"
           className="no-drag inline-flex h-8 cursor-pointer items-center gap-2 rounded-full border border-border bg-card px-3 text-xs font-medium text-foreground outline-none transition-colors hover:bg-muted focus:outline-none focus-visible:ring-1 focus-visible:ring-foreground/20"
         >
-          <Brain className="h-4 w-4 shrink-0 opacity-60" />
+          <Brain className="h-4 w-4 shrink-0 text-mutedForeground" />
           <span className="truncate">{currentModel || '选择模型'}</span>
-          <ChevronDown className="h-4 w-4 shrink-0 opacity-60" />
+          <ChevronDown className="h-4 w-4 shrink-0 text-mutedForeground" />
         </button>
       </PopoverPrimitive.Trigger>
       <PopoverPrimitive.Portal>
