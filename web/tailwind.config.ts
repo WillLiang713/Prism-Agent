@@ -38,10 +38,20 @@ const config: Config = {
           '0%': { backgroundPosition: '200% 0' },
           '100%': { backgroundPosition: '-200% 0' },
         },
+        collapsibleDown: {
+          '0%': { height: '0', opacity: '0' },
+          '100%': { height: 'var(--radix-collapsible-content-height)', opacity: '1' },
+        },
+        collapsibleUp: {
+          '0%': { height: 'var(--radix-collapsible-content-height)', opacity: '1' },
+          '100%': { height: '0', opacity: '0' },
+        },
       },
       animation: {
         fadeUp: 'fadeUp 240ms ease-out',
         shimmer: 'shimmer 2.5s linear infinite',
+        collapsibleDown: 'collapsibleDown 220ms ease-out',
+        collapsibleUp: 'collapsibleUp 180ms ease-in',
       },
     },
   },

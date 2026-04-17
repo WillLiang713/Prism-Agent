@@ -184,20 +184,26 @@ export function AgentChatInput({
         </div>
 
         {isStreaming ? (
-          <Button type="button" variant="danger" onClick={onStop} className="h-9 gap-1.5 px-4 text-sm">
-            <Square className="h-4 w-4" />
-            停止
+          <Button
+            type="button"
+            variant="danger"
+            onClick={onStop}
+            title="停止"
+            aria-label="停止"
+            className="h-7 w-7 p-0"
+          >
+            <Square className="h-3.5 w-3.5" />
           </Button>
         ) : (
           <Button
             type="submit"
             variant="primary"
             disabled={submitDisabled}
-            title={submitHint || undefined}
-            className="h-9 gap-1.5 px-4 text-sm"
+            title={submitHint || '发送'}
+            aria-label="发送"
+            className="h-7 w-7 p-0"
           >
-            <ArrowUp className="h-4 w-4" />
-            发送
+            <ArrowUp className="h-3.5 w-3.5" />
           </Button>
         )}
       </div>

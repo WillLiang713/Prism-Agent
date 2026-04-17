@@ -32,6 +32,8 @@ import type {
   AgentRuntimeStatus,
   AgentSessionToolEvent,
   CancelParams,
+  ListModelsParams,
+  ListModelsResult,
   OuterMethods,
   RespondApprovalParams,
   ResumeSessionParams,
@@ -171,6 +173,13 @@ const methods = {
     const threadId = params?.threadId ?? '';
     await sessionRegistry.archiveThread(threadId);
     return null;
+  },
+
+  async listModels(params?: ListModelsParams) {
+    if (!params?.providerSelection) {
+      throw new Error('缺少服务类型。');
+    }
+    return (await fetchProviderModels(params)) satisfies OuterMethods['listModels'];
   },
 };
 
@@ -326,7 +335,6 @@ async function createRuntimeSession(options: {
   });
   await session.bindExtensions({});
 
-  context.threadId = session.sessionId;
   const skills = collectSkills(loader);
   const snapshot =
     options.existingSnapshot ??
@@ -338,7 +346,10 @@ async function createRuntimeSession(options: {
       modelProvider: session.model?.provider || 'pi',
     });
 
-  snapshot.threadId = session.sessionId;
+  if (!options.existingSnapshot) {
+    snapshot.threadId = session.sessionId;
+  }
+  context.threadId = snapshot.threadId;
   snapshot.sessionId = provisionalSessionId;
   snapshot.workspaceRoot = resolvedWorkspaceRoot;
   snapshot.sessionFile = session.sessionFile ?? snapshot.sessionFile;
@@ -984,6 +995,66 @@ function getRuntimeSessions() {
 
 function disposeAll() {
   sessionRegistry.disposeAll();
+}
+
+async function fetchProviderModels(params: ListModelsParams): Promise<ListModelsResult> {
+  const apiUrl = (params.apiUrl || '').trim().replace(/\/+$/, '');
+  const apiKey = (params.apiKey || '').trim();
+
+  if (!apiKey) {
+    throw new Error('缺少 API Key，无法获取模型列表。');
+  }
+
+  if (!apiUrl) {
+    throw new Error('缺少 API 地址，无法获取模型列表。');
+  }
+
+  const selection = params.providerSelection;
+
+  if (selection === 'openai_chat' || selection === 'openai_responses') {
+    const url = `${apiUrl}/models`;
+    const res = await fetch(url, {
+      headers: { Authorization: `Bearer ${apiKey}` },
+    });
+    if (!res.ok) throw new Error(`${res.status} ${await res.text().catch(() => res.statusText)}`);
+    const body = (await res.json()) as { data?: Array<{ id?: string }> };
+    return { models: normalizeModelIds(body.data?.map((m) => m.id)) };
+  }
+
+  if (selection === 'anthropic') {
+    const url = `${apiUrl}/v1/models`;
+    const res = await fetch(url, {
+      headers: {
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+      },
+    });
+    if (!res.ok) throw new Error(`${res.status} ${await res.text().catch(() => res.statusText)}`);
+    const body = (await res.json()) as { data?: Array<{ id?: string }> };
+    return { models: normalizeModelIds(body.data?.map((m) => m.id)) };
+  }
+
+  if (selection === 'gemini') {
+    const url = `${apiUrl}/models?key=${encodeURIComponent(apiKey)}`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`${res.status} ${await res.text().catch(() => res.statusText)}`);
+    const body = (await res.json()) as { models?: Array<{ name?: string }> };
+    const ids = body.models?.map((m) => (m.name || '').replace(/^models\//, ''));
+    return { models: normalizeModelIds(ids) };
+  }
+
+  throw new Error(`不支持的服务类型：${selection}`);
+}
+
+function normalizeModelIds(ids: Array<string | undefined> | undefined) {
+  const unique = new Set<string>();
+  for (const id of ids || []) {
+    const trimmed = (id || '').trim();
+    if (trimmed) unique.add(trimmed);
+  }
+  return Array.from(unique)
+    .sort()
+    .map((id) => ({ id }));
 }
 
 void main().catch(async (error) => {

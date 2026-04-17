@@ -74,6 +74,18 @@ export interface RespondApprovalParams {
   decision: 'allow' | 'deny';
 }
 
+export type ProviderSelection = 'openai_chat' | 'openai_responses' | 'anthropic' | 'gemini';
+
+export interface ListModelsParams {
+  providerSelection: ProviderSelection;
+  apiUrl?: string;
+  apiKey?: string;
+}
+
+export interface ListModelsResult {
+  models: Array<{ id: string }>;
+}
+
 export interface SkillStatusItem {
   id: string;
   name: string;
@@ -212,4 +224,5 @@ export interface OuterMethods {
   respondApproval: null;
   listThreads: { threads: AgentThreadMeta[] };
   archiveThread: null;
+  listModels: ListModelsResult;
 }

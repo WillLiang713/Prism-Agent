@@ -107,7 +107,7 @@ export function useAgentChat() {
         const threadResponse = await withTimeout(
           agentListThreads(),
           BOOTSTRAP_CALL_TIMEOUT_MS,
-          '读取会话列表超时',
+          '读取任务列表超时',
         );
         if (disposed) {
           return;
@@ -133,7 +133,7 @@ export function useAgentChat() {
       const bootstrap = await withTimeout(
         agentStartSession(workspaceRoot),
         BOOTSTRAP_CALL_TIMEOUT_MS,
-        '创建会话超时',
+        '创建任务超时',
       );
       if (disposed) {
         return;
@@ -147,7 +147,7 @@ export function useAgentChat() {
       const bootstrap = await withTimeout(
         agentResumeSession(threadId, cwd),
         BOOTSTRAP_CALL_TIMEOUT_MS,
-        '恢复会话超时',
+        '恢复任务超时',
       );
       if (disposed) {
         return;
@@ -234,7 +234,7 @@ export function useAgentChat() {
     upsertSession(session);
     activateSession(session.sessionId);
 
-    // 立即更新 threadList，使新会话在侧边栏即时显示
+    // 立即更新 threadList，使新任务在侧边栏即时显示
     if (bootstrap.thread) {
       setThreadList([bootstrap.thread, ...threadList.filter(t => t.threadId !== bootstrap.threadId)]);
     }

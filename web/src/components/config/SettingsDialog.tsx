@@ -68,12 +68,10 @@ function SettingsSectionCard({
   children: React.ReactNode;
 }) {
   return (
-    <section className="grid gap-5 rounded-2xl border border-border/60 bg-background/70 p-6 shadow-[0_1px_0_rgba(255,255,255,0.03)_inset] dark:bg-background/30">
-      <div className="space-y-1.5">
-        <h3 className="font-display text-lg font-semibold tracking-tight text-foreground">
-          {title}
-        </h3>
-      </div>
+    <section className="grid gap-4">
+      <h3 className="font-display text-sm font-semibold tracking-tight text-foreground">
+        {title}
+      </h3>
       {children}
     </section>
   );
@@ -242,8 +240,8 @@ export function SettingsDialog({
             </Dialog.Close>
           </div>
 
-          <div className="mt-6 grid min-h-0 flex-1 overflow-hidden rounded-[20px] border border-border/60 bg-muted/88 shadow-[0_1px_0_rgba(255,255,255,0.04)_inset] dark:bg-muted/82 lg:grid-cols-[220px_minmax(0,1fr)]">
-            <aside className="grid content-start gap-2 p-3">
+          <div className="mt-4 grid min-h-0 flex-1 overflow-hidden lg:grid-cols-[200px_minmax(0,1fr)]">
+            <aside className="grid content-start gap-1 py-2 pr-2">
               {sections.map((section) => (
                 <SettingsNavButton
                   key={section.id}
@@ -255,9 +253,9 @@ export function SettingsDialog({
               ))}
             </aside>
 
-            <div className="flex min-h-0 flex-col overflow-hidden bg-background/35 dark:bg-background/10">
+            <div className="flex min-h-0 flex-col overflow-hidden border-l border-border/50">
               <ScrollArea className="min-h-0 flex-1">
-                <div className="space-y-8 px-6 py-6 pb-10 lg:px-8 lg:py-8 lg:pb-12">
+                <div className="space-y-8 px-8 py-6 pb-10">
                   {renderSectionContent()}
                 </div>
               </ScrollArea>

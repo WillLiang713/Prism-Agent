@@ -1,7 +1,10 @@
-import { Plus } from 'lucide-react';
+import { Plus, RefreshCw } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { agentListModels } from '../../agent/client';
 import { useConfigStore } from '../../store/configStore';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
+import { Combobox } from '../ui/combobox';
 import {
   Select,
   SelectContent,
@@ -27,6 +30,45 @@ export function ServiceManager() {
   const removeService = useConfigStore((state) => state.removeService);
   const selectedService =
     services.find((service) => service.id === serviceManagerSelectedId) || services[0];
+
+  const [modelOptions, setModelOptions] = useState<string[]>([]);
+  const [modelListLoading, setModelListLoading] = useState(false);
+  const [modelListError, setModelListError] = useState<string | null>(null);
+  const [modelListSuccess, setModelListSuccess] = useState<string | null>(null);
+
+  useEffect(() => {
+    setModelOptions([]);
+    setModelListError(null);
+    setModelListSuccess(null);
+  }, [selectedService?.id]);
+
+  useEffect(() => {
+    if (!modelListSuccess) return;
+    const timer = setTimeout(() => setModelListSuccess(null), 2500);
+    return () => clearTimeout(timer);
+  }, [modelListSuccess]);
+
+  async function refreshModelList() {
+    if (!selectedService) return;
+    setModelListLoading(true);
+    setModelListError(null);
+    setModelListSuccess(null);
+    try {
+      const result = await agentListModels({
+        providerSelection: selectedService.model.providerSelection,
+        apiUrl: selectedService.model.apiUrl,
+        apiKey: selectedService.model.apiKey,
+      });
+      const ids = result.models.map((m) => m.id);
+      setModelOptions(ids);
+      setModelListSuccess(`已获取 ${ids.length} 个模型`);
+    } catch (error) {
+      setModelListError(error instanceof Error ? error.message : String(error));
+      setModelOptions([]);
+    } finally {
+      setModelListLoading(false);
+    }
+  }
 
   function handleServiceChange<K extends keyof typeof selectedService.model>(
     field: K,
@@ -63,45 +105,34 @@ export function ServiceManager() {
   }
 
   return (
-    <div className="grid items-stretch gap-6 lg:grid-cols-[280px_minmax(0,1fr)]">
-      <div className="flex min-h-[520px] flex-col space-y-5 rounded-2xl border border-border/60 bg-background/68 p-5 shadow-[0_1px_0_rgba(255,255,255,0.03)_inset] dark:bg-background/24">
-        <div>
-          <Button
-            onClick={() => upsertService({ name: '新服务' })}
-            className="h-12 w-full gap-2 rounded-2xl border-0 bg-background/70 text-sm text-foreground transition-colors hover:bg-background/85 dark:bg-background/35 dark:hover:bg-background/45"
-          >
-            <Plus className="h-4 w-4" />
-            <span className="font-medium">新建服务</span>
-          </Button>
-        </div>
+    <div className="grid items-stretch gap-6 lg:grid-cols-[240px_minmax(0,1fr)]">
+      <div className="flex min-h-[520px] flex-col space-y-3">
+        <Button
+          onClick={() => upsertService({ name: '新服务' })}
+          variant="ghost"
+          className="h-10 w-full justify-start gap-2 rounded-lg text-sm text-mutedForeground hover:bg-muted/60 hover:text-foreground"
+        >
+          <Plus className="h-4 w-4" />
+          <span className="font-medium">新建服务</span>
+        </Button>
         <ScrollArea className="min-h-0 flex-1">
-          <div className="space-y-3">
+          <div className="space-y-0.5">
             {services.map((service) => (
               <button
                 key={service.id}
                 type="button"
                 onClick={() => setServiceManagerSelectedId(service.id)}
-                className={`inline-flex min-h-[88px] w-full touch-manipulation justify-start rounded-2xl border border-border/60 px-5 py-5 text-left transition-[background-color,border-color,color,box-shadow] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-foreground/20 ${
+                className={`group flex w-full touch-manipulation flex-col items-start gap-1 rounded-lg px-3 py-2.5 text-left transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-foreground/20 ${
                   service.id === selectedService.id
-                    ? 'border-border/80 bg-background/92 shadow-[0_1px_0_rgba(255,255,255,0.05)_inset] dark:bg-background/52'
-                    : 'bg-background/76 shadow-[0_1px_0_rgba(255,255,255,0.02)_inset] hover:border-border/75 hover:bg-background/88 dark:bg-background/34 dark:hover:bg-background/42'
+                    ? 'bg-muted'
+                    : 'hover:bg-muted/60'
                 }`}
               >
-                <div className="flex w-full min-w-0 flex-col items-start gap-1.5">
-                  <div className="w-full truncate text-[15px] font-medium text-foreground">
-                    {service.name || '未命名服务'}
-                  </div>
-                  <div className="flex w-full items-center gap-2">
-                    <div
-                      className={`truncate rounded-full px-2.5 py-1 text-xs font-normal text-mutedForeground ${
-                        service.id === selectedService.id
-                          ? 'bg-background'
-                          : 'bg-background/80 dark:bg-background/55'
-                      }`}
-                    >
-                      {providerLabels[service.model.providerSelection]}
-                    </div>
-                  </div>
+                <div className="w-full truncate text-sm font-medium text-foreground">
+                  {service.name || '未命名服务'}
+                </div>
+                <div className="truncate text-[11px] text-mutedForeground/70">
+                  {providerLabels[service.model.providerSelection]}
                 </div>
               </button>
             ))}
@@ -109,9 +140,9 @@ export function ServiceManager() {
         </ScrollArea>
       </div>
 
-      <div className="min-h-[520px] space-y-5 rounded-2xl border border-border/60 bg-background/70 p-6 shadow-[0_1px_0_rgba(255,255,255,0.03)_inset] dark:bg-background/30">
+      <div className="min-h-[520px] space-y-5 border-l border-border/50 pl-6">
         <div className="flex items-center justify-between">
-          <h3 className="font-display text-base font-semibold tracking-tight text-foreground">当前</h3>
+          <h3 className="font-display text-sm font-semibold tracking-tight text-foreground">当前</h3>
           {services.length > 1 ? (
             <Button
               variant="ghost"
@@ -176,11 +207,36 @@ export function ServiceManager() {
             />
           </label>
           <label className="grid gap-2 text-xs">
-            <span className="text-mutedForeground">模型</span>
-            <Input
-              className="border-0 bg-muted/90 dark:bg-muted/75"
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-mutedForeground">模型</span>
+              <div className="flex min-w-0 items-center gap-2">
+                {modelListError ? (
+                  <span
+                    className="max-w-[140px] truncate text-[11px] text-danger/80"
+                    title={modelListError}
+                  >
+                    {modelListError}
+                  </span>
+                ) : modelListSuccess ? (
+                  <span className="text-[11px] text-success/90">{modelListSuccess}</span>
+                ) : null}
+                <button
+                  type="button"
+                  onClick={refreshModelList}
+                  disabled={modelListLoading}
+                  className="flex shrink-0 items-center gap-1 text-[11px] text-mutedForeground/80 hover:text-foreground disabled:opacity-50"
+                  title="从端点获取模型列表"
+                >
+                  <RefreshCw className={`h-3 w-3 ${modelListLoading ? 'animate-spin' : ''}`} />
+                  {modelListLoading ? '获取中' : '获取'}
+                </button>
+              </div>
+            </div>
+            <Combobox
               value={selectedService.model.model}
-              onChange={(event) => handleServiceChange('model', event.currentTarget.value)}
+              onValueChange={(next) => handleServiceChange('model', next)}
+              options={modelOptions}
+              placeholder="选择或输入模型…"
             />
           </label>
         </div>

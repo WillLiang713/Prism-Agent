@@ -274,6 +274,23 @@ export async function agentListThreads() {
   });
 }
 
+export type ListModelsProviderSelection =
+  | 'openai_chat'
+  | 'openai_responses'
+  | 'anthropic'
+  | 'gemini';
+
+export async function agentListModels(payload: {
+  providerSelection: ListModelsProviderSelection;
+  apiUrl?: string;
+  apiKey?: string;
+}) {
+  return requestJson<{ models: Array<{ id: string }> }>('/api/agent/models/list', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
 export async function agentArchiveThread(threadId: string) {
   await requestJson(`/api/agent/threads/${encodeURIComponent(threadId)}`, {
     method: 'DELETE',

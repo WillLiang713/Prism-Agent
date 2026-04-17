@@ -1,6 +1,7 @@
 import { AgentSkillsSnapshot } from '../sessionStore';
-import { ChevronDown, ChevronUp } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
 import { useState } from 'react';
+import * as Collapsible from '@radix-ui/react-collapsible';
 
 export function SkillsDisplay({ skills }: { skills: AgentSkillsSnapshot }) {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -10,25 +11,32 @@ export function SkillsDisplay({ skills }: { skills: AgentSkillsSnapshot }) {
   }
 
   return (
-    <div className="mb-3 flex flex-col gap-1.5 px-1">
-      <div 
-        className="flex cursor-pointer items-center gap-2 text-sm text-mutedForeground/80 hover:text-mutedForeground transition-colors"
-        onClick={() => setIsExpanded(!isExpanded)}
-      >
-        <div className="flex items-center gap-1.5">
-          <span>已加载 {skills.items.length} 个技能</span>
-          {skills.diagnostics.length > 0 && (
-            <span className="flex items-center gap-1 text-danger/70">
-              <span className="h-1 w-1 rounded-full bg-danger animate-pulse" />
-              {skills.diagnostics.length} 条诊断
-            </span>
-          )}
+    <Collapsible.Root
+      open={isExpanded}
+      onOpenChange={setIsExpanded}
+      className="mb-3 flex flex-col gap-1.5 px-1"
+    >
+      <Collapsible.Trigger asChild>
+        <div className="flex cursor-pointer items-center gap-2 text-sm text-mutedForeground/80 hover:text-mutedForeground transition-colors">
+          <div className="flex items-center gap-1.5">
+            <span>已加载 {skills.items.length} 个技能</span>
+            {skills.diagnostics.length > 0 && (
+              <span className="flex items-center gap-1 text-danger/70">
+                <span className="h-1 w-1 rounded-full bg-danger animate-pulse" />
+                {skills.diagnostics.length} 条诊断
+              </span>
+            )}
+          </div>
+          <ChevronDown
+            className={`h-3 w-3 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}
+          />
         </div>
-        {isExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-      </div>
-      
-      {isExpanded && (
-        <div className="flex flex-wrap gap-2">
+      </Collapsible.Trigger>
+
+      <Collapsible.Content
+        className="overflow-hidden data-[state=open]:animate-collapsibleDown data-[state=closed]:animate-collapsibleUp"
+      >
+        <div className="flex flex-wrap gap-2 pt-0.5">
           {skills.items.map((skill) => (
             <span
               key={skill.id}
@@ -44,7 +52,7 @@ export function SkillsDisplay({ skills }: { skills: AgentSkillsSnapshot }) {
             </div>
           )}
         </div>
-      )}
-    </div>
+      </Collapsible.Content>
+    </Collapsible.Root>
   );
 }

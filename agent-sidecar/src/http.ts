@@ -5,6 +5,7 @@ import type {
   AgentEvent,
   AgentRuntimeConfig,
   CancelParams,
+  ListModelsParams,
   OuterMethods,
   RespondApprovalParams,
   ResumeSessionParams,
@@ -22,6 +23,7 @@ type AgentMethods = {
   respondApproval: (params?: RespondApprovalParams) => Promise<OuterMethods['respondApproval']>;
   listThreads: () => Promise<OuterMethods['listThreads']>;
   archiveThread: (params?: { threadId: string }) => Promise<OuterMethods['archiveThread']>;
+  listModels: (params?: ListModelsParams) => Promise<OuterMethods['listModels']>;
 };
 
 type HttpServerOptions = {
@@ -35,6 +37,7 @@ type HttpServerOptions = {
 type RouteMatch =
   | { route: 'health' }
   | { route: 'validate_config' }
+  | { route: 'list_models' }
   | { route: 'threads' }
   | { route: 'archive_thread'; threadId: string }
   | { route: 'start_session' }
@@ -109,6 +112,11 @@ async function handleRequest(
       case 'validate_config': {
         const body = await readJsonBody<{ config?: AgentRuntimeConfig }>(request);
         writeJson(response, 200, await options.methods.validateConfig({ config: body.config }));
+        return;
+      }
+      case 'list_models': {
+        const body = await readJsonBody<ListModelsParams>(request);
+        writeJson(response, 200, await options.methods.listModels(body));
         return;
       }
       case 'threads': {
@@ -234,6 +242,9 @@ function matchRoute(request: IncomingMessage): RouteMatch {
   }
   if (method === 'POST' && pathname === '/api/agent/config/validate') {
     return { route: 'validate_config' };
+  }
+  if (method === 'POST' && pathname === '/api/agent/models/list') {
+    return { route: 'list_models' };
   }
   if (method === 'GET' && pathname === '/api/agent/threads') {
     return { route: 'threads' };

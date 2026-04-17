@@ -90,7 +90,7 @@ export function AgentChatPanel({
           ) : (
             <ScrollArea ref={scrollRef} className="h-full">
               <div className="flex min-h-full py-8" style={{ paddingInline: CHAT_SIDE_PADDING }}>
-                <div className="mx-auto flex min-h-full w-full max-w-3xl">
+                <div className="mx-auto flex min-h-full w-full max-w-4xl">
                   <AgentMessageList
                     messages={activeSession?.messages || []}
                     isStreaming={activeSession?.isStreaming || false}
@@ -102,7 +102,7 @@ export function AgentChatPanel({
         </div>
         
         <div className="py-5" style={{ paddingInline: CHAT_SIDE_PADDING }}>
-          <div className="mx-auto max-w-3xl">
+          <div className="mx-auto max-w-4xl">
             {activeSession?.skills && (
               <SkillsDisplay skills={activeSession.skills} />
             )}
