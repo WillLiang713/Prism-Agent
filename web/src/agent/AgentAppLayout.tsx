@@ -31,6 +31,7 @@ export function AgentAppLayout() {
     stop,
     respondApproval,
     archiveThread,
+    regenerateThreadTitle,
   } = useAgentChat();
 
   const isDesktop = isDesktopRuntime();
@@ -54,6 +55,7 @@ export function AgentAppLayout() {
           onDelete={(threadId) => {
             void archiveThread(threadId);
           }}
+          onRegenerateTitle={(threadId) => regenerateThreadTitle(threadId)}
         />
         <section className="flex min-w-0 flex-1 flex-col">
           <header

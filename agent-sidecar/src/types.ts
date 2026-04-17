@@ -55,6 +55,14 @@ export interface SendMessageImagePayload {
   dataUrl: string;
 }
 
+export interface TitleModelPayload {
+  providerSelection?: string;
+  provider?: string;
+  apiUrl?: string;
+  apiKey?: string;
+  model?: string;
+}
+
 export interface SendMessageParams {
   requestId: string;
   sessionId: string;
@@ -63,6 +71,7 @@ export interface SendMessageParams {
   reasoningEffort?: AgentReasoningEffort;
   approvalMode?: AgentApprovalMode;
   config?: AgentRuntimeConfig;
+  titleModel?: TitleModelPayload;
 }
 
 export interface CancelParams {
@@ -112,6 +121,7 @@ export interface AgentThreadMeta {
   preview: string;
   name: string | null;
   cwd: string;
+  messageCount: number;
   createdAt: number;
   updatedAt: number;
   status: string;
@@ -265,6 +275,13 @@ export type AgentEvent =
       requestId: string;
       sessionId: string;
       message: string;
+    }
+  | {
+      type: 'thread_name_updated';
+      requestId: string;
+      sessionId: string;
+      threadId: string;
+      name: string;
     };
 
 export interface OuterMethods {
@@ -277,5 +294,7 @@ export interface OuterMethods {
   respondApproval: null;
   listThreads: { threads: AgentThreadMeta[] };
   archiveThread: null;
+  renameThread: { thread: AgentThreadMeta | null };
+  regenerateThreadTitle: { thread: AgentThreadMeta | null; name: string | null };
   listModels: ListModelsResult;
 }

@@ -1,4 +1,7 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
+
+import { createAgentSessionPersistStorage } from '../lib/storage';
 
 import type {
   AgentEvent,
@@ -69,16 +72,20 @@ type AgentSessionState = {
   sessionsById: Record<string, AgentSession>;
   activeSessionId: string | null;
   requestBindings: Record<string, RequestBinding>;
+  pinnedDirectories: string[];
   setInitialized: (initialized: boolean) => void;
   setBackendReady: (ready: boolean, error?: string) => void;
   setThreadList: (threads: AgentThreadMeta[]) => void;
   activateSession: (sessionId: string) => void;
   upsertSession: (session: AgentSession) => void;
+  pinDirectory: (path: string) => void;
+  unpinDirectory: (path: string) => void;
   findSessionByThreadId: (threadId: string) => string | null;
   createPendingMessage: (sessionId: string, text: string, requestId: string) => void;
   clearApproval: (approvalId: string) => void;
   applyEvent: (event: AgentEvent) => void;
   removeThread: (threadId: string) => void;
+  renameThreadLocal: (threadId: string, name: string | null) => void;
 };
 
 function createAssistantMessage(id: string): AgentMessage {
@@ -445,33 +452,53 @@ function normalizeBootstrapMessages(messages: AgentSessionBootstrap['messages'])
   }));
 }
 
-export const useAgentSessionStore = create<AgentSessionState>((set, get) => ({
-  initialized: false,
-  backendReady: false,
-  backendError: '',
-  threadList: [],
-  sessionOrder: [],
-  sessionsById: {},
-  activeSessionId: null,
-  requestBindings: {},
-  setInitialized: (initialized) => set({ initialized }),
-  setBackendReady: (backendReady, error = '') => set({ backendReady, backendError: error }),
-  setThreadList: (threadList) => set({ threadList }),
-  activateSession: (activeSessionId) => set({ activeSessionId }),
-  upsertSession: (session) =>
-    set((state) => {
-      const nextOrder = state.sessionOrder.includes(session.sessionId)
-        ? state.sessionOrder
-        : [session.sessionId, ...state.sessionOrder];
-      return {
-        sessionsById: {
-          ...state.sessionsById,
-          [session.sessionId]: session,
-        },
-        sessionOrder: nextOrder,
-        activeSessionId: state.activeSessionId || session.sessionId,
-      };
-    }),
+export const useAgentSessionStore = create<AgentSessionState>()(
+  persist(
+    (set, get) => ({
+      initialized: false,
+      backendReady: false,
+      backendError: '',
+      threadList: [],
+      sessionOrder: [],
+      sessionsById: {},
+      activeSessionId: null,
+      requestBindings: {},
+      pinnedDirectories: [],
+      setInitialized: (initialized) => set({ initialized }),
+      setBackendReady: (backendReady, error = '') => set({ backendReady, backendError: error }),
+      setThreadList: (threadList) => set({ threadList }),
+      activateSession: (activeSessionId) => set({ activeSessionId }),
+      upsertSession: (session) =>
+        set((state) => {
+          const nextOrder = state.sessionOrder.includes(session.sessionId)
+            ? state.sessionOrder
+            : [session.sessionId, ...state.sessionOrder];
+          
+          // 自动固定目录
+          const pinnedDirectories = [...state.pinnedDirectories];
+          if (session.workspaceRoot && !pinnedDirectories.includes(session.workspaceRoot)) {
+            pinnedDirectories.push(session.workspaceRoot);
+          }
+
+          return {
+            sessionsById: {
+              ...state.sessionsById,
+              [session.sessionId]: session,
+            },
+            sessionOrder: nextOrder,
+            activeSessionId: state.activeSessionId || session.sessionId,
+            pinnedDirectories,
+          };
+        }),
+      pinDirectory: (path) =>
+        set((state) => {
+          if (state.pinnedDirectories.includes(path)) return state;
+          return { pinnedDirectories: [...state.pinnedDirectories, path] };
+        }),
+      unpinDirectory: (path) =>
+        set((state) => ({
+          pinnedDirectories: state.pinnedDirectories.filter((p) => p !== path),
+        })),
   findSessionByThreadId: (threadId) => {
     const sessions = Object.values(get().sessionsById);
     return sessions.find((session) => session.threadId === threadId)?.sessionId || null;
@@ -525,6 +552,16 @@ export const useAgentSessionStore = create<AgentSessionState>((set, get) => ({
     }),
   applyEvent: (event) =>
     set((state) => {
+      if (event.type === 'thread_name_updated') {
+        const nextThreadList = state.threadList.map((thread) =>
+          thread.threadId === event.threadId ? { ...thread, name: event.name } : thread,
+        );
+        if (nextThreadList === state.threadList) {
+          return state;
+        }
+        return { threadList: nextThreadList };
+      }
+
       if (event.type === 'skills_snapshot') {
         const session = state.sessionsById[event.sessionId];
         if (!session) {
@@ -679,6 +716,12 @@ export const useAgentSessionStore = create<AgentSessionState>((set, get) => ({
         requestBindings: nextBindings,
       };
     }),
+  renameThreadLocal: (threadId, name) =>
+    set((state) => ({
+      threadList: state.threadList.map((thread) =>
+        thread.threadId === threadId ? { ...thread, name } : thread,
+      ),
+    })),
   removeThread: (threadId) =>
     set((state) => {
       const sessionId = state.findSessionByThreadId(threadId);
@@ -701,7 +744,27 @@ export const useAgentSessionStore = create<AgentSessionState>((set, get) => ({
         activeSessionId: nextActiveSessionId,
       };
     }),
-}));
+    }),
+    {
+      name: 'prism-session-store',
+      storage: createAgentSessionPersistStorage(
+        (state) => ({ pinnedDirectories: state.pinnedDirectories }),
+        (pinnedDirectories) =>
+          ({
+            pinnedDirectories,
+            initialized: false,
+            backendReady: false,
+            backendError: '',
+            threadList: [],
+            sessionOrder: [],
+            sessionsById: {},
+            activeSessionId: null,
+            requestBindings: {},
+          }) as AgentSessionState,
+      ),
+    },
+  ),
+);
 
 export function createSessionFromBootstrap(
   bootstrap: AgentSessionBootstrap,

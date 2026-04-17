@@ -32,6 +32,11 @@ import {
   startThinking,
 } from './messageTimeline.js';
 import { SessionRegistry, type PersistedSessionSnapshot, type RuntimeSessionRecord } from './sessions.js';
+import {
+  generateTitleFromMessages,
+  isTitleConfigUsable,
+  type TitleModelPayload,
+} from './titleGenerator.js';
 import type {
   AgentApprovalMode,
   AgentEvent,
@@ -181,6 +186,43 @@ const methods = {
     const threadId = params?.threadId ?? '';
     await sessionRegistry.archiveThread(threadId);
     return null;
+  },
+
+  async renameThread(params?: { threadId: string; name: string }) {
+    const threadId = params?.threadId ?? '';
+    const name = params?.name ?? '';
+    if (!threadId) {
+      throw new Error('缺少 threadId。');
+    }
+    const thread = await sessionRegistry.renameThread(threadId, name);
+    return { thread } satisfies OuterMethods['renameThread'];
+  },
+
+  async regenerateThreadTitle(params?: { threadId: string; titleModel?: TitleModelPayload }) {
+    const threadId = params?.threadId ?? '';
+    const titleModel = params?.titleModel;
+    if (!threadId) {
+      throw new Error('缺少 threadId。');
+    }
+    if (!isTitleConfigUsable(titleModel ?? null)) {
+      throw new Error('未配置标题模型，请先在设置中指定。');
+    }
+
+    const messages = await sessionRegistry.getThreadMessages(threadId);
+    if (messages.length < 2) {
+      throw new Error('对话内容不足，无法生成标题。');
+    }
+
+    const title = await generateTitleFromMessages(messages, titleModel!);
+    if (!title) {
+      throw new Error('标题模型未返回有效结果。');
+    }
+
+    const thread = await sessionRegistry.renameThread(threadId, title);
+    return {
+      thread,
+      name: title,
+    } satisfies OuterMethods['regenerateThreadTitle'];
   },
 
   async listModels(params?: ListModelsParams) {
@@ -508,6 +550,7 @@ async function runPrompt(runtime: RuntimeSessionRecord, requestId: string, paylo
     emitThinkingEndIfNeeded(runtime, requestId, 'done');
     finalizeLatestToolStates(runtime, 'done');
     if (!sessionRegistry.isCancelled(runtime.sessionId, requestId)) {
+      await maybeGenerateThreadTitle(runtime, requestId, payload.titleModel);
       emit({
         type: 'done',
         requestId,
@@ -548,6 +591,43 @@ async function runPrompt(runtime: RuntimeSessionRecord, requestId: string, paylo
     requestApprovalModes.delete(requestId);
     sessionRegistry.clearRequest(runtime.sessionId, requestId);
     await sessionRegistry.saveSnapshot(runtime.snapshot);
+  }
+}
+
+const TITLE_GENERATION_TIMEOUT_MS = 8_000;
+
+async function maybeGenerateThreadTitle(
+  runtime: RuntimeSessionRecord,
+  requestId: string,
+  titleModel: TitleModelPayload | undefined,
+) {
+  if (runtime.snapshot.name) return;
+  if (!isTitleConfigUsable(titleModel ?? null)) return;
+  if (runtime.snapshot.messages.length < 2) return;
+
+  try {
+    const title = await Promise.race([
+      generateTitleFromMessages(runtime.snapshot.messages, titleModel!),
+      new Promise<null>((resolve) => {
+        const timer = setTimeout(() => resolve(null), TITLE_GENERATION_TIMEOUT_MS);
+        timer.unref?.();
+      }),
+    ]);
+    if (!title) return;
+
+    runtime.snapshot.name = title;
+    runtime.snapshot.updatedAt = Date.now();
+    await sessionRegistry.saveSnapshot(runtime.snapshot);
+
+    emit({
+      type: 'thread_name_updated',
+      requestId,
+      sessionId: runtime.sessionId,
+      threadId: runtime.threadId,
+      name: title,
+    });
+  } catch (error) {
+    console.warn('[title] generation failed:', error);
   }
 }
 

@@ -11,6 +11,7 @@ import type {
   ResumeSessionParams,
   SendMessageParams,
   StartSessionParams,
+  TitleModelPayload,
 } from './types.js';
 
 type AgentMethods = {
@@ -23,6 +24,10 @@ type AgentMethods = {
   respondApproval: (params?: RespondApprovalParams) => Promise<OuterMethods['respondApproval']>;
   listThreads: () => Promise<OuterMethods['listThreads']>;
   archiveThread: (params?: { threadId: string }) => Promise<OuterMethods['archiveThread']>;
+  renameThread: (params?: { threadId: string; name: string }) => Promise<OuterMethods['renameThread']>;
+  regenerateThreadTitle: (
+    params?: { threadId: string; titleModel?: TitleModelPayload },
+  ) => Promise<OuterMethods['regenerateThreadTitle']>;
   listModels: (params?: ListModelsParams) => Promise<OuterMethods['listModels']>;
 };
 
@@ -40,6 +45,8 @@ type RouteMatch =
   | { route: 'list_models' }
   | { route: 'threads' }
   | { route: 'archive_thread'; threadId: string }
+  | { route: 'rename_thread'; threadId: string }
+  | { route: 'regenerate_thread_title'; threadId: string }
   | { route: 'start_session' }
   | { route: 'resume_session' }
   | { route: 'send_message' }
@@ -126,6 +133,24 @@ async function handleRequest(
       case 'archive_thread': {
         await options.methods.archiveThread({ threadId: match.threadId });
         writeJson(response, 200, { ok: true });
+        return;
+      }
+      case 'rename_thread': {
+        const body = await readJsonBody<{ name?: string }>(request);
+        const result = await options.methods.renameThread({
+          threadId: match.threadId,
+          name: body.name ?? '',
+        });
+        writeJson(response, 200, result);
+        return;
+      }
+      case 'regenerate_thread_title': {
+        const body = await readJsonBody<{ titleModel?: TitleModelPayload }>(request);
+        const result = await options.methods.regenerateThreadTitle({
+          threadId: match.threadId,
+          titleModel: body.titleModel,
+        });
+        writeJson(response, 200, result);
         return;
       }
       case 'start_session': {
@@ -257,6 +282,23 @@ function matchRoute(request: IncomingMessage): RouteMatch {
       threadId: decodeURIComponent(pathname.replace('/api/agent/threads/', '')),
     };
   }
+  if (
+    method === 'POST' &&
+    pathname.startsWith('/api/agent/threads/') &&
+    pathname.endsWith('/regenerate-title')
+  ) {
+    const rest = pathname.replace('/api/agent/threads/', '').replace(/\/regenerate-title$/, '');
+    return {
+      route: 'regenerate_thread_title',
+      threadId: decodeURIComponent(rest),
+    };
+  }
+  if (method === 'PATCH' && pathname.startsWith('/api/agent/threads/')) {
+    return {
+      route: 'rename_thread',
+      threadId: decodeURIComponent(pathname.replace('/api/agent/threads/', '')),
+    };
+  }
   if (method === 'POST' && pathname === '/api/agent/sessions') {
     return { route: 'start_session' };
   }
@@ -319,7 +361,7 @@ function writeCorsHeaders(response: ServerResponse, origin: string | null) {
     response.setHeader('Access-Control-Allow-Origin', origin);
   }
   response.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type');
-  response.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
+  response.setHeader('Access-Control-Allow-Methods', 'GET, POST, PATCH, DELETE, OPTIONS');
 }
 
 function resolveAllowedOrigin(origin: string) {

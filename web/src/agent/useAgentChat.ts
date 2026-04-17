@@ -5,6 +5,8 @@ import {
   agentCancel,
   agentHealth,
   agentListThreads,
+  agentRegenerateThreadTitle,
+  agentRenameThread,
   agentRespondApproval,
   agentResumeSession,
   agentSendMessage,
@@ -14,6 +16,7 @@ import {
   type AgentRuntimeConfig,
   type AgentRuntimeStatus,
   type AgentReasoningEffort,
+  type TitleModelPayload,
 } from './client';
 import {
   createSessionFromBootstrap,
@@ -69,6 +72,23 @@ export function useAgentChat() {
       apiUrl: runtimeRequestConfig.apiUrl,
       systemPrompt: runtimeRequestConfig.systemPrompt,
       serviceName: runtimeRequestConfig.serviceName,
+    };
+  }, [runtimeModelConfig, serviceManagerSelectedId, services]);
+
+  const titleModelPayload = useMemo<TitleModelPayload | undefined>(() => {
+    const titleRequestConfig = resolveRuntimeRequestConfig(
+      services,
+      runtimeModelConfig,
+      serviceManagerSelectedId,
+      'title',
+    );
+    if (!titleRequestConfig.model) return undefined;
+    return {
+      provider: titleRequestConfig.provider,
+      providerSelection: titleRequestConfig.providerSelection,
+      apiUrl: titleRequestConfig.apiUrl,
+      apiKey: titleRequestConfig.apiKey,
+      model: titleRequestConfig.model,
     };
   }, [runtimeModelConfig, serviceManagerSelectedId, services]);
 
@@ -275,6 +295,7 @@ export function useAgentChat() {
           reasoningEffort: payload.reasoningEffort,
           approvalMode: payload.approvalMode,
           config: agentRuntimeConfig,
+          titleModel: titleModelPayload,
         },
         (event) => {
           applyEvent(event);
@@ -325,6 +346,28 @@ export function useAgentChat() {
       void agentArchiveThread(threadId).catch((err) => {
         console.error('Archive thread failed:', err);
       });
+    },
+    renameThread: async (threadId: string, name: string) => {
+      const trimmed = name.trim();
+      const finalName = trimmed || null;
+      useAgentSessionStore.getState().renameThreadLocal(threadId, finalName);
+      try {
+        await agentRenameThread(threadId, trimmed);
+      } catch (err) {
+        console.error('Rename thread failed:', err);
+      }
+    },
+    regenerateThreadTitle: async (threadId: string) => {
+      try {
+        const result = await agentRegenerateThreadTitle(threadId, titleModelPayload);
+        if (result.name) {
+          useAgentSessionStore.getState().renameThreadLocal(threadId, result.name);
+        }
+        return result.name;
+      } catch (err) {
+        console.error('Regenerate thread title failed:', err);
+        throw err;
+      }
     },
   };
 }

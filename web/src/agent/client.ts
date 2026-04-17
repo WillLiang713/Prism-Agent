@@ -99,6 +99,7 @@ export interface AgentThreadMeta {
   preview: string;
   name: string | null;
   cwd: string;
+  messageCount: number;
   createdAt: number;
   updatedAt: number;
   status: string;
@@ -197,7 +198,22 @@ export type AgentEvent =
       requestId: string;
       sessionId: string;
       message: string;
+    }
+  | {
+      type: 'thread_name_updated';
+      requestId: string;
+      sessionId: string;
+      threadId: string;
+      name: string;
     };
+
+export interface TitleModelPayload {
+  providerSelection?: string;
+  provider?: string;
+  apiUrl?: string;
+  apiKey?: string;
+  model?: string;
+}
 
 export interface UploadImagePayload {
   name: string;
@@ -278,6 +294,7 @@ export async function agentSendMessage(
     reasoningEffort: AgentReasoningEffort;
     approvalMode: AgentApprovalMode;
     config: AgentRuntimeConfig;
+    titleModel?: TitleModelPayload;
   },
   onEvent: (event: AgentEvent) => void,
 ) {
@@ -349,6 +366,29 @@ export async function agentArchiveThread(threadId: string) {
     method: 'DELETE',
     headers: createHeaders(false),
   });
+}
+
+export async function agentRenameThread(threadId: string, name: string) {
+  return requestJson<{ thread: AgentThreadMeta | null }>(
+    `/api/agent/threads/${encodeURIComponent(threadId)}`,
+    {
+      method: 'PATCH',
+      body: JSON.stringify({ name }),
+    },
+  );
+}
+
+export async function agentRegenerateThreadTitle(
+  threadId: string,
+  titleModel: TitleModelPayload | undefined,
+) {
+  return requestJson<{ thread: AgentThreadMeta | null; name: string | null }>(
+    `/api/agent/threads/${encodeURIComponent(threadId)}/regenerate-title`,
+    {
+      method: 'POST',
+      body: JSON.stringify({ titleModel }),
+    },
+  );
 }
 
 async function readNdjsonStream(

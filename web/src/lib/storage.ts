@@ -14,6 +14,7 @@ export const STORAGE_KEYS = {
   activeTopicId: 'prismActiveTopicId',
   isSidebarCollapsed: 'prismIsSidebarCollapsed',
   theme: 'prismTheme',
+  pinnedDirectories: 'prismPinnedDirectoriesV1',
 } as const;
 
 type ConfigPersistedShape = {
@@ -131,6 +132,29 @@ export function createUiPersistStorage<TState extends object>(
     removeItem: () => {
       window.localStorage.removeItem(STORAGE_KEYS.theme);
       window.localStorage.removeItem(STORAGE_KEYS.isSidebarCollapsed);
+    },
+  };
+}
+
+export function createAgentSessionPersistStorage<TState extends object>(
+  readState: (state: TState) => { pinnedDirectories: string[] },
+  fromPersisted: (pinnedDirectories: string[]) => TState,
+): PersistStorage<TState> {
+  return {
+    getItem: () => {
+      const pinned = readRawJson<string[]>(STORAGE_KEYS.pinnedDirectories, []);
+      return {
+        state: fromPersisted(Array.isArray(pinned) ? pinned : []),
+        version: 1,
+      };
+    },
+    setItem: (_name, value) => {
+      const storageValue = value as StorageValue<TState>;
+      const { pinnedDirectories } = readState(storageValue.state);
+      window.localStorage.setItem(STORAGE_KEYS.pinnedDirectories, JSON.stringify(pinnedDirectories));
+    },
+    removeItem: () => {
+      window.localStorage.removeItem(STORAGE_KEYS.pinnedDirectories);
     },
   };
 }

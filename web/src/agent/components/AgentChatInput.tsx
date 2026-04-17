@@ -151,7 +151,7 @@ export function AgentChatInput({
         onKeyDown={handleTextareaKeyDown}
         rows={1}
         disabled={inputDisabled || isStreaming}
-        placeholder="输入问题或指令，@ 附加文件，/ 运行命令，$ 调用技能"
+        placeholder="告诉我你想处理什么…"
         className="min-h-[48px] resize-none border-0 bg-transparent px-3 py-1.5 text-sm leading-6 shadow-none focus-visible:ring-0"
       />
 
@@ -206,9 +206,9 @@ export function AgentChatInput({
             onClick={onStop}
             title="停止"
             aria-label="停止"
-            className="h-8 w-8 p-0"
+            className="h-7 w-7 p-0"
           >
-            <span aria-hidden="true" className="h-2.5 w-2.5 rounded-[3px] bg-current" />
+            <span aria-hidden="true" className="h-2 w-2 rounded-[3px] bg-current" />
           </Button>
         ) : (
           <Button
@@ -217,9 +217,9 @@ export function AgentChatInput({
             disabled={submitDisabled}
             title={submitHint || '发送'}
             aria-label="发送"
-            className="h-8 w-8 p-0"
+            className="h-7 w-7 p-0"
           >
-            <ArrowUp className="h-4 w-4" />
+            <ArrowUp className="h-3.5 w-3.5" />
           </Button>
         )}
       </div>

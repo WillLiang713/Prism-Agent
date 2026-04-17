@@ -26,6 +26,7 @@ type ConfigStoreState = {
   getServiceById: (serviceId: string | null | undefined) => ServiceConfig | null;
   getRuntimeRequestConfig: (mode?: 'main' | 'title') => {
     provider: ServiceModelConfig['provider'];
+    providerSelection: ServiceModelConfig['providerSelection'];
     endpointMode: ServiceModelConfig['endpointMode'];
     apiKey: string;
     model: string;
@@ -117,6 +118,7 @@ export function resolveRuntimeRequestConfig(
 
   return {
     provider: sourceService?.model.provider || 'openai',
+    providerSelection: sourceService?.model.providerSelection || 'openai_chat',
     endpointMode: sourceService?.model.endpointMode || 'chat_completions',
     apiKey: sourceService?.model.apiKey || '',
     model,

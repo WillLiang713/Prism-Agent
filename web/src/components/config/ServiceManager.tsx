@@ -1,4 +1,4 @@
-import { Plus, RefreshCw } from 'lucide-react';
+import { Plus, RefreshCw, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { agentListModels } from '../../agent/client';
 import { useConfigStore } from '../../store/configStore';
@@ -34,10 +34,12 @@ export function ServiceManager() {
   const [modelOptions, setModelOptions] = useState<string[]>([]);
   const [modelListLoading, setModelListLoading] = useState(false);
   const [modelListError, setModelListError] = useState<string | null>(null);
+  const [modelListSuccess, setModelListSuccess] = useState<string | null>(null);
 
   useEffect(() => {
     setModelOptions([]);
     setModelListError(null);
+    setModelListSuccess(null);
     if (selectedService?.model.apiKey && selectedService?.model.apiUrl) {
       void refreshModelList();
     }
@@ -48,6 +50,7 @@ export function ServiceManager() {
     if (!selectedService) return;
     setModelListLoading(true);
     setModelListError(null);
+    setModelListSuccess(null);
     try {
       const result = await agentListModels({
         providerSelection: selectedService.model.providerSelection,
@@ -55,6 +58,8 @@ export function ServiceManager() {
         apiKey: selectedService.model.apiKey,
       });
       setModelOptions(result.models.map((m) => m.id));
+      setModelListSuccess(`已获取 ${result.models.length} 个模型`);
+      setTimeout(() => setModelListSuccess(null), 3000);
     } catch (error) {
       setModelListError(error instanceof Error ? error.message : String(error));
       setModelOptions([]);
@@ -98,12 +103,12 @@ export function ServiceManager() {
   }
 
   return (
-    <div className="grid items-stretch gap-6 lg:grid-cols-[240px_minmax(0,1fr)]">
-      <div className="flex min-h-[520px] flex-col space-y-3">
+    <div className="grid items-stretch gap-6 md:grid-cols-[240px_minmax(0,1fr)]">
+      <div className="flex flex-col space-y-3 md:min-h-[520px]">
         <Button
           onClick={() => upsertService({ name: '新服务' })}
           variant="ghost"
-          className="h-10 w-full justify-start gap-2 rounded-lg text-sm text-mutedForeground hover:bg-muted/60 hover:text-foreground"
+          className="h-10 w-full justify-start gap-2 rounded-lg text-sm text-mutedForeground hover:bg-foreground/[0.05] hover:text-foreground"
         >
           <Plus className="h-4 w-4" />
           <span className="font-medium">新建服务</span>
@@ -111,46 +116,48 @@ export function ServiceManager() {
         <ScrollArea className="min-h-0 flex-1">
           <div className="space-y-0.5">
             {services.map((service) => (
-              <button
+              <div
                 key={service.id}
-                type="button"
+                role="button"
+                tabIndex={0}
                 onClick={() => setServiceManagerSelectedId(service.id)}
-                className={`group flex w-full touch-manipulation flex-col items-start gap-1 rounded-lg px-3 py-2.5 text-left transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-foreground/20 ${
+                className={`group relative flex w-full touch-manipulation flex-col items-start gap-1 rounded-lg px-3 py-2.5 text-left transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-foreground/20 ${
                   service.id === selectedService.id
-                    ? 'bg-muted'
-                    : 'hover:bg-muted/60'
+                    ? 'bg-foreground/[0.08]'
+                    : 'hover:bg-foreground/[0.05]'
                 }`}
               >
-                <div className="w-full truncate text-sm font-medium text-foreground">
+                <div className="w-full truncate pr-6 text-sm font-medium text-foreground">
                   {service.name || '未命名服务'}
                 </div>
                 <div className="truncate text-[11px] text-mutedForeground/70">
                   {providerLabels[service.model.providerSelection]}
                 </div>
-              </button>
+                {services.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      removeService(service.id);
+                    }}
+                    className="absolute right-2 top-1/2 flex -translate-y-1/2 items-center justify-center rounded-md p-1.5 text-mutedForeground opacity-0 transition-opacity hover:bg-danger/10 hover:text-danger group-hover:opacity-100 focus-visible:opacity-100"
+                    title="删除服务"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                )}
+              </div>
             ))}
           </div>
         </ScrollArea>
       </div>
 
-      <div className="min-h-[520px] space-y-5 border-l border-border/50 pl-6">
-        <div className="flex items-center justify-between">
-          <h3 className="font-display text-sm font-semibold tracking-tight text-foreground">当前</h3>
-          {services.length > 1 ? (
-            <Button
-              variant="ghost"
-              size="xs"
-              onClick={() => removeService(selectedService.id)}
-              className="shrink-0"
-            >
-              删除
-            </Button>
-          ) : null}
-        </div>
-        <label className="grid gap-2 text-xs">
-          <span className="text-mutedForeground">名称</span>
+      <div className="space-y-5 border-t border-border/50 pt-6 md:min-h-[520px] md:border-l md:border-t-0 md:pl-6 md:pt-0">
+
+        <div className="grid gap-2 text-xs">
+          <span className="px-4 text-mutedForeground">名称</span>
           <Input
-            className="border-0 bg-muted/90 dark:bg-muted/75"
+            className="bg-card border border-border"
             value={selectedService.name}
             onChange={(event) =>
               upsertService({
@@ -159,10 +166,10 @@ export function ServiceManager() {
               })
             }
           />
-        </label>
+        </div>
         <div className="grid gap-4 md:grid-cols-2">
-          <label className="grid gap-2 text-xs">
-            <span className="text-mutedForeground">类型</span>
+          <div className="grid gap-2 text-xs">
+            <span className="px-4 text-mutedForeground">类型</span>
             <Select
               value={selectedService.model.providerSelection}
               onValueChange={(value) =>
@@ -171,7 +178,7 @@ export function ServiceManager() {
                 )
               }
             >
-              <SelectTrigger className="border-0 bg-muted/90 shadow-none dark:bg-muted/75">
+              <SelectTrigger className="bg-card border border-border">
                 <SelectValue placeholder="选择服务类型" />
               </SelectTrigger>
               <SelectContent className="border-0">
@@ -181,26 +188,26 @@ export function ServiceManager() {
                 <SelectItem value="gemini">Google Gemini</SelectItem>
               </SelectContent>
             </Select>
-          </label>
-          <label className="grid gap-2 text-xs">
-            <span className="text-mutedForeground">地址</span>
+          </div>
+          <div className="grid gap-2 text-xs">
+            <span className="px-4 text-mutedForeground">地址</span>
             <Input
-              className="border-0 bg-muted/90 dark:bg-muted/75"
+              className="bg-card border border-border"
               value={selectedService.model.apiUrl}
               onChange={(event) => handleServiceChange('apiUrl', event.currentTarget.value)}
             />
-          </label>
-          <label className="grid gap-2 text-xs">
-            <span className="text-mutedForeground">Key</span>
+          </div>
+          <div className="grid gap-2 text-xs">
+            <span className="px-4 text-mutedForeground">Key</span>
             <Input
-              className="border-0 bg-muted/90 dark:bg-muted/75"
+              className="bg-card border border-border"
               type="password"
               value={selectedService.model.apiKey}
               onChange={(event) => handleServiceChange('apiKey', event.currentTarget.value)}
             />
-          </label>
+          </div>
           <div className="grid gap-2 text-xs">
-            <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center justify-between gap-2 px-4">
               <span className="text-mutedForeground">模型</span>
               <div className="flex min-w-0 items-center gap-2">
                 {modelListError ? (
@@ -210,7 +217,7 @@ export function ServiceManager() {
                   >
                     {modelListError}
                   </span>
-                ) : null}
+                ) : modelListSuccess ? (<span className="max-w-[140px] truncate text-[11px] text-success/80 dark:text-success" title={modelListSuccess}>{modelListSuccess}</span>) : null}
                 <button
                   type="button"
                   onClick={() => refreshModelList()}
@@ -231,6 +238,8 @@ export function ServiceManager() {
             />
           </div>
         </div>
+        
+
       </div>
     </div>
   );

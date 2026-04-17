@@ -233,6 +233,56 @@ export class SessionRegistry {
       .sort((left, right) => right.updatedAt - left.updatedAt);
   }
 
+  async getThreadMessages(threadId: string): Promise<AgentSessionMessage[]> {
+    const runtime = this.getRuntimeSessionByThreadId(threadId);
+    if (runtime) return runtime.snapshot.messages;
+    try {
+      const snapshot = await this.loadSnapshot(threadId);
+      return snapshot.messages;
+    } catch (error) {
+      const err = error as NodeJS.ErrnoException;
+      if (err.code === 'ENOENT') return [];
+      throw error;
+    }
+  }
+
+  async renameThread(threadId: string, name: string): Promise<AgentThreadMeta | null> {
+    await this.ensureReady();
+    const trimmed = name.trim().slice(0, 60);
+    const finalName = trimmed || null;
+
+    const runtime = this.getRuntimeSessionByThreadId(threadId);
+    if (runtime) {
+      runtime.snapshot.name = finalName;
+      runtime.snapshot.updatedAt = Date.now();
+      await this.saveSnapshot(runtime.snapshot);
+      return this.toThreadMeta(runtime.snapshot);
+    }
+
+    let resultMeta: AgentThreadMeta | null = null;
+    await this.enqueuePersistence(async () => {
+      const index = await this.readIndex();
+      const entry = index[threadId];
+      if (!entry) return;
+      entry.name = finalName;
+      entry.updatedAt = Date.now();
+      await this.writeIndex(index);
+      const filePath = path.join(this.snapshotDir, `${threadId}.json`);
+      try {
+        const raw = await fs.readFile(filePath, 'utf8');
+        const snapshot = JSON.parse(raw) as PersistedSessionSnapshot;
+        snapshot.name = finalName;
+        snapshot.updatedAt = entry.updatedAt;
+        await this.writeJsonAtomic(filePath, snapshot);
+      } catch (error) {
+        const err = error as NodeJS.ErrnoException;
+        if (err.code !== 'ENOENT') throw error;
+      }
+      resultMeta = this.toThreadMeta(entry);
+    });
+    return resultMeta;
+  }
+
   async archiveThread(threadId: string) {
     await this.ensureReady();
     this.cancelScheduledSnapshotSave(threadId);
@@ -284,6 +334,7 @@ export class SessionRegistry {
       preview: snapshot.preview,
       name: snapshot.name,
       cwd: snapshot.workspaceRoot,
+      messageCount: snapshot.messages.length,
       createdAt: snapshot.createdAt,
       updatedAt: snapshot.updatedAt,
       status: snapshot.status,

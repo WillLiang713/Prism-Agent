@@ -46,7 +46,7 @@ export function Combobox({
           type="button"
           disabled={disabled}
           className={cn(
-            'flex h-11 w-full items-center justify-between gap-2 rounded-full border-0 bg-muted/90 px-4 py-3 text-sm text-foreground outline-none transition-colors dark:bg-muted/75 disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1',
+            'flex h-11 w-full items-center justify-between gap-2 rounded-full border border-border bg-card px-4 py-3 text-sm text-foreground outline-none transition-colors disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1',
             className,
           )}
         >
