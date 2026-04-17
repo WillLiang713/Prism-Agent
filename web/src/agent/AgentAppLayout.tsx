@@ -1,5 +1,5 @@
 import { MoonStar, Settings, SunMedium } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 
 import { SettingsDialog } from '../components/config/SettingsDialog';
 import { Button } from '../components/ui/button';
@@ -9,8 +9,6 @@ import { AgentSessionList } from './components/AgentSessionList';
 import { useAgentChat } from './useAgentChat';
 import { WindowControls } from '../components/layout/WindowControls';
 import { isDesktopRuntime } from '../lib/runtime';
-import { resolveRuntimeRequestConfig, useConfigStore } from '../store/configStore';
-import { HeaderModelPicker } from './components/HeaderModelPicker';
 
 export function AgentAppLayout() {
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -34,17 +32,6 @@ export function AgentAppLayout() {
     respondApproval,
     archiveThread,
   } = useAgentChat();
-
-  const services = useConfigStore((state) => state.services);
-  const runtimeModelConfig = useConfigStore((state) => state.runtimeModelConfig);
-  const serviceManagerSelectedId = useConfigStore((state) => state.serviceManagerSelectedId);
-  const selectedModelId = useMemo(
-    () =>
-      resolveRuntimeRequestConfig(services, runtimeModelConfig, serviceManagerSelectedId, 'main')
-        .model,
-    [services, runtimeModelConfig, serviceManagerSelectedId],
-  );
-  const displayModelId = selectedModelId || agentRuntimeStatus.model || '';
 
   const isDesktop = isDesktopRuntime();
   const headerIconButtonClass =
@@ -74,9 +61,7 @@ export function AgentAppLayout() {
             data-tauri-drag-region
           >
             <div data-tauri-drag-region />
-            <div className="flex justify-center overflow-hidden" data-tauri-drag-region>
-              <HeaderModelPicker currentModel={displayModelId} />
-            </div>
+            <div data-tauri-drag-region />
             <div className="flex items-center justify-end gap-1" data-tauri-drag-region>
               <div className="flex items-center gap-1 no-drag mr-2">
                 <Button size="icon" variant="ghost" onClick={toggleTheme} className={headerIconButtonClass}>

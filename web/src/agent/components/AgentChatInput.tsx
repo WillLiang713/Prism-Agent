@@ -1,5 +1,6 @@
 import { ArrowUp, Lightbulb, Paperclip, Play, X } from 'lucide-react';
 import {
+  useMemo,
   useRef,
   useState,
   type ChangeEvent,
@@ -13,7 +14,9 @@ import { ContentImage } from '../../components/ui/content-image';
 import { FileInput } from '../../components/ui/file-input';
 import { Select, SelectContent, SelectItem, SelectTrigger } from '../../components/ui/select';
 import { Textarea } from '../../components/ui/textarea';
+import { resolveRuntimeRequestConfig, useConfigStore } from '../../store/configStore';
 import type { AgentApprovalMode, AgentReasoningEffort } from '../client';
+import { HeaderModelPicker } from './HeaderModelPicker';
 
 export function AgentChatInput({
   inputDisabled,
@@ -21,6 +24,7 @@ export function AgentChatInput({
   submitHint,
   isStreaming,
   approvalMode,
+  fallbackModel,
   onApprovalModeChange,
   onSubmit,
   onStop,
@@ -30,6 +34,7 @@ export function AgentChatInput({
   submitHint?: string;
   isStreaming: boolean;
   approvalMode: AgentApprovalMode;
+  fallbackModel?: string;
   onApprovalModeChange: (mode: AgentApprovalMode) => void;
   onSubmit: (payload: {
     text: string;
@@ -39,6 +44,16 @@ export function AgentChatInput({
   }) => void;
   onStop: () => void;
 }) {
+  const services = useConfigStore((state) => state.services);
+  const runtimeModelConfig = useConfigStore((state) => state.runtimeModelConfig);
+  const serviceManagerSelectedId = useConfigStore((state) => state.serviceManagerSelectedId);
+  const selectedModelId = useMemo(
+    () =>
+      resolveRuntimeRequestConfig(services, runtimeModelConfig, serviceManagerSelectedId, 'main')
+        .model,
+    [services, runtimeModelConfig, serviceManagerSelectedId],
+  );
+  const displayModelId = selectedModelId || fallbackModel || '';
   const [text, setText] = useState('');
   const [reasoningEffort, setReasoningEffort] = useState<AgentReasoningEffort>('high');
   const [images, setImages] = useState<Array<{ name: string; mediaType: string; dataUrl: string }>>(
@@ -136,7 +151,7 @@ export function AgentChatInput({
         onKeyDown={handleTextareaKeyDown}
         rows={1}
         disabled={inputDisabled || isStreaming}
-        placeholder="输入你的需求…"
+        placeholder="输入问题或指令，@ 附加文件，/ 运行命令，$ 调用技能"
         className="min-h-[48px] resize-none border-0 bg-transparent px-3 py-1.5 text-sm leading-6 shadow-none focus-visible:ring-0"
       />
 
@@ -149,36 +164,37 @@ export function AgentChatInput({
             onClick={() => fileInputRef.current?.click()}
             disabled={inputDisabled || isStreaming}
             title="上传图片"
-            className="h-8 w-8 shrink-0 bg-card p-0 shadow-sm"
+            className="h-8 w-8 shrink-0 bg-card p-0 shadow-none hover:bg-card"
             aria-label="上传图片"
           >
             <Paperclip className="h-4 w-4" />
           </Button>
+          <HeaderModelPicker currentModel={displayModelId} />
           <Select value={reasoningEffort} onValueChange={(value) => setReasoningEffort(value as AgentReasoningEffort)}>
-            <SelectTrigger className="h-8 w-[100px] px-3 text-xs">
+            <SelectTrigger className="h-8 w-[100px] cursor-pointer px-3 text-xs">
               <div className="flex items-center gap-2">
                 <Lightbulb className="h-4 w-4" />
                 <span>{reasoningOptions.find((option) => option.value === reasoningEffort)?.label || '高'}</span>
               </div>
             </SelectTrigger>
-            <SelectContent className="min-w-0">
+            <SelectContent side="top" className="min-w-0">
               {reasoningOptions.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
+                <SelectItem key={option.value} value={option.value} className="cursor-pointer">
                   {option.label}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
           <Select value={approvalMode} onValueChange={(value) => onApprovalModeChange(value as AgentApprovalMode)}>
-            <SelectTrigger className="h-8 w-[96px] px-3 text-xs" aria-label="执行模式">
+            <SelectTrigger className="h-8 w-[96px] cursor-pointer px-3 text-xs" aria-label="执行模式">
               <div className="flex items-center gap-2">
                 <Play aria-hidden="true" className="h-4 w-4 text-mutedForeground" />
                 <span>{approvalMode === 'auto' ? '自动' : '手动'}</span>
               </div>
             </SelectTrigger>
-            <SelectContent className="min-w-0">
-              <SelectItem value="auto">自动</SelectItem>
-              <SelectItem value="manual">手动</SelectItem>
+            <SelectContent side="top" className="min-w-0">
+              <SelectItem value="auto" className="cursor-pointer">自动</SelectItem>
+              <SelectItem value="manual" className="cursor-pointer">手动</SelectItem>
             </SelectContent>
           </Select>
         </div>

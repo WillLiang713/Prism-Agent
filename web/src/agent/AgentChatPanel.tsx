@@ -50,6 +50,7 @@ export function AgentChatPanel({
   const activeApproval = useMemo(() => activeSession?.approvals[0] || null, [activeSession]);
   const inputDisabled = !backendReady || !activeSession;
   const submitDisabled = inputDisabled || !agentRuntimeStatus.ready;
+  const isEmptySession = Boolean(activeSession) && (activeSession?.messages.length || 0) === 0;
   const runtimeStatusMessage = agentConfigValidating
     ? agentRuntimeStatus.ready
       ? ''
@@ -164,6 +165,28 @@ export function AgentChatPanel({
                 <h3 className="text-lg font-medium">开始新的对话</h3>
               </div>
             </div>
+          ) : isEmptySession ? (
+            <div className="flex h-full items-center justify-center" style={{ paddingInline: CHAT_SIDE_PADDING }}>
+              <div className="mx-auto flex w-full flex-col gap-6" style={{ maxWidth: CHAT_PANEL_MAX_WIDTH }}>
+                <h1 className="text-center text-2xl font-medium text-foreground">
+                  准备好开始了吗？
+                </h1>
+                {activeSession?.skills && (
+                  <SkillsDisplay skills={activeSession.skills} />
+                )}
+                <AgentChatInput
+                  inputDisabled={inputDisabled}
+                  submitDisabled={submitDisabled}
+                  submitHint={runtimeStatusMessage}
+                  isStreaming={activeSession?.isStreaming || false}
+                  approvalMode={approvalMode}
+                  fallbackModel={agentRuntimeStatus.model}
+                  onApprovalModeChange={onApprovalModeChange}
+                  onStop={onStop}
+                  onSubmit={onSendMessage}
+                />
+              </div>
+            </div>
           ) : (
             <ScrollArea ref={scrollRef} className="h-full">
               <div className="flex min-h-full py-8" style={{ paddingInline: CHAT_SIDE_PADDING }}>
@@ -177,26 +200,29 @@ export function AgentChatPanel({
             </ScrollArea>
           )}
         </div>
-        
-        <div className="py-5" style={{ paddingInline: CHAT_SIDE_PADDING }}>
-          <div className="mx-auto w-full" style={{ maxWidth: CHAT_PANEL_MAX_WIDTH }}>
-            {activeSession?.skills && (
-              <SkillsDisplay skills={activeSession.skills} />
-            )}
-            {activeSession && (
-              <AgentChatInput
-                inputDisabled={inputDisabled}
-                submitDisabled={submitDisabled}
-                submitHint={runtimeStatusMessage}
-                isStreaming={activeSession?.isStreaming || false}
-                approvalMode={approvalMode}
-                onApprovalModeChange={onApprovalModeChange}
-                onStop={onStop}
-                onSubmit={onSendMessage}
-              />
-            )}
+
+        {!isEmptySession && (
+          <div className="py-5" style={{ paddingInline: CHAT_SIDE_PADDING }}>
+            <div className="mx-auto w-full" style={{ maxWidth: CHAT_PANEL_MAX_WIDTH }}>
+              {activeSession?.skills && (
+                <SkillsDisplay skills={activeSession.skills} />
+              )}
+              {activeSession && (
+                <AgentChatInput
+                  inputDisabled={inputDisabled}
+                  submitDisabled={submitDisabled}
+                  submitHint={runtimeStatusMessage}
+                  isStreaming={activeSession?.isStreaming || false}
+                  approvalMode={approvalMode}
+                  fallbackModel={agentRuntimeStatus.model}
+                  onApprovalModeChange={onApprovalModeChange}
+                  onStop={onStop}
+                  onSubmit={onSendMessage}
+                />
+              )}
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       <ApprovalDialog

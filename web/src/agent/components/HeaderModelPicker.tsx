@@ -81,22 +81,23 @@ export function HeaderModelPicker({ currentModel }: { currentModel: string }) {
         <button
           ref={triggerRef}
           type="button"
-          className="no-drag inline-flex cursor-pointer items-center gap-1 rounded-md px-2 py-0.5 text-[13px] font-medium text-mutedForeground/90 transition-colors hover:bg-muted hover:text-foreground/90 focus:outline-none focus-visible:ring-1 focus-visible:ring-foreground/20"
+          className="no-drag inline-flex h-8 cursor-pointer items-center gap-2 rounded-full border border-border bg-card px-3 text-xs font-medium text-foreground outline-none transition-colors hover:bg-muted focus:outline-none focus-visible:ring-1 focus-visible:ring-foreground/20"
         >
           <span
             className={cn(
               'truncate',
-              currentModel && 'font-mono font-normal lowercase text-mutedForeground/85',
+              currentModel && 'font-mono font-normal lowercase',
             )}
           >
             {currentModel || '选择模型'}
           </span>
-          <ChevronDown className="h-3.5 w-3.5 shrink-0 opacity-60" />
+          <ChevronDown className="h-4 w-4 shrink-0 opacity-60" />
         </button>
       </PopoverPrimitive.Trigger>
       <PopoverPrimitive.Portal>
         <PopoverPrimitive.Content
           align="center"
+          side="top"
           sideOffset={6}
           className="z-50 w-[280px] overflow-hidden rounded-xl border border-border bg-muted p-1 text-foreground shadow-[0_18px_40px_rgba(0,0,0,0.22)]"
         >

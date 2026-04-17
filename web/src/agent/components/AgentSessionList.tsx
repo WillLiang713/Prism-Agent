@@ -1,6 +1,7 @@
-import { Trash2, Check, X, FolderOpen, Plus } from 'lucide-react';
-import { useMemo, useState, useEffect } from 'react';
+import { MoreHorizontal, Trash2, FolderOpen, Plus } from 'lucide-react';
+import { useMemo } from 'react';
 import { open } from '@tauri-apps/plugin-dialog';
+import * as PopoverPrimitive from '@radix-ui/react-popover';
 
 import { Button } from '../../components/ui/button';
 import { ScrollArea } from '../../components/ui/scroll-area';
@@ -71,21 +72,6 @@ export function AgentSessionList({
     if (typeof selected === 'string') {
       onCreate(selected);
     }
-  };
-
-  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
-
-  useEffect(() => {
-    const handleClick = () => {
-      setPendingDeleteId(null);
-    };
-    window.addEventListener('click', handleClick);
-    return () => window.removeEventListener('click', handleClick);
-  }, []);
-
-  const handleDeleteThread = (threadId: string) => {
-    setPendingDeleteId(null);
-    onDelete(threadId);
   };
 
   return (
@@ -161,39 +147,42 @@ export function AgentSessionList({
                   )}
                 </div>
                 <div className="flex items-center gap-0.5 shrink-0">
-                  {pendingDeleteId === thread.threadId ? (
-                    <div className="flex items-center gap-1 animate-in fade-in slide-in-from-right-1 duration-200">
+                  <PopoverPrimitive.Root>
+                    <PopoverPrimitive.Trigger asChild>
                       <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeleteThread(thread.threadId);
-                        }}
-                        className="p-1 hover:bg-success/20 text-success rounded-md transition-all"
+                        type="button"
+                        onClick={(e) => e.stopPropagation()}
+                        aria-label="更多操作"
+                        className="cursor-pointer opacity-0 group-hover:opacity-100 data-[state=open]:opacity-100 p-1.5 hover:bg-muted rounded-md transition-all text-mutedForeground/80 hover:text-foreground"
                       >
-                        <Check className="h-3 w-3" />
+                        <MoreHorizontal className="h-3.5 w-3.5" />
                       </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setPendingDeleteId(null);
-                        }}
-                        className="p-1 hover:bg-muted text-mutedForeground rounded-md transition-all"
+                    </PopoverPrimitive.Trigger>
+                    <PopoverPrimitive.Portal>
+                      <PopoverPrimitive.Content
+                        side="right"
+                        align="start"
+                        sideOffset={6}
+                        collisionPadding={8}
+                        onClick={(e) => e.stopPropagation()}
+                        className="z-50 min-w-[140px] overflow-hidden rounded-xl border border-border bg-muted p-1 text-foreground shadow-[0_18px_40px_rgba(0,0,0,0.22)]"
                       >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </div>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setPendingDeleteId(thread.threadId);
-                      }}
-                      className="opacity-0 group-hover:opacity-100 p-1.5 hover:bg-danger/10 hover:text-danger rounded-md transition-all text-mutedForeground/80"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
-                  )}
+                        <PopoverPrimitive.Close asChild>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onDelete(thread.threadId);
+                            }}
+                            className="flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm text-danger outline-none transition-colors hover:bg-danger/10"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                            <span>删除对话</span>
+                          </button>
+                        </PopoverPrimitive.Close>
+                      </PopoverPrimitive.Content>
+                    </PopoverPrimitive.Portal>
+                  </PopoverPrimitive.Root>
                 </div>
               </div>
             );
