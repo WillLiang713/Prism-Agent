@@ -167,7 +167,7 @@ export function AgentChatPanel({
             </div>
           ) : isEmptySession ? (
             <div className="flex h-full items-center justify-center" style={{ paddingInline: CHAT_SIDE_PADDING }}>
-              <div className="mx-auto flex w-full flex-col gap-6" style={{ maxWidth: CHAT_PANEL_MAX_WIDTH }}>
+              <div className="mx-auto flex w-full flex-col gap-4" style={{ maxWidth: CHAT_PANEL_MAX_WIDTH }}>
                 <h1 className="text-center text-2xl font-medium text-foreground">
                   准备好开始了吗？
                 </h1>
@@ -203,7 +203,7 @@ export function AgentChatPanel({
 
         {!isEmptySession && (
           <div className="py-5" style={{ paddingInline: CHAT_SIDE_PADDING }}>
-            <div className="mx-auto w-full" style={{ maxWidth: CHAT_PANEL_MAX_WIDTH }}>
+            <div className="mx-auto w-full flex flex-col gap-4" style={{ maxWidth: CHAT_PANEL_MAX_WIDTH }}>
               {activeSession?.skills && (
                 <SkillsDisplay skills={activeSession.skills} />
               )}
