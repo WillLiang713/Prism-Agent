@@ -40,6 +40,10 @@ export function ServiceManager() {
     setModelOptions([]);
     setModelListError(null);
     setModelListSuccess(null);
+    if (selectedService?.model.apiKey && selectedService?.model.apiUrl) {
+      void refreshModelList({ silent: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedService?.id]);
 
   useEffect(() => {
@@ -48,7 +52,7 @@ export function ServiceManager() {
     return () => clearTimeout(timer);
   }, [modelListSuccess]);
 
-  async function refreshModelList() {
+  async function refreshModelList(options: { silent?: boolean } = {}) {
     if (!selectedService) return;
     setModelListLoading(true);
     setModelListError(null);
@@ -61,7 +65,9 @@ export function ServiceManager() {
       });
       const ids = result.models.map((m) => m.id);
       setModelOptions(ids);
-      setModelListSuccess(`已获取 ${ids.length} 个模型`);
+      if (!options.silent) {
+        setModelListSuccess(`已获取 ${ids.length} 个模型`);
+      }
     } catch (error) {
       setModelListError(error instanceof Error ? error.message : String(error));
       setModelOptions([]);
@@ -206,7 +212,7 @@ export function ServiceManager() {
               onChange={(event) => handleServiceChange('apiKey', event.currentTarget.value)}
             />
           </label>
-          <label className="grid gap-2 text-xs">
+          <div className="grid gap-2 text-xs">
             <div className="flex items-center justify-between gap-2">
               <span className="text-mutedForeground">模型</span>
               <div className="flex min-w-0 items-center gap-2">
@@ -222,7 +228,7 @@ export function ServiceManager() {
                 ) : null}
                 <button
                   type="button"
-                  onClick={refreshModelList}
+                  onClick={() => refreshModelList()}
                   disabled={modelListLoading}
                   className="flex shrink-0 items-center gap-1 text-[11px] text-mutedForeground/80 hover:text-foreground disabled:opacity-50"
                   title="从端点获取模型列表"
@@ -238,7 +244,7 @@ export function ServiceManager() {
               options={modelOptions}
               placeholder="选择或输入模型…"
             />
-          </label>
+          </div>
         </div>
       </div>
     </div>

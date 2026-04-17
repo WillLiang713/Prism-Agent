@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react';
 
 import * as Dialog from '@radix-ui/react-dialog';
-import { Bot, Monitor, Server, X } from 'lucide-react';
+import { Bot, Monitor, RefreshCw, Server, X } from 'lucide-react';
 
+import { agentListModels } from '../../agent/client';
 import { isDesktopRuntime } from '../../lib/runtime';
-import { useConfigStore } from '../../store/configStore';
+import { resolveSelectedService, useConfigStore } from '../../store/configStore';
 import { Button } from '../ui/button';
 import { Checkbox } from '../ui/checkbox';
+import { Combobox } from '../ui/combobox';
 import { ScrollArea } from '../ui/scroll-area';
 import {
   Select,
@@ -104,6 +106,55 @@ export function SettingsDialog({
     ? runtimeModelConfig.titleModelServiceId
     : FOLLOW_CURRENT_SERVICE_VALUE;
 
+  const effectiveTitleService = hasTitleServiceOverride
+    ? services.find((s) => s.id === runtimeModelConfig.titleModelServiceId) || null
+    : resolveSelectedService(services, serviceManagerSelectedId);
+
+  const [titleModelOptions, setTitleModelOptions] = useState<string[]>([]);
+  const [titleModelLoading, setTitleModelLoading] = useState(false);
+  const [titleModelError, setTitleModelError] = useState<string | null>(null);
+  const [titleModelSuccess, setTitleModelSuccess] = useState<string | null>(null);
+
+  useEffect(() => {
+    setTitleModelOptions([]);
+    setTitleModelError(null);
+    setTitleModelSuccess(null);
+    if (effectiveTitleService?.model.apiKey && effectiveTitleService?.model.apiUrl) {
+      void refreshTitleModelList({ silent: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [effectiveTitleService?.id]);
+
+  useEffect(() => {
+    if (!titleModelSuccess) return;
+    const timer = setTimeout(() => setTitleModelSuccess(null), 2500);
+    return () => clearTimeout(timer);
+  }, [titleModelSuccess]);
+
+  async function refreshTitleModelList(options: { silent?: boolean } = {}) {
+    if (!effectiveTitleService) return;
+    setTitleModelLoading(true);
+    setTitleModelError(null);
+    setTitleModelSuccess(null);
+    try {
+      const result = await agentListModels({
+        providerSelection: effectiveTitleService.model.providerSelection,
+        apiUrl: effectiveTitleService.model.apiUrl,
+        apiKey: effectiveTitleService.model.apiKey,
+      });
+      const ids = result.models.map((m) => m.id);
+      setTitleModelOptions(ids);
+      if (!options.silent) {
+        setTitleModelSuccess(`已获取 ${ids.length} 个模型`);
+      }
+    } catch (error) {
+      setTitleModelError(error instanceof Error ? error.message : String(error));
+      setTitleModelOptions([]);
+    } finally {
+      setTitleModelLoading(false);
+    }
+  }
+
   const sections: SettingsSectionMeta[] = [
     {
       id: 'services',
@@ -161,6 +212,45 @@ export function SettingsDialog({
                 </SelectContent>
               </Select>
             </label>
+            <div className="grid gap-2 text-xs">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-mutedForeground">标题模型</span>
+                <div className="flex min-w-0 items-center gap-2">
+                  {titleModelError ? (
+                    <span
+                      className="max-w-[160px] truncate text-[11px] text-danger/80"
+                      title={titleModelError}
+                    >
+                      {titleModelError}
+                    </span>
+                  ) : titleModelSuccess ? (
+                    <span className="text-[11px] text-success/90">{titleModelSuccess}</span>
+                  ) : null}
+                  <button
+                    type="button"
+                    onClick={() => refreshTitleModelList()}
+                    disabled={titleModelLoading || !effectiveTitleService}
+                    className="flex shrink-0 items-center gap-1 text-[11px] text-mutedForeground/80 hover:text-foreground disabled:opacity-50"
+                    title="从端点获取模型列表"
+                  >
+                    <RefreshCw
+                      className={`h-3 w-3 ${titleModelLoading ? 'animate-spin' : ''}`}
+                    />
+                    {titleModelLoading ? '获取中' : '获取'}
+                  </button>
+                </div>
+              </div>
+              <Combobox
+                value={runtimeModelConfig.titleModel}
+                onValueChange={(next) => updateRuntimeModelConfig({ titleModel: next })}
+                options={titleModelOptions}
+                placeholder={
+                  effectiveTitleService?.model.titleModel ||
+                  effectiveTitleService?.model.model ||
+                  '跟随服务默认模型'
+                }
+              />
+            </div>
           </div>
         </SettingsSectionCard>
 

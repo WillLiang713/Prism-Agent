@@ -7,6 +7,10 @@ import remarkGfm from 'remark-gfm';
 import { cn } from '../../lib/utils';
 import { MARKDOWN_BODY_CLASS } from './MarkdownContent.styles';
 
+const REMARK_PLUGINS = [remarkGfm];
+const REHYPE_PLUGINS_WITH_HIGHLIGHT = [rehypeHighlight];
+const REHYPE_PLUGINS_PLAIN: [] = [];
+
 type MarkdownElementProps = HTMLAttributes<HTMLElement> & ExtraProps;
 
 const markdownComponents: Components = {
@@ -89,22 +93,36 @@ const markdownComponents: Components = {
   ),
 };
 
+export const MarkdownBlock = memo(function MarkdownBlock({
+  text,
+  highlight = true,
+}: {
+  text: string;
+  highlight?: boolean;
+}) {
+  return (
+    <ReactMarkdown
+      components={markdownComponents}
+      rehypePlugins={highlight ? REHYPE_PLUGINS_WITH_HIGHLIGHT : REHYPE_PLUGINS_PLAIN}
+      remarkPlugins={REMARK_PLUGINS}
+    >
+      {text}
+    </ReactMarkdown>
+  );
+});
+
 export const MarkdownContent = memo(function MarkdownContent({
   text,
   className,
+  highlight = true,
 }: {
   text: string;
   className?: string;
+  highlight?: boolean;
 }) {
   return (
     <div className={cn(MARKDOWN_BODY_CLASS, className)}>
-      <ReactMarkdown
-        components={markdownComponents}
-        rehypePlugins={[rehypeHighlight]}
-        remarkPlugins={[remarkGfm]}
-      >
-        {text}
-      </ReactMarkdown>
+      <MarkdownBlock text={text} highlight={highlight} />
     </div>
   );
 });

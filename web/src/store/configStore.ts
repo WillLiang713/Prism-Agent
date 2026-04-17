@@ -86,7 +86,7 @@ function normalizeServices(services: ServiceConfig[] | undefined) {
   return [createDefaultService()];
 }
 
-function resolveSelectedService(
+export function resolveSelectedService(
   services: ServiceConfig[],
   serviceManagerSelectedId: string | null,
 ) {

@@ -1,7 +1,9 @@
 import { memo, useDeferredValue, useEffect, useEffectEvent, useMemo, useRef, useState } from 'react';
+import { Check, Copy } from 'lucide-react';
 
-import { MarkdownContent } from './MarkdownContent';
-import { STREAMING_PLAIN_TEXT_CLASS } from './MarkdownContent.styles';
+import { MarkdownBlock, MarkdownContent } from './MarkdownContent';
+import { MARKDOWN_BODY_CLASS, STREAMING_PLAIN_TEXT_CLASS } from './MarkdownContent.styles';
+import { cn } from '../../lib/utils';
 import { ToolCallCard } from './ToolCallCard';
 import { ThinkingBlock } from './ThinkingBlock';
 import type { AgentMessage } from '../sessionStore';
@@ -52,10 +54,11 @@ const AgentMessageItem = memo(function AgentMessageItem({
 }) {
   if (message.role === 'user') {
     return (
-      <article className="space-y-2">
-        <div className="ml-auto w-fit max-w-[90%] rounded-full border border-border bg-accent px-4 py-2.5 text-sm leading-7 text-accentForeground">
+      <article className="group/user flex flex-col items-end gap-1">
+        <div className="w-fit max-w-[90%] rounded-2xl border border-border bg-accent px-4 py-2.5 text-sm leading-7 text-accentForeground">
           <div className="whitespace-pre-wrap break-words">{message.text}</div>
         </div>
+        <CopyMessageButton text={message.text} />
       </article>
     );
   }
@@ -86,6 +89,54 @@ const AgentMessageItem = memo(function AgentMessageItem({
     </article>
   );
 });
+
+function CopyMessageButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+  const timerRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (timerRef.current !== null) {
+        window.clearTimeout(timerRef.current);
+      }
+    };
+  }, []);
+
+  const handleCopy = async () => {
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+      }
+      setCopied(true);
+      if (timerRef.current !== null) {
+        window.clearTimeout(timerRef.current);
+      }
+      timerRef.current = window.setTimeout(() => setCopied(false), 1500);
+    } catch {
+      // ignore
+    }
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={handleCopy}
+      aria-label={copied ? '已复制' : '复制'}
+      className="inline-flex h-6 w-6 items-center justify-center rounded-md text-mutedForeground/70 opacity-0 transition hover:bg-accent hover:text-foreground focus:opacity-100 focus:outline-none group-hover/user:opacity-100"
+    >
+      {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+    </button>
+  );
+}
 
 function MessageBody({ text, isStreaming }: { text: string; isStreaming: boolean }) {
   if (isStreaming) {
@@ -279,15 +330,79 @@ function StreamingMessageBody({ text }: { text: string }) {
     () => partitionStreamingMarkdown(displayText),
     [displayText],
   );
+  const stableBlocks = useMemo(
+    () => splitStableMarkdownBlocks(stableMarkdown),
+    [stableMarkdown],
+  );
 
   return (
     <div className="min-w-0 space-y-0">
-      {stableMarkdown ? <MarkdownContent text={stableMarkdown} /> : null}
+      {stableBlocks.length > 0 ? (
+        <div className={cn(MARKDOWN_BODY_CLASS)}>
+          {stableBlocks.map((block, index) => (
+            <MarkdownBlock key={index} text={block} highlight={false} />
+          ))}
+        </div>
+      ) : null}
       {trailingText ? (
         <div className={STREAMING_PLAIN_TEXT_CLASS}>{trailingText}</div>
       ) : null}
     </div>
   );
+}
+
+function splitStableMarkdownBlocks(text: string): string[] {
+  if (!text) {
+    return [];
+  }
+
+  const blocks: string[] = [];
+  let buffer: string[] = [];
+  let inFence = false;
+  let fenceChar = '';
+
+  const flush = () => {
+    if (buffer.length === 0) {
+      return;
+    }
+    const joined = buffer.join('\n');
+    if (joined.trim()) {
+      blocks.push(joined);
+    }
+    buffer = [];
+  };
+
+  const lines = text.split('\n');
+  for (const line of lines) {
+    const fenceMatch = line.match(/^\s*(```+|~~~+)/);
+
+    if (!inFence && fenceMatch) {
+      inFence = true;
+      fenceChar = fenceMatch[1][0];
+      buffer.push(line);
+      continue;
+    }
+
+    if (inFence) {
+      buffer.push(line);
+      if (fenceMatch && fenceMatch[1][0] === fenceChar) {
+        inFence = false;
+        fenceChar = '';
+        flush();
+      }
+      continue;
+    }
+
+    if (line.trim() === '') {
+      flush();
+      continue;
+    }
+
+    buffer.push(line);
+  }
+
+  flush();
+  return blocks;
 }
 
 function normalizeStreamingLength(text: string, nextLength: number) {

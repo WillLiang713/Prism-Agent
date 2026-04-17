@@ -71,7 +71,12 @@ export function Combobox({
               placeholder="搜索模型…"
               className="h-8 w-full rounded-md bg-transparent px-2 text-sm text-foreground placeholder:text-mutedForeground outline-none"
             />
-            <Command.List className="mt-1 max-h-64 overflow-y-auto">
+            <Command.List
+              className="mt-1 max-h-64 overflow-y-auto"
+              onWheel={(event) => {
+                event.currentTarget.scrollTop += event.deltaY;
+              }}
+            >
               <Command.Empty className="py-3 text-center text-xs text-mutedForeground">
                 {emptyText}
               </Command.Empty>
