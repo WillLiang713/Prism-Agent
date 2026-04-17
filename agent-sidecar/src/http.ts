@@ -208,7 +208,9 @@ async function streamAgentResponse(
     }
   });
 
-  request.once('close', () => {
+  // IncomingMessage 'close' fires when the request body has been fully read,
+  // which is too early for streaming responses. Watch the response instead.
+  response.once('close', () => {
     unsubscribe();
     if (!completed) {
       void options.methods.cancel({ requestId }).catch(() => undefined);
