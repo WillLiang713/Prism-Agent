@@ -1,4 +1,4 @@
-import { Plus, RefreshCw, Trash2 } from 'lucide-react';
+import { Eye, EyeOff, Plus, RefreshCw, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { agentListModels } from '../../agent/client';
 import { useConfigStore } from '../../store/configStore';
@@ -35,6 +35,7 @@ export function ServiceManager() {
   const [modelListLoading, setModelListLoading] = useState(false);
   const [modelListError, setModelListError] = useState<string | null>(null);
   const [modelListSuccess, setModelListSuccess] = useState<string | null>(null);
+  const [showApiKey, setShowApiKey] = useState(false);
 
   useEffect(() => {
     setModelOptions([]);
@@ -199,12 +200,23 @@ export function ServiceManager() {
           </div>
           <div className="grid gap-2 text-xs">
             <span className="px-4 text-mutedForeground">Key</span>
+            <div className="relative">
             <Input
-              className="bg-card border border-border"
-              type="password"
+              className="bg-card border border-border pr-10"
+              type="text"
+              style={showApiKey ? undefined : { WebkitTextSecurity: 'disc' } as React.CSSProperties}
               value={selectedService.model.apiKey}
               onChange={(event) => handleServiceChange('apiKey', event.currentTarget.value)}
             />
+              <button
+                type="button"
+                onClick={() => setShowApiKey((v) => !v)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-mutedForeground/60 transition-colors hover:text-foreground"
+                title={showApiKey ? '隐藏密钥' : '显示密钥'}
+              >
+                {showApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
           </div>
           <div className="grid gap-2 text-xs">
             <div className="flex items-center justify-between gap-2 px-4">
