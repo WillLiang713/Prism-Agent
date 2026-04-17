@@ -17,9 +17,9 @@
   --success: 0 0% 12%;
   --warning: 0 0% 22%;
   --danger: 0 0% 12%;
-  --font-body: "Geist Variable", "HarmonyOS Sans SC", "MiSans", "PingFang SC", "Noto Sans SC", -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans GB", "Microsoft YaHei", "Source Han Sans SC", "Apple Color Emoji", "Segoe UI Emoji", sans-serif;
-  --font-display: "Geist Variable", "HarmonyOS Sans SC", "MiSans", "PingFang SC", "Noto Sans SC", -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
-  --font-mono: "Geist Mono Variable", "JetBrains Mono", "ui-monospace", "SFMono-Regular", "Menlo", "Consolas", "Liberation Mono", "Courier New", monospace;
+  --font-body: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei UI", "Microsoft YaHei", system-ui, sans-serif;
+  --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei UI", "Microsoft YaHei", system-ui, sans-serif;
+  --font-mono: ui-monospace, "SFMono-Regular", "SF Mono", Menlo, Consolas, "Liberation Mono", "Courier New", monospace;
 }
 
 .dark {
@@ -64,7 +64,7 @@ body {
   text-rendering: optimizeLegibility;
   font-feature-settings: 'liga' 1, 'kern' 1, 'cv05' 1, 'cv08' 1, 'ss01' 1;
   font-variant-numeric: tabular-nums;
-  letter-spacing: -0.011em;
+  letter-spacing: -0.006em;
   line-height: 1.55;
 }
 
@@ -84,7 +84,7 @@ h5,
 h6 {
   font-family: var(--font-display);
   font-weight: 500;
-  letter-spacing: -0.022em;
+  letter-spacing: -0.016em;
   text-wrap: balance;
   line-height: 1.2;
 }

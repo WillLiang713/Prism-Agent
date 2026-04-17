@@ -1,8 +1,7 @@
 import { ChevronRight } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
-import ReactMarkdown from 'react-markdown';
-import rehypeHighlight from 'rehype-highlight';
 
+import { MarkdownContent } from './MarkdownContent';
 import type { AgentToolEvent } from '../sessionStore';
 
 function normalizeArgs(args: unknown) {
@@ -73,26 +72,27 @@ export function ToolCallCard({ event }: { event: AgentToolEvent }) {
       </summary>
       {isOpen ? (
         <div className="mt-2 space-y-2 min-w-0">
-        {event.summary ? (
-          <div className="break-words text-xs leading-6 text-foreground/90">
-            {event.summary}
-          </div>
-        ) : null}
-        {!isCommandLike ? (
-          <pre className="overflow-x-auto whitespace-pre-wrap break-all rounded-lg border border-border/60 bg-background/40 px-3 py-2.5 text-xs leading-6 text-mutedForeground font-mono">
-            {renderArgs(event.args)}
-          </pre>
-        ) : null}
-        {event.output || event.diff ? (
-          <div className="prose prose-sm prose-neutral max-w-none dark:prose-invert [&_pre]:rounded-lg [&_pre]:border [&_pre]:border-border/60 [&_pre]:bg-background/50 [&_pre]:px-3 [&_pre]:py-2.5 [&_pre]:text-xs [&_pre]:overflow-x-auto [&_pre]:whitespace-pre-wrap [&_pre]:break-all break-words min-w-0">
-            <ReactMarkdown rehypePlugins={[rehypeHighlight]}>{formattedOutput}</ReactMarkdown>
-          </div>
-        ) : null}
-        {typeof event.exitCode === 'number' ? (
-          <div className="text-xs font-mono text-mutedForeground">
-            exit code: {event.exitCode}
-          </div>
-        ) : null}
+          {event.summary ? (
+            <div className="break-words text-xs leading-6 text-foreground/90">
+              {event.summary}
+            </div>
+          ) : null}
+          {!isCommandLike ? (
+            <pre className="overflow-x-auto whitespace-pre-wrap break-all rounded-lg border border-border/60 bg-background/40 px-3 py-2.5 text-xs leading-6 text-mutedForeground font-mono">
+              {renderArgs(event.args)}
+            </pre>
+          ) : null}
+          {event.output || event.diff ? (
+            <MarkdownContent
+              text={formattedOutput}
+              className="min-w-0 text-sm leading-6 [&_pre]:rounded-lg [&_pre]:border-border/60 [&_pre]:bg-background/50 [&_pre]:px-3 [&_pre]:py-2.5 [&_pre]:text-xs"
+            />
+          ) : null}
+          {typeof event.exitCode === 'number' ? (
+            <div className="text-xs font-mono text-mutedForeground">
+              exit code: {event.exitCode}
+            </div>
+          ) : null}
         </div>
       ) : null}
     </details>

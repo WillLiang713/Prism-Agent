@@ -388,6 +388,10 @@ function bindSessionEvents(runtime: RuntimeSessionRecord) {
         if (!assistantMessage) {
           return;
         }
+        if (event.assistantMessageEvent.type === 'thinking_start') {
+          assistantMessage.thinkingStartedAt = Date.now();
+          assistantMessage.thinkingDurationSec = undefined;
+        }
         if (event.assistantMessageEvent.type === 'text_delta') {
           assistantMessage.text += event.assistantMessageEvent.delta;
           emit({
@@ -409,6 +413,9 @@ function bindSessionEvents(runtime: RuntimeSessionRecord) {
             kind: 'thinking',
             text: event.assistantMessageEvent.delta,
           });
+        }
+        if (event.assistantMessageEvent.type === 'thinking_end') {
+          finalizeAssistantThinking(assistantMessage);
         }
         persistSnapshot(runtime);
         return;
@@ -510,6 +517,10 @@ async function runPrompt(runtime: RuntimeSessionRecord, requestId: string, paylo
       });
     }
   } finally {
+    const assistantMessage = sessionRegistry.getLatestAssistantMessage(runtime.sessionId);
+    if (assistantMessage) {
+      finalizeAssistantThinking(assistantMessage);
+    }
     requestApprovalModes.delete(requestId);
     sessionRegistry.clearRequest(runtime.sessionId, requestId);
     await sessionRegistry.saveSnapshot(runtime.snapshot);
@@ -984,9 +995,20 @@ function resolveDataDir() {
 }
 
 function persistSnapshot(runtime: RuntimeSessionRecord) {
-  void sessionRegistry.saveSnapshot(runtime.snapshot).catch((error) => {
-    console.error('Failed to persist session snapshot:', error);
-  });
+  sessionRegistry.scheduleSnapshotSave(runtime.snapshot);
+}
+
+function finalizeAssistantThinking(assistantMessage: { thinking?: string; thinkingStartedAt?: number; thinkingDurationSec?: number }) {
+  if (assistantMessage.thinkingDurationSec !== undefined) {
+    return;
+  }
+  if (!assistantMessage.thinking?.trim() || !assistantMessage.thinkingStartedAt) {
+    return;
+  }
+  assistantMessage.thinkingDurationSec = Math.max(
+    1,
+    Math.round((Date.now() - assistantMessage.thinkingStartedAt) / 1000),
+  );
 }
 
 function getRuntimeSessions() {

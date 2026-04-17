@@ -138,6 +138,8 @@ export interface AgentSessionMessage {
   text: string;
   createdAt: number;
   thinking?: string;
+  thinkingStartedAt?: number;
+  thinkingDurationSec?: number;
   toolEvents?: AgentSessionToolEvent[];
 }
 

@@ -13,6 +13,8 @@ import type {
   SkillsSnapshot,
 } from './types.js';
 
+const SNAPSHOT_SAVE_DEBOUNCE_MS = 120;
+
 export interface PersistedSessionSnapshot {
   sessionId: string;
   threadId: string;
@@ -46,6 +48,14 @@ export class SessionRegistry {
   private runtimeSessions = new Map<string, RuntimeSessionRecord>();
   private snapshotDir: string;
   private indexPath: string;
+  private persistenceQueue: Promise<void> = Promise.resolve();
+  private scheduledSnapshotSaves = new Map<
+    string,
+    {
+      timer: NodeJS.Timeout;
+      snapshot: PersistedSessionSnapshot;
+    }
+  >();
 
   constructor(private dataDir: string) {
     this.snapshotDir = path.join(this.dataDir, 'snapshots');
@@ -181,16 +191,40 @@ export class SessionRegistry {
   }
 
   async saveSnapshot(snapshot: PersistedSessionSnapshot) {
-    await this.ensureReady();
-    snapshot.updatedAt = Date.now();
-    this.refreshPreview(snapshot);
-    const filePath = path.join(this.snapshotDir, `${snapshot.threadId}.json`);
-    await fs.writeFile(filePath, JSON.stringify(snapshot, null, 2), 'utf8');
-    await this.writeIndexEntry(snapshot);
+    this.cancelScheduledSnapshotSave(snapshot.threadId);
+    await this.enqueuePersistence(async () => {
+      await this.ensureReady();
+      snapshot.updatedAt = Date.now();
+      this.refreshPreview(snapshot);
+      const persistedSnapshot = structuredClone(snapshot);
+      const filePath = path.join(this.snapshotDir, `${snapshot.threadId}.json`);
+      await this.writeJsonAtomic(filePath, persistedSnapshot);
+      await this.writeIndexEntry(persistedSnapshot);
+    });
+  }
+
+  scheduleSnapshotSave(snapshot: PersistedSessionSnapshot, delayMs = SNAPSHOT_SAVE_DEBOUNCE_MS) {
+    this.cancelScheduledSnapshotSave(snapshot.threadId);
+    const timer = setTimeout(() => {
+      const pending = this.scheduledSnapshotSaves.get(snapshot.threadId);
+      if (!pending || pending.timer !== timer) {
+        return;
+      }
+      this.scheduledSnapshotSaves.delete(snapshot.threadId);
+      void this.saveSnapshot(pending.snapshot).catch((error) => {
+        console.error('Failed to persist scheduled session snapshot:', error);
+      });
+    }, delayMs);
+    timer.unref?.();
+    this.scheduledSnapshotSaves.set(snapshot.threadId, {
+      timer,
+      snapshot,
+    });
   }
 
   async loadSnapshot(threadId: string) {
     await this.ensureReady();
+    await this.waitForPendingPersistence([threadId]);
     const filePath = path.join(this.snapshotDir, `${threadId}.json`);
     const content = await fs.readFile(filePath, 'utf8');
     return JSON.parse(content) as PersistedSessionSnapshot;
@@ -198,6 +232,7 @@ export class SessionRegistry {
 
   async listThreads(): Promise<AgentThreadMeta[]> {
     await this.ensureReady();
+    await this.waitForPendingPersistence();
     const index = await this.readIndex();
     return Object.values(index)
       .map((snapshot) => this.toThreadMeta(snapshot))
@@ -206,17 +241,20 @@ export class SessionRegistry {
 
   async archiveThread(threadId: string) {
     await this.ensureReady();
-    const index = await this.readIndex();
-    const existing = index[threadId];
-    if (existing) {
-      delete index[threadId];
-      await this.writeIndex(index);
-    }
-    const snapshotPath = path.join(this.snapshotDir, `${threadId}.json`);
-    await fs.rm(snapshotPath, { force: true });
-    if (existing?.sessionFile) {
-      await fs.rm(existing.sessionFile, { force: true });
-    }
+    this.cancelScheduledSnapshotSave(threadId);
+    await this.enqueuePersistence(async () => {
+      const index = await this.readIndex();
+      const entry = index[threadId];
+      if (entry) {
+        delete index[threadId];
+        await this.writeIndex(index);
+      }
+      const snapshotPath = path.join(this.snapshotDir, `${threadId}.json`);
+      await fs.rm(snapshotPath, { force: true });
+      if (entry?.sessionFile) {
+        await fs.rm(entry.sessionFile, { force: true });
+      }
+    });
 
     const runtimeSession = this.getRuntimeSessionByThreadId(threadId);
     if (runtimeSession) {
@@ -226,6 +264,10 @@ export class SessionRegistry {
   }
 
   disposeAll() {
+    for (const { timer } of this.scheduledSnapshotSaves.values()) {
+      clearTimeout(timer);
+    }
+    this.scheduledSnapshotSaves.clear();
     for (const runtime of this.runtimeSessions.values()) {
       runtime.session.dispose();
     }
@@ -278,18 +320,99 @@ export class SessionRegistry {
   private async readIndex() {
     try {
       const content = await fs.readFile(this.indexPath, 'utf8');
+      if (!content.trim()) {
+        return {};
+      }
       return JSON.parse(content) as Record<string, PersistedSessionSnapshot>;
     } catch (error) {
       const nodeError = error as NodeJS.ErrnoException;
       if (nodeError.code === 'ENOENT') {
         return {};
       }
+      if (error instanceof SyntaxError) {
+        const rebuiltIndex = await this.rebuildIndexFromSnapshots();
+        await this.writeIndex(rebuiltIndex);
+        return rebuiltIndex;
+      }
       throw error;
     }
   }
 
   private async writeIndex(index: Record<string, PersistedSessionSnapshot>) {
-    await fs.mkdir(path.dirname(this.indexPath), { recursive: true });
-    await fs.writeFile(this.indexPath, JSON.stringify(index, null, 2), 'utf8');
+    await this.writeJsonAtomic(this.indexPath, index);
+  }
+
+  private async rebuildIndexFromSnapshots() {
+    await fs.mkdir(this.snapshotDir, { recursive: true });
+    const entries = await fs.readdir(this.snapshotDir, { withFileTypes: true });
+    const index: Record<string, PersistedSessionSnapshot> = {};
+
+    for (const entry of entries) {
+      if (!entry.isFile() || !entry.name.endsWith('.json')) {
+        continue;
+      }
+
+      const filePath = path.join(this.snapshotDir, entry.name);
+      try {
+        const content = await fs.readFile(filePath, 'utf8');
+        if (!content.trim()) {
+          continue;
+        }
+        const snapshot = JSON.parse(content) as PersistedSessionSnapshot;
+        if (snapshot.threadId) {
+          index[snapshot.threadId] = snapshot;
+        }
+      } catch (snapshotError) {
+        console.warn('Failed to rebuild index entry from snapshot:', filePath, snapshotError);
+      }
+    }
+
+    return index;
+  }
+
+  private async enqueuePersistence<T>(task: () => Promise<T>) {
+    const run = this.persistenceQueue.catch(() => undefined).then(task);
+    this.persistenceQueue = run.then(
+      () => undefined,
+      () => undefined,
+    );
+    return run;
+  }
+
+  private async waitForPendingPersistence(threadIds?: string[]) {
+    const targets = threadIds ?? [...this.scheduledSnapshotSaves.keys()];
+    await Promise.all(targets.map((threadId) => this.flushScheduledSnapshotSave(threadId)));
+    await this.persistenceQueue.catch(() => undefined);
+  }
+
+  private cancelScheduledSnapshotSave(threadId: string) {
+    const pending = this.scheduledSnapshotSaves.get(threadId);
+    if (!pending) {
+      return;
+    }
+    clearTimeout(pending.timer);
+    this.scheduledSnapshotSaves.delete(threadId);
+  }
+
+  private async flushScheduledSnapshotSave(threadId: string) {
+    const pending = this.scheduledSnapshotSaves.get(threadId);
+    if (!pending) {
+      return;
+    }
+    clearTimeout(pending.timer);
+    this.scheduledSnapshotSaves.delete(threadId);
+    await this.saveSnapshot(pending.snapshot);
+  }
+
+  private async writeJsonAtomic(targetPath: string, value: unknown) {
+    await fs.mkdir(path.dirname(targetPath), { recursive: true });
+    const tempPath = `${targetPath}.${process.pid}.${randomUUID()}.tmp`;
+    try {
+      await fs.writeFile(tempPath, JSON.stringify(value, null, 2), 'utf8');
+      await fs.rename(tempPath, targetPath);
+    } catch (error) {
+      await fs.rm(tempPath, { force: true }).catch(() => undefined);
+      throw error;
+    }
   }
 }

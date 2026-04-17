@@ -1,5 +1,5 @@
 import { MessageSquarePlus, Loader2, AlertCircle } from 'lucide-react';
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useEffectEvent, useMemo, useRef } from 'react';
 
 import { ScrollArea } from '../components/ui/scroll-area';
 import { ApprovalDialog } from './components/ApprovalDialog';
@@ -10,6 +10,7 @@ import type { AgentApprovalMode, AgentRuntimeStatus } from './client';
 import type { AgentSession } from './sessionStore';
 
 const CHAT_SIDE_PADDING = 'calc(1.5rem + 10px)';
+const BOTTOM_STICK_THRESHOLD_PX = 160;
 const SUPPRESSED_RUNTIME_REASON = '未指定主模型，请在设置中选择或输入模型名称。';
 
 export function AgentChatPanel({
@@ -45,6 +46,8 @@ export function AgentChatPanel({
   onRespondApproval: (approvalId: string, decision: 'allow' | 'deny') => void;
 }) {
   const scrollRef = useRef<HTMLDivElement | null>(null);
+  const stickToBottomRef = useRef(true);
+  const scrollFrameRef = useRef<number | null>(null);
   const activeApproval = useMemo(() => activeSession?.approvals[0] || null, [activeSession]);
   const inputDisabled = !backendReady || !activeSession;
   const submitDisabled = inputDisabled || agentConfigValidating || !agentRuntimeStatus.ready;
@@ -54,14 +57,87 @@ export function AgentChatPanel({
       ? ''
       : agentRuntimeStatus.reason;
 
+  const cancelScheduledScroll = useEffectEvent(() => {
+    if (scrollFrameRef.current !== null) {
+      cancelAnimationFrame(scrollFrameRef.current);
+      scrollFrameRef.current = null;
+    }
+  });
+
+  const scheduleScrollToBottom = useEffectEvent(() => {
+    if (!stickToBottomRef.current || scrollFrameRef.current !== null) {
+      return;
+    }
+
+    scrollFrameRef.current = requestAnimationFrame(() => {
+      scrollFrameRef.current = null;
+      const root = scrollRef.current;
+      const viewport = root?.querySelector('[data-radix-scroll-area-viewport]');
+      if (!(viewport instanceof HTMLDivElement) || !stickToBottomRef.current) {
+        return;
+      }
+      viewport.scrollTop = viewport.scrollHeight;
+    });
+  });
+
   useEffect(() => {
     const root = scrollRef.current;
     const viewport = root?.querySelector('[data-radix-scroll-area-viewport]');
     if (!(viewport instanceof HTMLDivElement)) {
       return;
     }
+
+    const syncStickState = () => {
+      stickToBottomRef.current =
+        viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight <=
+        BOTTOM_STICK_THRESHOLD_PX;
+    };
+
+    syncStickState();
+    viewport.addEventListener('scroll', syncStickState, { passive: true });
+    return () => {
+      viewport.removeEventListener('scroll', syncStickState);
+      cancelScheduledScroll();
+    };
+  }, [activeSession?.sessionId]);
+
+  useEffect(() => {
+    const root = scrollRef.current;
+    const viewport = root?.querySelector('[data-radix-scroll-area-viewport]');
+    const content = viewport?.firstElementChild;
+    if (!(viewport instanceof HTMLDivElement) || !(content instanceof HTMLElement)) {
+      return;
+    }
+
+    const observer = new ResizeObserver(() => {
+      scheduleScrollToBottom();
+    });
+    observer.observe(content);
+
+    return () => observer.disconnect();
+  }, [activeSession?.sessionId]);
+
+  useEffect(() => {
+    const root = scrollRef.current;
+    const viewport = root?.querySelector('[data-radix-scroll-area-viewport]');
+    if (!(viewport instanceof HTMLDivElement)) {
+      return;
+    }
+
+    cancelScheduledScroll();
     viewport.scrollTop = viewport.scrollHeight;
-  }, [activeSession?.messages, activeSession?.isStreaming]);
+    stickToBottomRef.current = true;
+  }, [activeSession?.sessionId]);
+
+  useEffect(() => {
+    if (!activeSession?.sessionId) {
+      return;
+    }
+
+    scheduleScrollToBottom();
+  }, [activeSession?.isStreaming, activeSession?.messages, activeSession?.sessionId]);
+
+  useEffect(() => () => cancelScheduledScroll(), []);
 
   return (
     <div className="flex h-full min-h-0 flex-1 overflow-hidden">

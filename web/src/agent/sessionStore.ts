@@ -46,6 +46,8 @@ export interface AgentMessage {
   text: string;
   thinking: string;
   createdAt: number;
+  thinkingStartedAt?: number;
+  thinkingDurationSec?: number;
   toolEvents: AgentToolEvent[];
   error?: string;
 }
@@ -96,8 +98,17 @@ function createAssistantMessage(id: string): AgentMessage {
     text: '',
     thinking: '',
     createdAt: Date.now(),
+    thinkingStartedAt: undefined,
+    thinkingDurationSec: undefined,
     toolEvents: [],
   };
+}
+
+function findAssistantMessageIndex(messages: AgentMessage[], assistantMessageId?: string) {
+  if (assistantMessageId) {
+    return messages.findIndex((message) => message.id === assistantMessageId);
+  }
+  return messages.length - 1;
 }
 
 function normalizeBootstrapMessages(messages: AgentSessionBootstrap['messages']): AgentMessage[] {
@@ -107,6 +118,8 @@ function normalizeBootstrapMessages(messages: AgentSessionBootstrap['messages'])
     text: message.text,
     thinking: message.thinking || '',
     createdAt: message.createdAt || Date.now(),
+    thinkingStartedAt: message.thinkingStartedAt,
+    thinkingDurationSec: message.thinkingDurationSec,
     toolEvents: (message.toolEvents || []).map((event) => ({
       id: event.id,
       name: event.name,
@@ -234,106 +247,168 @@ export const useAgentSessionStore = create<AgentSessionState>((set, get) => ({
       }
 
       const assistantMessageId = binding?.assistantMessageId;
-      const nextSessions = { ...state.sessionsById };
-      const nextBindings = { ...state.requestBindings };
-      const nextSession: AgentSession = {
-        ...session,
-        approvals: [...session.approvals],
-        messages: session.messages.map((message) => ({
-          ...message,
-          toolEvents: [...message.toolEvents],
-        })),
-      };
-      nextSessions[sessionId] = nextSession;
+      const assistantMessageIndex = findAssistantMessageIndex(session.messages, assistantMessageId);
+      let nextSession = session;
+      let nextBindings = state.requestBindings;
 
-      const assistantMessage = assistantMessageId
-        ? nextSession.messages.find((message) => message.id === assistantMessageId)
-        : nextSession.messages[nextSession.messages.length - 1];
-
-      if (event.type === 'delta' && assistantMessage) {
-        if (event.kind === 'thinking') {
-          assistantMessage.thinking += event.text;
-        } else {
-          assistantMessage.text += event.text;
+      const updateAssistantMessage = (
+        updater: (message: AgentMessage) => AgentMessage,
+      ) => {
+        if (assistantMessageIndex < 0) {
+          return;
         }
+
+        const currentMessage = nextSession.messages[assistantMessageIndex];
+        const nextMessage = updater(currentMessage);
+        if (nextMessage === currentMessage) {
+          return;
+        }
+
+        const nextMessages = [...nextSession.messages];
+        nextMessages[assistantMessageIndex] = nextMessage;
+        nextSession = {
+          ...nextSession,
+          messages: nextMessages,
+        };
+      };
+
+      if (event.type === 'delta') {
+        updateAssistantMessage((message) =>
+          event.kind === 'thinking'
+            ? { ...message, thinking: message.thinking + event.text }
+            : { ...message, text: message.text + event.text },
+        );
       }
 
-      if (event.type === 'tool_call' && assistantMessage) {
-        assistantMessage.toolEvents.push({
-          id: event.toolCallId,
-          name: event.name,
-          status: 'started',
-          args: event.args,
-          output: '',
-          ok: null,
-          summary: event.summary,
-          skillName: event.skillName,
-        });
+      if (event.type === 'tool_call') {
+        updateAssistantMessage((message) => ({
+          ...message,
+          toolEvents: [
+            ...message.toolEvents,
+            {
+              id: event.toolCallId,
+              name: event.name,
+              status: 'started',
+              args: event.args,
+              output: '',
+              ok: null,
+              summary: event.summary,
+              skillName: event.skillName,
+            },
+          ],
+        }));
       }
 
-      if (event.type === 'tool_result' && assistantMessage) {
-        const existing = assistantMessage.toolEvents.find((tool) => tool.id === event.toolCallId);
-        if (existing) {
-          existing.status = event.status;
-          existing.output = event.output;
-          existing.ok = event.ok;
-          existing.diff = event.diff;
-          existing.exitCode = event.exitCode;
-          existing.summary = event.summary;
-          existing.skillName = event.skillName;
-        } else {
-          assistantMessage.toolEvents.push({
-            id: event.toolCallId,
-            name: 'tool',
+      if (event.type === 'tool_result') {
+        updateAssistantMessage((message) => {
+          const toolIndex = message.toolEvents.findIndex((tool) => tool.id === event.toolCallId);
+          if (toolIndex === -1) {
+            return {
+              ...message,
+              toolEvents: [
+                ...message.toolEvents,
+                {
+                  id: event.toolCallId,
+                  name: 'tool',
+                  status: event.status,
+                  args: {},
+                  output: event.output,
+                  ok: event.ok,
+                  diff: event.diff,
+                  exitCode: event.exitCode,
+                  summary: event.summary,
+                  skillName: event.skillName,
+                },
+              ],
+            };
+          }
+
+          const currentTool = message.toolEvents[toolIndex];
+          const nextToolEvents = [...message.toolEvents];
+          nextToolEvents[toolIndex] = {
+            ...currentTool,
             status: event.status,
-            args: {},
             output: event.output,
             ok: event.ok,
             diff: event.diff,
             exitCode: event.exitCode,
             summary: event.summary,
             skillName: event.skillName,
-          });
-        }
-      }
-
-      if (event.type === 'approval_request') {
-        nextSession.approvals.push({
-          approvalId: event.approvalId,
-          requestId: event.requestId,
-          toolCallId: event.toolCallId,
-          command: event.command,
-          risk: event.risk,
-          reason: event.reason,
+          };
+          return {
+            ...message,
+            toolEvents: nextToolEvents,
+          };
         });
       }
 
+      if (event.type === 'approval_request') {
+        nextSession = {
+          ...nextSession,
+          approvals: [
+            ...nextSession.approvals,
+            {
+              approvalId: event.approvalId,
+              requestId: event.requestId,
+              toolCallId: event.toolCallId,
+              command: event.command,
+              risk: event.risk,
+              reason: event.reason,
+            },
+          ],
+        };
+      }
+
       if (event.type === 'done') {
-        nextSession.isStreaming = false;
-        nextSession.pendingRequestId = null;
-        nextSession.threadId = event.threadId;
-        nextSession.lastUsage = event.usage;
-        nextSession.approvals = nextSession.approvals.filter(
-          (approval) => approval.requestId !== event.requestId,
-        );
-        delete nextBindings[event.requestId];
+        nextSession = {
+          ...nextSession,
+          isStreaming: false,
+          pendingRequestId: null,
+          threadId: event.threadId,
+          lastUsage: event.usage,
+          approvals: nextSession.approvals.filter((approval) => approval.requestId !== event.requestId),
+        };
+
+        if (event.requestId in state.requestBindings) {
+          nextBindings = { ...state.requestBindings };
+          delete nextBindings[event.requestId];
+        }
       }
 
       if (event.type === 'error') {
-        nextSession.isStreaming = false;
-        nextSession.pendingRequestId = null;
-        nextSession.lastError = event.message;
-        nextSession.approvals = nextSession.approvals.filter(
-          (approval) => approval.requestId !== event.requestId,
-        );
-        if (assistantMessage && !assistantMessage.text.trim()) {
-          assistantMessage.error = event.message;
+        nextSession = {
+          ...nextSession,
+          isStreaming: false,
+          pendingRequestId: null,
+          lastError: event.message,
+          approvals: nextSession.approvals.filter((approval) => approval.requestId !== event.requestId),
+        };
+
+        updateAssistantMessage((message) => {
+          if (message.text.trim()) {
+            return message;
+          }
+          return {
+            ...message,
+            error: event.message,
+          };
+        });
+
+        if (event.requestId in state.requestBindings) {
+          nextBindings = { ...state.requestBindings };
+          delete nextBindings[event.requestId];
         }
-        delete nextBindings[event.requestId];
+      }
+
+      if (nextSession === session && nextBindings === state.requestBindings) {
+        return state;
       }
 
       return {
-        sessionsById: nextSessions,
+        sessionsById: {
+          ...state.sessionsById,
+          [sessionId]: nextSession,
+        },
         requestBindings: nextBindings,
       };
     }),
