@@ -149,13 +149,13 @@ export function AgentChatInput({
             onClick={() => fileInputRef.current?.click()}
             disabled={inputDisabled || isStreaming}
             title="上传图片"
-            className="h-10 w-10 shrink-0 bg-card p-0 shadow-sm"
+            className="h-8 w-8 shrink-0 bg-card p-0 shadow-sm"
             aria-label="上传图片"
           >
             <Paperclip className="h-4 w-4" />
           </Button>
           <Select value={reasoningEffort} onValueChange={(value) => setReasoningEffort(value as AgentReasoningEffort)}>
-            <SelectTrigger className="h-10 w-[120px] px-4 text-xs">
+            <SelectTrigger className="h-8 w-[100px] px-3 text-xs">
               <div className="flex items-center gap-2">
                 <Lightbulb className="h-4 w-4" />
                 <span>{reasoningOptions.find((option) => option.value === reasoningEffort)?.label || '高'}</span>
@@ -170,7 +170,7 @@ export function AgentChatInput({
             </SelectContent>
           </Select>
           <Select value={approvalMode} onValueChange={(value) => onApprovalModeChange(value as AgentApprovalMode)}>
-            <SelectTrigger className="h-10 w-[112px] px-4 text-xs" aria-label="执行模式">
+            <SelectTrigger className="h-8 w-[96px] px-3 text-xs" aria-label="执行模式">
               <div className="flex items-center gap-2">
                 <Play aria-hidden="true" className="h-4 w-4 text-mutedForeground" />
                 <span>{approvalMode === 'auto' ? '自动' : '手动'}</span>
@@ -190,7 +190,7 @@ export function AgentChatInput({
             onClick={onStop}
             title="停止"
             aria-label="停止"
-            className="h-7 w-7 p-0"
+            className="h-8 w-8 p-0"
           >
             <span aria-hidden="true" className="h-2.5 w-2.5 rounded-[3px] bg-current" />
           </Button>
@@ -201,9 +201,9 @@ export function AgentChatInput({
             disabled={submitDisabled}
             title={submitHint || '发送'}
             aria-label="发送"
-            className="h-7 w-7 p-0"
+            className="h-8 w-8 p-0"
           >
-            <ArrowUp className="h-3.5 w-3.5" />
+            <ArrowUp className="h-4 w-4" />
           </Button>
         )}
       </div>

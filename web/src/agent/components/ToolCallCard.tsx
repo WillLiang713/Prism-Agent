@@ -1,8 +1,15 @@
-import { ChevronRight } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 
 import { MarkdownContent } from './MarkdownContent';
 import type { AgentToolEvent } from '../sessionStore';
+
+type ToolHeaderParts = {
+  title: string;
+  detail: string | null;
+  isMonospace: boolean;
+  fullText: string;
+};
 
 function normalizeArgs(args: unknown) {
   if (typeof args !== 'string') {
@@ -54,24 +61,195 @@ function extractPattern(args: unknown) {
   return null;
 }
 
+function extractFirstStringField(args: unknown, fields: string[]) {
+  const normalized = normalizeArgs(args);
+  if (!normalized || typeof normalized !== 'object') {
+    return null;
+  }
+
+  const candidate = normalized as Record<string, unknown>;
+  for (const field of fields) {
+    const value = candidate[field];
+    if (typeof value === 'string' && value.trim()) {
+      return value.trim();
+    }
+    if (Array.isArray(value)) {
+      const strings = value.filter((item): item is string => typeof item === 'string' && item.trim().length > 0);
+      if (strings.length > 0) {
+        return strings.length > 1 ? `${strings[0].trim()} +${strings.length - 1}` : strings[0].trim();
+      }
+    }
+  }
+
+  return null;
+}
+
 function shortenText(value: string, limit: number) {
   return value.length > limit ? `${value.slice(0, limit - 1)}…` : value;
 }
 
-function buildCompactTitle(event: AgentToolEvent, commandText: string | null) {
-  if (commandText) {
-    return commandText;
+function normalizeComparableText(value: string | null | undefined) {
+  return (value ?? '').trim().replace(/\s+/g, ' ').toLowerCase();
+}
+
+function tokenizeCommand(command: string) {
+  return command.match(/"[^"]*"|'[^']*'|[^\s]+/g)?.map((token) => token.replace(/^['"]|['"]$/g, '')) ?? [];
+}
+
+function extractCommandHeader(commandText: string): ToolHeaderParts {
+  const tokens = tokenizeCommand(commandText);
+  if (tokens.length === 0) {
+    return {
+      title: 'bash',
+      detail: null,
+      isMonospace: true,
+      fullText: 'bash',
+    };
   }
 
-  const toolName = event.name.toLowerCase();
-  if (toolName === 'grep' || toolName === 'find') {
-    const pattern = extractPattern(event.args);
-    if (pattern) {
-      return `${toolName === 'grep' ? '搜索' : '查找'} ${shortenText(pattern, 48)}`;
+  const [commandName, ...rest] = tokens;
+  const normalizedName = commandName.toLowerCase();
+  const positionalArgs = rest.filter((token) => token && !token.startsWith('-') && !['|', '&&', ';'].includes(token));
+
+  let detail: string | null = null;
+  if (normalizedName === 'rg' || normalizedName === 'grep' || normalizedName === 'select-string') {
+    const [pattern, target] = positionalArgs;
+    if (pattern && target) {
+      detail = `${shortenText(pattern, 20)} in ${shortenText(target, 32)}`;
+    } else if (pattern) {
+      detail = shortenText(pattern, 44);
     }
+  } else if (
+    normalizedName === 'ls' ||
+    normalizedName === 'dir' ||
+    normalizedName === 'get-childitem' ||
+    normalizedName === 'cat' ||
+    normalizedName === 'type' ||
+    normalizedName === 'head' ||
+    normalizedName === 'tail'
+  ) {
+    detail = positionalArgs[0] ? shortenText(positionalArgs[0], 44) : null;
+  } else if (normalizedName === 'git') {
+    detail = rest.length > 0 ? shortenText(rest.join(' '), 44) : null;
+  } else {
+    detail = rest.length > 0 ? shortenText(rest.join(' '), 44) : null;
   }
 
-  return event.summary || event.name;
+  const fullText = detail ? `${commandName} ${detail}` : commandName;
+  return {
+    title: commandName,
+    detail,
+    isMonospace: true,
+    fullText,
+  };
+}
+
+function buildToolHeader(event: AgentToolEvent, commandText: string | null): ToolHeaderParts {
+  if (commandText) {
+    return extractCommandHeader(commandText);
+  }
+
+  const toolName = event.name.trim() || 'tool';
+  const normalizedToolName = toolName.toLowerCase();
+  const genericPath = extractFirstStringField(event.args, [
+    'path',
+    'paths',
+    'dir',
+    'directory',
+    'cwd',
+    'target',
+    'targets',
+    'file',
+    'files',
+    'uri',
+  ]);
+
+  if (normalizedToolName === 'grep' || normalizedToolName === 'find') {
+    const pattern = extractPattern(event.args);
+    const detail = pattern
+      ? genericPath
+        ? `${shortenText(pattern, 20)} in ${shortenText(genericPath, 32)}`
+        : shortenText(pattern, 44)
+      : genericPath
+        ? shortenText(genericPath, 44)
+        : null;
+    return {
+      title: toolName,
+      detail,
+      isMonospace: true,
+      fullText: detail ? `${toolName} ${detail}` : toolName,
+    };
+  }
+
+  const query = extractFirstStringField(event.args, ['query', 'q', 'name']);
+  const detail = genericPath || query;
+
+  return {
+    title: toolName,
+    detail: detail ? shortenText(detail, 44) : null,
+    isMonospace: ['ls', 'read', 'write', 'edit', 'bash'].includes(normalizedToolName),
+    fullText: detail ? `${toolName} ${shortenText(detail, 44)}` : toolName,
+  };
+}
+
+function buildCompactTitle(event: AgentToolEvent, commandText: string | null) {
+  const header = buildToolHeader(event, commandText);
+  if (header.fullText.trim()) {
+    return header.fullText;
+  }
+
+  if (event.summary?.trim()) {
+    return event.summary.trim();
+  }
+
+  return event.name;
+}
+
+function shouldUsePlainTextOutput(toolName: string) {
+  const normalizedToolName = toolName.toLowerCase();
+  return normalizedToolName === 'grep' || normalizedToolName === 'find' || normalizedToolName === 'ls';
+}
+
+function normalizeOutputText(output: string) {
+  return output.replace(/\r\n/g, '\n').trim();
+}
+
+function isInlineOutput(output: string, diff?: string) {
+  if (diff) {
+    return false;
+  }
+
+  const normalized = normalizeOutputText(output);
+  if (!normalized) {
+    return false;
+  }
+
+  const lines = normalized.split('\n');
+  return lines.length <= 2 && normalized.length <= 160;
+}
+
+function formatInlineOutput(output: string) {
+  return normalizeOutputText(output).split('\n').join('  ');
+}
+
+function getInlineResultLabel(status: AgentToolEvent['status']) {
+  if (status === 'error' || status === 'blocked') {
+    return '错误:';
+  }
+  if (status === 'running') {
+    return '进行中:';
+  }
+  return '结果:';
+}
+
+function getInlineResultTone(status: AgentToolEvent['status']) {
+  if (status === 'error' || status === 'blocked') {
+    return 'text-danger/90';
+  }
+  if (status === 'running') {
+    return 'text-warm/90';
+  }
+  return 'text-foreground/88';
 }
 
 export function ToolCallCard({ event }: { event: AgentToolEvent }) {
@@ -84,14 +262,30 @@ export function ToolCallCard({ event }: { event: AgentToolEvent }) {
   }, [event.ok, event.status]);
 
   const commandText = useMemo(() => extractCommand(event.args), [event.args]);
-  const toolName = event.name.toLowerCase();
-  const isCommandLike = Boolean(commandText) || toolName.includes('bash');
-  const isPlainTextOutput = toolName === 'grep' || toolName === 'find' || toolName === 'ls';
+  const header = useMemo(() => buildToolHeader(event, commandText), [event, commandText]);
   const compactTitle = useMemo(() => buildCompactTitle(event, commandText), [event, commandText]);
+  const toolName = event.name.toLowerCase();
+  const isCommandLike = header.isMonospace || toolName.includes('bash');
+  const isPlainTextOutput = shouldUsePlainTextOutput(event.name);
+  const inlineOutput = isInlineOutput(event.output, event.diff) ? formatInlineOutput(event.output) : null;
+  const normalizedSummary = normalizeComparableText(event.summary);
+  const summaryRepeatsHeader =
+    normalizedSummary.length === 0 ||
+    normalizedSummary === normalizeComparableText(header.title) ||
+    normalizedSummary === normalizeComparableText(header.fullText) ||
+    normalizedSummary === normalizeComparableText(compactTitle) ||
+    (header.detail !== null && normalizedSummary === normalizeComparableText(header.detail));
   const shouldRenderSummaryBody =
     typeof event.summary === 'string' &&
     event.summary.trim().length > 0 &&
-    event.summary.trim() !== compactTitle.trim();
+    !summaryRepeatsHeader;
+  const hasExpandableContent =
+    shouldRenderSummaryBody ||
+    Boolean(inlineOutput) ||
+    !isCommandLike ||
+    Boolean(event.output) ||
+    Boolean(event.diff) ||
+    typeof event.exitCode === 'number';
 
   const formattedOutput = event.diff
     ? `\`\`\`diff\n${event.diff}\n\`\`\`${event.output ? `\n\n${event.output}` : ''}`
@@ -103,15 +297,34 @@ export function ToolCallCard({ event }: { event: AgentToolEvent }) {
       open={isOpen}
       onToggle={(event) => setIsOpen((event.currentTarget as HTMLDetailsElement).open)}
     >
-      <summary className="flex w-fit max-w-full cursor-pointer list-none items-center gap-1.5 text-mutedForeground/80 hover:text-foreground">
-        <span className={`truncate ${isCommandLike ? 'font-mono text-xs' : 'text-sm'}`}>{compactTitle}</span>
-        <ChevronRight className="h-4 w-4 shrink-0 group-open:rotate-90" />
+      <summary className="flex w-fit max-w-full list-none items-center gap-1.5 text-mutedForeground/80 hover:text-foreground">
+        <span
+          className={`min-w-0 truncate ${hasExpandableContent ? 'cursor-pointer' : 'cursor-default'} ${
+            isCommandLike ? 'font-mono text-xs' : 'text-sm'
+          }`}
+        >
+          <span className="shrink-0">{header.title}</span>
+          {header.detail ? (
+            <span className="ml-1.5 min-w-0 truncate text-mutedForeground/60">
+              {header.detail}
+            </span>
+          ) : null}
+        </span>
+        {hasExpandableContent ? (
+          <ChevronDown className="h-3.5 w-3.5 shrink-0 text-mutedForeground/70 opacity-0 transition-all duration-200 group-hover:opacity-85 group-focus-within:opacity-85 group-open:rotate-180 group-open:opacity-100" />
+        ) : null}
       </summary>
       {isOpen ? (
-        <div className="mt-2 space-y-2 min-w-0">
+        <div className="mt-1.5 min-w-0 space-y-2 pl-0.5">
           {shouldRenderSummaryBody ? (
             <div className="break-words text-xs leading-6 text-foreground/90">
               {event.summary}
+            </div>
+          ) : null}
+          {inlineOutput ? (
+            <div className={`min-w-0 text-xs leading-6 ${getInlineResultTone(event.status)}`}>
+              <span className="mr-1 text-mutedForeground/65">{getInlineResultLabel(event.status)}</span>
+              <span className="break-words">{inlineOutput}</span>
             </div>
           ) : null}
           {!isCommandLike ? (
@@ -119,7 +332,7 @@ export function ToolCallCard({ event }: { event: AgentToolEvent }) {
               {renderArgs(event.args)}
             </pre>
           ) : null}
-          {event.output || event.diff ? (
+          {(event.diff || (event.output && !inlineOutput)) ? (
             isPlainTextOutput ? (
               <pre className="overflow-x-auto whitespace-pre-wrap break-all rounded-lg border border-border/60 bg-background/40 px-3 py-2.5 text-xs leading-6 text-foreground font-mono">
                 {formattedOutput}

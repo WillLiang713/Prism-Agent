@@ -1,4 +1,4 @@
-import { ChevronRight } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 
 import { cn } from '../../lib/utils';
@@ -51,7 +51,7 @@ export function ThinkingBlock({
     >
       <summary className="flex w-fit cursor-pointer list-none items-center gap-1.5 font-medium text-mutedForeground/80 hover:text-foreground">
         <span className={cn(status === 'streaming' && 'thinking-title-shimmer')}>{label}</span>
-        <ChevronRight className="h-4 w-4 group-open:rotate-90" />
+        <ChevronDown className="h-3.5 w-3.5 shrink-0 text-mutedForeground/70 opacity-0 transition-all duration-200 group-hover:opacity-85 group-focus-within:opacity-85 group-open:rotate-180 group-open:opacity-100" />
       </summary>
       {isOpen ? (
         text.trim() ? (
