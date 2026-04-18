@@ -511,9 +511,15 @@ export const useAgentSessionStore = create<AgentSessionState>()(
           return { pinnedDirectories: [...state.pinnedDirectories, path] };
         }),
       unpinDirectory: (path) =>
-        set((state) => ({
-          pinnedDirectories: state.pinnedDirectories.filter((p) => p !== path),
-        })),
+        set((state) => {
+          const activeSession = state.activeSessionId ? state.sessionsById[state.activeSessionId] : null;
+          const shouldClearActiveSession = activeSession?.workspaceRoot === path;
+
+          return {
+            pinnedDirectories: state.pinnedDirectories.filter((p) => p !== path),
+            activeSessionId: shouldClearActiveSession ? null : state.activeSessionId,
+          };
+        }),
   findSessionByThreadId: (threadId) => {
     const sessions = Object.values(get().sessionsById);
     return sessions.find((session) => session.threadId === threadId)?.sessionId || null;
