@@ -3,6 +3,16 @@ import * as ScrollAreaPrimitive from '@radix-ui/react-scroll-area';
 
 import { cn } from '../../lib/utils';
 
+export const scrollBarBaseClassName = 'group/scrollbar flex touch-none select-none';
+
+export const scrollAreaThumbClassName = cn(
+  'relative flex-1 rounded-full bg-border/80 opacity-80',
+  'transition-[background-color,box-shadow,opacity] duration-150 ease-out',
+  'group-hover/scrollbar:bg-border/90 group-hover/scrollbar:opacity-100',
+  'data-[state=visible]:opacity-100',
+  'active:bg-foreground/18 active:shadow-[0_0_0_4px_hsl(var(--foreground)_/_0.12)]',
+);
+
 export const ScrollArea = React.forwardRef<
   React.ElementRef<typeof ScrollAreaPrimitive.Root>,
   React.ComponentPropsWithoutRef<typeof ScrollAreaPrimitive.Root>
@@ -30,7 +40,7 @@ export const ScrollBar = React.forwardRef<
     ref={ref}
     orientation={orientation}
     className={cn(
-      'flex touch-none select-none',
+      scrollBarBaseClassName,
       orientation === 'vertical' &&
         'h-full w-2.5 border-l border-l-transparent p-[1px]',
       orientation === 'horizontal' &&
@@ -39,7 +49,7 @@ export const ScrollBar = React.forwardRef<
     )}
     {...props}
   >
-    <ScrollAreaPrimitive.ScrollAreaThumb className="relative flex-1 rounded-full bg-border" />
+    <ScrollAreaPrimitive.ScrollAreaThumb className={scrollAreaThumbClassName} />
   </ScrollAreaPrimitive.ScrollAreaScrollbar>
 ));
 

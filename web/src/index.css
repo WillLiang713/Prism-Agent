@@ -115,8 +115,18 @@ samp {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: hsl(var(--border));
+  background: hsl(var(--border) / 0.82);
   border-radius: 9999px;
+  transition: background-color 140ms ease, box-shadow 140ms ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--border) / 0.96);
+}
+
+::-webkit-scrollbar-thumb:active {
+  background: hsl(var(--foreground) / 0.18);
+  box-shadow: 0 0 0 4px hsl(var(--foreground) / 0.12);
 }
 
 [data-tauri-drag-region] {
@@ -157,6 +167,10 @@ samp {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  ::-webkit-scrollbar-thumb {
+    transition: none;
+  }
+
   .thinking-title-shimmer {
     background-image: none;
     animation: none;
