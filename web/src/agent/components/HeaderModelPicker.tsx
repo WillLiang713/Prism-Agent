@@ -1,13 +1,15 @@
 import * as PopoverPrimitive from '@radix-ui/react-popover';
 import { Command } from 'cmdk';
-import { Brain, Check, ChevronDown, RefreshCw } from 'lucide-react';
+import { Check, ChevronDown, RefreshCw } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
 import { agentListModels } from '../client';
 import { resolveSelectedService, useConfigStore } from '../../store/configStore';
 import { cn } from '../../lib/utils';
+import { composerControlIcons } from './composerControlIcons';
 
 export function HeaderModelPicker({ currentModel }: { currentModel: string }) {
+  const ModelIcon = composerControlIcons.model;
   const services = useConfigStore((state) => state.services);
   const serviceManagerSelectedId = useConfigStore((state) => state.serviceManagerSelectedId);
   const upsertService = useConfigStore((state) => state.upsertService);
@@ -83,7 +85,7 @@ export function HeaderModelPicker({ currentModel }: { currentModel: string }) {
           type="button"
           className="no-drag inline-flex h-8 cursor-pointer items-center gap-2 rounded-full border border-border bg-card px-3 text-xs font-medium text-foreground outline-none transition-colors hover:bg-muted focus:outline-none focus-visible:ring-1 focus-visible:ring-foreground/20"
         >
-          <Brain className="h-4 w-4 shrink-0 text-mutedForeground" />
+          <ModelIcon aria-hidden="true" className="h-4 w-4 shrink-0 text-mutedForeground" />
           <span className="truncate">{currentModel || '选择模型'}</span>
           <ChevronDown className="h-4 w-4 shrink-0 text-mutedForeground" />
         </button>

@@ -1,4 +1,4 @@
-import { ArrowUp, Folder, Lightbulb, Paperclip, Play, X } from 'lucide-react';
+import { ArrowUp, FolderOpen, Paperclip, Play, X } from 'lucide-react';
 import {
   useMemo,
   useRef,
@@ -16,6 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger } from '../../componen
 import { Textarea } from '../../components/ui/textarea';
 import { resolveRuntimeRequestConfig, useConfigStore } from '../../store/configStore';
 import type { AgentApprovalMode, AgentReasoningEffort } from '../client';
+import { composerControlIcons } from './composerControlIcons';
 import { HeaderModelPicker } from './HeaderModelPicker';
 
 export function AgentChatInput({
@@ -27,6 +28,7 @@ export function AgentChatInput({
   fallbackModel,
   onApprovalModeChange,
   workspaceRoot,
+  onPickWorkspace,
   onSubmit,
   onStop,
 }: {
@@ -38,6 +40,7 @@ export function AgentChatInput({
   fallbackModel?: string;
   onApprovalModeChange: (mode: AgentApprovalMode) => void;
   workspaceRoot?: string;
+  onPickWorkspace: () => void;
   onSubmit: (payload: {
     text: string;
     images: Array<{ name: string; mediaType: string; dataUrl: string }>;
@@ -46,6 +49,7 @@ export function AgentChatInput({
   }) => void;
   onStop: () => void;
 }) {
+  const ReasoningIcon = composerControlIcons.reasoning;
   const services = useConfigStore((state) => state.services);
   const runtimeModelConfig = useConfigStore((state) => state.runtimeModelConfig);
   const serviceManagerSelectedId = useConfigStore((state) => state.serviceManagerSelectedId);
@@ -153,7 +157,7 @@ export function AgentChatInput({
         onKeyDown={handleTextareaKeyDown}
         rows={1}
         disabled={inputDisabled || isStreaming}
-        placeholder="告诉我你想处理什么…"
+        placeholder="把问题发给我，我来处理"
         className="min-h-[48px] resize-none border-0 bg-transparent px-3 py-1.5 text-sm leading-6 shadow-none focus-visible:ring-0"
       />
 
@@ -172,17 +176,20 @@ export function AgentChatInput({
             <Paperclip className="h-4 w-4 text-mutedForeground" />
           </Button>
 
-          {workspaceRoot && (
-            <div
-              className="flex h-8 items-center gap-2 rounded-full border border-border bg-card px-3 text-xs font-medium text-foreground"
-              title={workspaceRoot}
-            >
-              <Folder className="h-4 w-4 text-mutedForeground" />
-              <span className="max-w-[120px] overflow-hidden text-ellipsis whitespace-nowrap font-medium">
-                {workspaceRoot.split(/[\\/]/).filter(Boolean).pop() || workspaceRoot}
-              </span>
-            </div>
-          )}
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={onPickWorkspace}
+            disabled={inputDisabled}
+            title={workspaceRoot || '选择工作区'}
+            aria-label={workspaceRoot ? `当前工作区：${workspaceRoot}，点击选择其他工作区` : '选择工作区'}
+            className="h-8 max-w-[180px] min-w-0 shrink-0 gap-2 rounded-full bg-card px-3 text-xs font-medium shadow-none"
+          >
+            <FolderOpen className="h-4 w-4 shrink-0 text-mutedForeground" />
+            <span className="min-w-0 truncate font-medium">
+              {workspaceRoot?.split(/[\\/]/).filter(Boolean).pop() || '选择工作区'}
+            </span>
+          </Button>
 
           <Select value={approvalMode} onValueChange={(value) => onApprovalModeChange(value as AgentApprovalMode)}>
             <SelectTrigger className="h-8 w-[96px] cursor-pointer px-3 text-xs" aria-label="执行模式">
@@ -204,7 +211,7 @@ export function AgentChatInput({
           <Select value={reasoningEffort} onValueChange={(value) => setReasoningEffort(value as AgentReasoningEffort)}>
             <SelectTrigger className="h-8 w-[100px] cursor-pointer px-3 text-xs">
               <div className="flex items-center gap-2">
-                <Lightbulb className="h-4 w-4 text-mutedForeground" />
+                <ReasoningIcon aria-hidden="true" className="h-4 w-4 text-mutedForeground" />
                 <span className="font-medium">{reasoningOptions.find((option) => option.value === reasoningEffort)?.label || '高'}</span>
               </div>
             </SelectTrigger>

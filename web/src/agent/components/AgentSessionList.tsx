@@ -1,25 +1,16 @@
-import { MoreHorizontal, Sparkles, Trash2, FolderOpen, Plus, Folder } from 'lucide-react';
+import { MoreHorizontal, Sparkles, Trash2, Plus, Folder } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useAgentSessionStore } from '../sessionStore';
-import { open } from '@tauri-apps/plugin-dialog';
 import * as PopoverPrimitive from '@radix-ui/react-popover';
 
-import { Button } from '../../components/ui/button';
 import { ScrollArea } from '../../components/ui/scroll-area';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../../components/ui/tooltip';
-import { isDesktopRuntime } from '../../lib/runtime';
 import type { AgentThreadMeta } from '../client';
 import type { AgentSession } from '../sessionStore';
+import { buildSessionGroups } from './sessionGroups';
 
 function previewLabel(thread: AgentThreadMeta) {
   return thread.name || thread.preview || '新任务';
-}
-
-function getBasename(path: string) {
-  if (!path) return '通用任务';
-  const parts = path.split(/[/\\]/).filter(Boolean);
-  if (parts.length === 0) return path;
-  return parts[parts.length - 1];
 }
 
 export function AgentSessionList({
@@ -65,69 +56,13 @@ export function AgentSessionList({
   const pinnedDirectories = useAgentSessionStore((state) => state.pinnedDirectories);
   const unpinDirectory = useAgentSessionStore((state) => state.unpinDirectory);
   
-  const groupedThreads = useMemo(() => {
-    const groups: Record<string, AgentThreadMeta[]> = {};
-    
-    // 初始化固定目录
-    pinnedDirectories.forEach((dir) => {
-      groups[dir] = [];
-    });
-
-    threadList.forEach((thread) => {
-      const cwd = thread.cwd || '';
-      if (!groups[cwd]) groups[cwd] = [];
-      groups[cwd].push(thread);
-    });
-
-    return Object.entries(groups)
-      .map(([cwd, threads]) => {
-        const basename = getBasename(cwd);
-        const sortedThreads = threads.sort((a, b) => b.updatedAt - a.updatedAt);
-
-        return {
-          cwd,
-          basename,
-          threads: sortedThreads,
-        };
-      })
-      .sort((a, b) => a.basename.localeCompare(b.basename));
-  }, [threadList, pinnedDirectories]);
-
-
-  const handleOpenDirectory = async () => {
-    if (!isDesktopRuntime()) {
-      const selected = window.prompt('输入要打开的工作目录路径');
-      if (selected?.trim()) {
-        onCreate(selected.trim());
-      }
-      return;
-    }
-
-    const selected = await open({
-      directory: true,
-      multiple: false,
-      title: '选择工作目录',
-    });
-    if (typeof selected === 'string') {
-      onCreate(selected);
-    }
-  };
+  const groupedThreads = useMemo(
+    () => buildSessionGroups(threadList, pinnedDirectories),
+    [threadList, pinnedDirectories],
+  );
 
   return (
     <aside className="flex h-full w-[260px] shrink-0 flex-col bg-background">
-      <div className="flex items-center gap-2 p-2">
-        <Button
-          type="button"
-          variant="ghost"
-          onClick={handleOpenDirectory}
-          aria-label="工作区"
-          className="h-9 flex-1 justify-start gap-2 rounded-lg px-3 text-sm font-medium text-foreground hover:bg-muted/60"
-        >
-          <FolderOpen aria-hidden="true" className="h-4 w-4 text-mutedForeground" />
-          <span>工作区</span>
-        </Button>
-      </div>
-
       <ScrollArea className="flex-1 px-2">
         <div className="space-y-4 pb-4">
           {groupedThreads.map((group) => (
@@ -173,13 +108,13 @@ export function AgentSessionList({
                       >
                         <PopoverPrimitive.Close asChild>
                           <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              unpinDirectory(group.cwd);
-                            }}
-                            className="flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm text-foreground outline-none transition-colors hover:bg-[rgba(239,68,68,0.16)] hover:text-danger focus-visible:bg-[rgba(239,68,68,0.16)] focus-visible:text-danger"
-                          >
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                unpinDirectory(group.cwd);
+                              }}
+                              className="flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm text-foreground outline-none transition-colors hover:bg-[rgba(239,68,68,0.16)] hover:text-danger focus-visible:bg-[rgba(239,68,68,0.16)] focus-visible:text-danger"
+                            >
                             <Trash2 className="h-3.5 w-3.5" />
                             <span>移除目录</span>
                           </button>

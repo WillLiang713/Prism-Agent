@@ -467,7 +467,22 @@ export const useAgentSessionStore = create<AgentSessionState>()(
       setInitialized: (initialized) => set({ initialized }),
       setBackendReady: (backendReady, error = '') => set({ backendReady, backendError: error }),
       setThreadList: (threadList) => set({ threadList }),
-      activateSession: (activeSessionId) => set({ activeSessionId }),
+      activateSession: (activeSessionId) =>
+        set((state) => {
+          const session = state.sessionsById[activeSessionId];
+          if (!session) {
+            return { activeSessionId };
+          }
+
+          if (!session.workspaceRoot || state.pinnedDirectories.includes(session.workspaceRoot)) {
+            return { activeSessionId };
+          }
+
+          return {
+            activeSessionId,
+            pinnedDirectories: [...state.pinnedDirectories, session.workspaceRoot],
+          };
+        }),
       upsertSession: (session) =>
         set((state) => {
           const nextOrder = state.sessionOrder.includes(session.sessionId)
@@ -511,6 +526,11 @@ export const useAgentSessionStore = create<AgentSessionState>()(
       }
 
       const assistantMessageId = `assistant-${requestId}`;
+      const pinnedDirectories =
+        session.workspaceRoot && !state.pinnedDirectories.includes(session.workspaceRoot)
+          ? [...state.pinnedDirectories, session.workspaceRoot]
+          : state.pinnedDirectories;
+
       return {
         sessionsById: {
           ...state.sessionsById,
@@ -533,6 +553,7 @@ export const useAgentSessionStore = create<AgentSessionState>()(
             assistantMessageId,
           },
         },
+        pinnedDirectories,
       };
     }),
   clearApproval: (approvalId) =>

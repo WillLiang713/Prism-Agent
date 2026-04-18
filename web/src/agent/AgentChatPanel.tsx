@@ -23,6 +23,7 @@ export function AgentChatPanel({
   agentRuntimeStatus,
   agentConfigValidating,
   onApprovalModeChange,
+  onPickWorkspace,
   onSendMessage,
   onStop,
   onRespondApproval,
@@ -35,6 +36,7 @@ export function AgentChatPanel({
   agentRuntimeStatus: AgentRuntimeStatus;
   agentConfigValidating: boolean;
   onApprovalModeChange: (mode: AgentApprovalMode) => void;
+  onPickWorkspace: () => void;
   onSendMessage: (payload: {
     text: string;
     images: Array<{ name: string; mediaType: string; dataUrl: string }>;
@@ -159,9 +161,14 @@ export function AgentChatPanel({
           ) : isWelcomeState ? (
             <div className="flex h-full items-center justify-center" style={{ paddingInline: CHAT_SIDE_PADDING }}>
               <div className="mx-auto flex w-full flex-col gap-4" style={{ maxWidth: CHAT_PANEL_MAX_WIDTH }}>
-                <h1 className="text-center text-2xl font-medium text-foreground">
-                  准备好开始了吗？
-                </h1>
+                <div className="flex flex-col items-center gap-2 text-center">
+                  <h1 className="text-2xl font-medium text-foreground">
+                    准备好开始了吗？
+                  </h1>
+                  <p className="max-w-[34rem] text-sm leading-6 text-mutedForeground">
+                    把你想做的事告诉我，我们一起把它理清楚
+                  </p>
+                </div>
                 {activeSession?.skills && (
                   <SkillsDisplay skills={activeSession.skills} />
                 )}
@@ -174,6 +181,7 @@ export function AgentChatPanel({
                   fallbackModel={agentRuntimeStatus.model}
                   workspaceRoot={activeSession?.workspaceRoot}
                   onApprovalModeChange={onApprovalModeChange}
+                  onPickWorkspace={onPickWorkspace}
                   onStop={onStop}
                   onSubmit={onSendMessage}
                 />
@@ -209,6 +217,7 @@ export function AgentChatPanel({
                   fallbackModel={agentRuntimeStatus.model}
                   workspaceRoot={activeSession?.workspaceRoot}
                   onApprovalModeChange={onApprovalModeChange}
+                  onPickWorkspace={onPickWorkspace}
                   onStop={onStop}
                   onSubmit={onSendMessage}
                 />

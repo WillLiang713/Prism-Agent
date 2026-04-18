@@ -1,5 +1,6 @@
 import { MoonStar, Settings, SunMedium } from 'lucide-react';
 import { useState } from 'react';
+import { open } from '@tauri-apps/plugin-dialog';
 
 import { SettingsDialog } from '../components/config/SettingsDialog';
 import { Button } from '../components/ui/button';
@@ -9,6 +10,7 @@ import { AgentSessionList } from './components/AgentSessionList';
 import { useAgentChat } from './useAgentChat';
 import { WindowControls } from '../components/layout/WindowControls';
 import { isDesktopRuntime } from '../lib/runtime';
+import { resolveWorkspaceSelection } from './workspaceSelection';
 
 export function AgentAppLayout() {
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -37,6 +39,36 @@ export function AgentAppLayout() {
   const isDesktop = isDesktopRuntime();
   const headerIconButtonClass =
     'h-8 w-8 rounded-full border border-transparent text-foreground hover:bg-muted hover:text-foreground';
+
+  const handleWorkspaceSelection = async (selectedWorkspace: string) => {
+    const selection = resolveWorkspaceSelection(selectedWorkspace, threadList);
+
+    if (selection.mode === 'resume') {
+      await resumeThread(selection.threadId, selection.cwd);
+      return;
+    }
+
+    await startNewSession(selection.cwd);
+  };
+
+  const handlePickWorkspace = async () => {
+    if (!isDesktop) {
+      const selected = window.prompt('输入要打开的工作目录路径');
+      if (selected?.trim()) {
+        await handleWorkspaceSelection(selected.trim());
+      }
+      return;
+    }
+
+    const selected = await open({
+      directory: true,
+      multiple: false,
+      title: '选择工作目录',
+    });
+    if (typeof selected === 'string') {
+      await handleWorkspaceSelection(selected);
+    }
+  };
 
   return (
     <>
@@ -86,6 +118,9 @@ export function AgentAppLayout() {
               agentRuntimeStatus={agentRuntimeStatus}
               agentConfigValidating={agentConfigValidating}
               onApprovalModeChange={setApprovalMode}
+              onPickWorkspace={() => {
+                void handlePickWorkspace();
+              }}
               onSendMessage={(payload) => {
                 void sendMessage(payload);
               }}
