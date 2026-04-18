@@ -1,8 +1,8 @@
-# Prism
+# Prism-Agent
 
 [English](./README.md)
 
-Prism 现在是一个**桌面优先**的 AI 编码桌面应用，技术栈是 `React + Vite + Tauri`。
+Prism-Agent 现在是一个**桌面优先**的 AI 编码桌面应用，技术栈是 `React + Vite + Tauri`。
 
 当前结构里：
 
@@ -22,7 +22,7 @@ Prism 现在是一个**桌面优先**的 AI 编码桌面应用，技术栈是 `R
 - 以桌面端开发和使用为主
 - 后端链路基于 Tauri + Node sidecar + Agent SDK
 - 支持流式输出、工具卡片、审批弹窗
-- 支持从 Prism 本地快照恢复会话
+- 支持从 Prism-Agent 本地快照恢复会话
 - 已不再依赖独立 Python 后端
 - 已不再提供独立浏览器部署路径
 
@@ -91,7 +91,7 @@ npm run build
 ## 项目结构
 
 ```text
-Prism/
+Prism-Agent/
 ├── agent-sidecar/         # pi agent 运行时的 Node sidecar
 ├── scripts/               # 开发与打包辅助脚本
 ├── src-tauri/             # Tauri 桌面壳

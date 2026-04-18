@@ -1,522 +1,432 @@
 # UI Design Specification
 
-## 1. Design Positioning
+## 1. Positioning
 
-The interface should not feel like a flat white landing page, and it should not drift into a high-saturation neon style. Its core character is:
+This document describes the UI style currently implemented in this repository and turns that style into the default standard for future work.
 
-- A desktop-first AI chat workspace
-- Dark by default, with full light-theme support
-- Mostly neutral in tone, with restraint instead of strong brand-color dominance
-- Layering built through dark surfaces, subtle borders, blur, and shadow
-- Content-first, with very little decoration and quiet, short interaction feedback
+It is descriptive first and prescriptive second:
 
-Visual keywords:
+- It records the design patterns that are already consistent in the shipped UI.
+- It defines how new UI work should stay aligned with those patterns.
+- It should not be treated as an aspirational redesign brief for a different product.
 
-- `neutral`
-- `dense but calm`
-- `desktop workspace`
-- `soft glass panel`
-- `low-saturation grayscale`
+When current code and older design descriptions conflict, the shipped UI takes precedence unless a new design task explicitly changes the direction.
 
-## 2. Theme System
+This repository is a desktop-first AI client. The interface should read as focused utility software, not as a marketing site, visual experiment, or branded showcase.
 
-The interface uses a dual-theme system:
+## 2. Source Of Truth
 
-- Default theme: dark
-- Optional theme: light
-- When no explicit theme is set, follow `prefers-color-scheme`
+Use the following order when judging design decisions:
 
-Theme-switching requirements:
+1. Current shipped UI in the repository
+2. Shared tokens and shared UI primitives
+3. This document
+4. Older screenshots, comments, and historical descriptions
 
-- Only switch tokens; do not change layout structure
-- Preserve the same visual hierarchy across dark and light themes
-- The light theme must not be a simple inverted dark theme; it must preserve the same panel logic, border logic, radius logic, and shadow logic
+Practical implications:
 
-## 3. Design Tokens
+- Do not force new work to match outdated design notes if the current implementation has already moved on.
+- Do not invent local visual systems inside feature components when the shared UI layer already defines a pattern.
+- If a new pattern is needed, it should be generalized through shared tokens or shared primitives before becoming feature-specific styling.
 
-### 3.1 Typography
+## 3. Core Visual Direction
 
-- `--font-body`: `Inter`, `-apple-system`, `BlinkMacSystemFont`, `"Segoe UI"`, `Roboto`, `"Helvetica Neue"`, `"PingFang SC"`, `"Hiragino Sans GB"`, `"Microsoft YaHei"`, `Arial`, `sans-serif`
-- `--font-display`: same as `--font-body`
-- `--font-mono`: currently also the same as `--font-body`
+The UI is a restrained desktop-first AI client with a monochrome base.
 
-Notes:
+Core characteristics:
 
-- Use `Inter` consistently across the system; do not introduce a highly stylized display typeface
-- Distinguish code and prose mainly through containers, borders, backgrounds, and size, not through aggressive font contrast
+- Dark mode is the visual baseline.
+- Light mode must remain supported.
+- The overall mood is quiet, practical, and tool-like.
+- Visual hierarchy comes from contrast, spacing, and typography weight more than from color.
+- Surfaces should stay low-noise, with limited shadow depth and restrained layering.
 
-### 3.2 Dark Theme Core Colors
+The interface should feel like clean utility software:
 
-- Page background `--bg`: `#000000`
-- Elevated background `--bg-elev`: `#0a0a0a`
-- Panel background `--bg-chat`: `#161616`
-- Primary surface `--surface`: `rgba(20, 20, 20, 0.92)`
-- Solid surface `--surface-solid`: `#141414`
-- Glass surface `--glass`: `rgba(20, 20, 20, 0.55)`
-- Strong glass surface `--glass-strong`: `rgba(20, 20, 20, 0.78)`
+- not a glassmorphism showcase
+- not a high-saturation branded product
+- not an editorial landing page
+- not a dense IDE-style control wall
 
-Borders:
+## 4. Theme And Token Strategy
 
-- `--border`: `rgba(255, 255, 255, 0.05)`
-- `--border-strong`: `rgba(255, 255, 255, 0.09)`
-- `--border-accent`: `rgba(255, 255, 255, 0.16)`
-- `--border-subtle`: `rgba(255, 255, 255, 0.03)`
+### 4.1 Theme Model
 
-Text:
+- The app uses explicit class-based theming through `.dark` on the root document.
+- Do not assume `prefers-color-scheme` is the active source of truth.
+- Dark and light themes must keep the same structure and component logic.
+- Theme changes should primarily happen through token changes, not layout rewrites.
 
-- `--text`: `#e4e4e4`
-- `--text-muted`: `#888888`
-- `--text-dim`: `#555555`
+### 4.2 Core Semantic Tokens
 
-Neutral emphasis:
+The current token system is defined in `web/src/index.css` and exposed through the Tailwind theme.
 
-- `--accent`: `#a0a0a0`
-- `--accent-strong`: `#d4d4d4`
-- `--accent-glow`: `rgba(255, 255, 255, 0.06)`
+Core semantic tokens:
 
-Semantic colors:
+- `background`
+- `foreground`
+- `card`
+- `card-foreground`
+- `muted`
+- `muted-foreground`
+- `border`
+- `accent`
+- `accent-foreground`
+- `primary`
+- `primary-foreground`
+- `success`
+- `warning`
+- `danger`
 
-- Running / warning `--warm`: `#f97316`
-- Strong warning `--warm-strong`: `#ea580c`
-- Error `--danger`: `#ef4444`
-- Success `--panel-status-success`: `#22c55e`
+Rules:
 
-State fills:
+- Reuse existing semantic tokens before introducing new global tokens.
+- Avoid hardcoded one-off colors inside feature components when an existing semantic token expresses the same meaning.
+- Treat `success`, `warning`, and `danger` as restrained utility states, not bright branding accents.
 
-- `--bg-hover`: `rgba(255, 255, 255, 0.06)`
-- `--bg-active`: `rgba(255, 255, 255, 0.08)`
-- `--bg-subtle`: `rgba(255, 255, 255, 0.03)`
-
-### 3.3 Light Theme Core Colors
-
-- Page background `--bg`: `#f5f5f7`
-- Elevated background `--bg-elev`: `#ffffff`
-- Panel background `--bg-chat`: `#ffffff`
-- Primary surface `--surface`: `rgba(255, 255, 255, 0.92)`
-- Solid surface `--surface-solid`: `#ffffff`
-
-Borders:
-
-- `--border`: `rgba(0, 0, 0, 0.08)`
-- `--border-strong`: `rgba(0, 0, 0, 0.12)`
-- `--border-accent`: `rgba(0, 0, 0, 0.18)`
-
-Text:
-
-- `--text`: `#1d1d1f`
-- `--text-muted`: `#86868b`
-- `--text-dim`: `#b0b0b5`
-
-Neutral emphasis:
-
-- `--accent`: `#424245`
-- `--accent-strong`: `#1d1d1f`
-- `--accent-glow`: `rgba(0, 0, 0, 0.04)`
-
-### 3.4 Shadows and Blur
-
-Dark theme:
-
-- `--shadow-xs`: `0 1px 3px rgba(0, 0, 0, 0.4)`
-- `--shadow-sm`: `0 4px 16px rgba(0, 0, 0, 0.5)`
-- `--shadow-md`: `0 12px 40px rgba(0, 0, 0, 0.6)`
+### 4.3 Color Behavior
 
 Light theme:
 
-- `--shadow-xs`: `0 1px 2px rgba(0, 0, 0, 0.05)`
-- `--shadow-sm`: `0 4px 12px rgba(0, 0, 0, 0.06)`
-- `--shadow-md`: `0 12px 32px rgba(0, 0, 0, 0.08)`
+- Near-white background
+- Black or near-black foreground
+- Soft neutral gray surfaces
 
-Modal layer:
+Dark theme:
 
-- `--modal-overlay`: dark `rgba(6, 8, 12, 0.62)`, light `rgba(245, 247, 250, 0.82)`
-- `--modal-shadow`: large and soft; do not use aggressive outer glow
+- Compressed grayscale range
+- Low visual noise
+- Subtle borders and restrained contrast shifts
 
-Rules:
+Across both themes:
 
-- Panels may use `backdrop-filter: blur(...)`
-- Shadows are allowed, but they must stay soft, low-contrast, and hierarchy-driven; do not create neon-like glow
+- Borders should stay low-contrast.
+- Primary emphasis should usually come from contrast inversion, not accent color fills.
+- Large saturated color fields do not belong in the base UI language.
 
-### 3.5 Border Radius
+### 4.4 Typography Tokens
 
-- `--radius-xl`: `20px`
-- `--radius-lg`: `16px`
-- `--radius-md`: `12px`
-- `--radius-sm`: `8px`
-- Pill / round buttons: `999px`
-- Image radius: `16px`
+The current typography stack is the standard for future work:
 
-Usage:
+- Body: `Geist Variable` with CJK system fallbacks
+- Display: same family stack as body
+- Mono: `Geist Mono Variable` with standard monospace fallbacks
 
-- App shell, primary panels, modals: `20px`
-- Inputs, edit panels, secondary containers: `16px`
-- Tool buttons, status blocks, code blocks: `8px` to `12px`
-- Circular icon buttons: `34px` diameter with `50%` or `999px` radius
+Do not introduce a decorative display typeface unless a future product direction explicitly changes the visual language.
 
-## 4. Typography Rules
+### 4.5 Radius, Shadow, And Blur
 
-Typography should be clear, moderately dense, and stable for long reading.
+Current direction:
 
-### 4.1 Type Scale
+- Controls are rounded and compact.
+- Pills are common for buttons, small controls, and option rows.
+- Medium radii are used for cards, bubbles, popovers, and secondary containers.
+- Larger radii are reserved for major shells such as the composer and settings dialog.
 
-Confirmed core sizes:
+Shadow and blur rules:
 
-- Empty-state title: `28px / 700`
-- Markdown `h1`: `22px / 600`
-- Markdown `h2`: `18px / 600`
-- Markdown `h3`: `16px / 600`
-- Config-panel title: `18px / 700`
-- Main chat body: `14px`
-- Brand title: `14.5px / 700`
-- General supporting text: `12px` to `13px`
-- Labels / statuses / tool-button text: `11px` to `12px`
+- Use no shadow or a very soft shadow by default.
+- Blur is acceptable for overlays and large modal shells.
+- Heavy floating cards, dramatic depth, and glow effects are out of scope.
 
-### 4.2 Text Style
+### 4.6 Spacing
 
-- Body copy should generally stay between `1.5` and `1.8` line-height
-- Secondary text should be weakened through `--text-muted` and `--text-dim`, not by shrinking it too aggressively
-- Hierarchy should come from weight and spacing, not from saturated color
-- Explanatory copy should stay short; do not stack long paragraphs inside panels
+- Prefer compact desktop spacing over airy marketing-page spacing.
+- Use small gaps for control clusters.
+- Use medium gaps for section separation.
+- Use larger vertical spacing only between major chat blocks or modal sections.
+- Avoid oversized empty hero spacing in the main app shell.
 
-## 5. Layout Rules
+If a component needs stronger emphasis, first increase contrast, border treatment, or text weight before adding more color.
 
-### 5.1 App Shell
+## 5. Typography Rules
 
-- Outermost container max width: `1440px`
-- Main chat shell max width: `1260px`
-- Outer horizontal padding: `12px`
-- Desktop vertical offset: `3vh`
-- Main viewport height: `94vh`
+Typography should support long-form reading and tool-oriented density without feeling cramped.
 
-Layout characteristics:
+### 5.1 Body Text
 
-- One centered shell; do not turn it into a portal-style multi-column home page
-- Topic sidebar on the left, conversation area on the right
-- The whole interface should feel like one continuous workspace, not a collage of separate cards
+- Default body copy sits around `14px`.
+- Body text should maintain comfortable reading line height.
+- The app should preserve readable density for both prose and code-adjacent content.
 
-### 5.2 Sidebar and Conversation Area
+### 5.2 Heading Scale
 
-- Expanded sidebar width: `264px`
-- Collapsed sidebar width: `68px`
-- Conversation area fills the remaining space
-- Both panels share one outer silhouette, while the touching inner corners are removed
-
-Specific requirements:
-
-- `topics-panel` keeps only left-side outer radii
-- `conversation-panel` keeps only right-side outer radii
-- Do not introduce an obvious gap between them
-
-### 5.3 Content Width
-
-- Conversation content max width: `900px`
-- Composer max width: `900px`
-- Standard turn max width: follow the conversation content width
-- Chat horizontal gutter: `24px`
-
-Notes:
-
-- Body content should not span the full conversation area; keep it centered and restrained for stable reading
-
-## 6. Component Rules
-
-### 6.1 Primary Panels
-
-Primary chat panels and sidebar panels must follow these rules:
-
-- Use `--bg-chat` as the panel background
-- Use a subtle 1px border
-- Use `20px` outer radius
-- Use soft medium-to-large shadow
-- Support glass-like blur
-
-Do not:
-
-- Use high-contrast outlines
-- Use exaggerated floating shadows
-- Overlay complex textures on panel surfaces
-
-### 6.2 Top Bar
-
-The top bar is a lightweight title bar, not a marketing navigation bar.
-
-Rules:
-
-- Minimum height: `60px`
-- Horizontal layout
-- Model information centered
-- Interface actions on both sides
-- Background should be transparent or near-transparent; do not create a heavy header slab
-
-Model selector button:
-
-- Height around `28px`
-- Pill radius
-- Transparent by default
-- Hover only adds a subtle background change
-- Use caret rotation as the open/close cue
-
-### 6.3 Sidebar
-
-Sidebar controls should feel small, light, and precise.
-
-Rules:
-
-- Top control buttons use a `34px` diameter
-- Default background is transparent or barely visible
-- Border uses `--border-strong`
-- Text and icon color defaults to `--text-muted`
-- `:active` may scale down slightly to `0.94`
-
-Sidebar behavior:
-
-- Support collapse
-- Keep only essential controls when collapsed
-- Use scrim + drawer behavior on mobile
-
-### 6.4 Message Area
-
-Message presentation should be content-first and should not turn into a wall of heavy chat bubbles.
-
-User messages:
-
-- Right-aligned
-- Bubble background uses `--bg-active`
-- Radius `16px`
-- Padding `10px 14px`
-- No obvious outline or shadow
-
-Assistant messages:
-
-- Transparent by default
-- Do not wrap them in heavy cards
-- Header row shows model / service information
-- Footer carries actions like copy, retry, and delete
-
-Multi-model comparison:
-
-- Allow two columns on desktop
-- Collapse to one column below `1200px`
-
-### 6.5 Composer
-
-The composer is a key action panel and must stay stable, restrained, and extensible.
-
-Rules:
-
-- Outer container max width `900px`
-- Panel radius `16px`
-- Use a light border plus an inner pseudo-surface for subtle depth
-- Do not use a glowing blue input field
-- Text area minimum height `52px`
-- Text area maximum height `200px`
-- Input text size `14px`
-- Placeholder must use a softened neutral color
-
-Composer bottom toolbar:
-
-- Button height `34px`
-- Standard tool-button radius `10px`
-- Background uses `--bg-subtle`
-- Hover moves to `--bg-hover`
-- Icon-only and text buttons must share the same visual system
-
-### 6.6 Buttons
-
-Base button:
-
-- Default text size `13px`
-- Font weight `600`
-- Radius `10px`
-- Padding `8px 16px`
-
-Primary button `btn-primary`:
-
-- Background `--accent-strong`
-- Text uses strong contrast against a darker base
-- Hover may slightly increase brightness and shadow
-
-Secondary button `btn-secondary`:
-
-- Background `--bg-subtle`
-- 1px border
-- Default text color `--text-muted`
-
-Floating round button:
-
-- Size `34px`
-- Pill or true round shape
-- `blur(16px)` is allowed
-- Use for floating actions like close preview, image actions, or scroll-to-bottom
-
-Danger button:
-
-- Use only for delete, clear, or destructive confirmation flows
-- Do not spread it into routine actions
-
-### 6.7 Tags and Status
-
-Status blocks and light tags should stay in a low-saturation visual system.
-
-Rules:
-
-- Default status text size `12px`
-- Radius `12px`
-- Left dot size `7px`
-- Use green for success
-- Use orange for running
-- Use red for error
-- Use neutral light gray for complete / idle states
-
-Model tags / chips:
-
-- Pill style
-- Subtle 1px border
-- Very faint background
-- Text must not become brighter than the main content
-
-### 6.8 Markdown and Content Rendering
-
-Chat output and preview content should follow one consistent content style.
-
-Headings:
+The current markdown scale is the baseline:
 
 - `h1`: `22px`
 - `h2`: `18px`
 - `h3`: `16px`
-- `h1` and `h2` include a bottom divider
-
-Paragraphs and lists:
-
-- Paragraph bottom spacing `12px`
-- List left padding `24px`
-
-Inline code:
-
-- Use a subtle background
-- Padding `2px 6px`
-- Radius `4px`
-
-Code blocks:
-
-- Use `--bg-active` or `--bg-subtle` as background
-- Use a subtle 1px border
-- Container radius `8px` to `10px`
-- Toolbar includes language label and copy / preview actions
-
-Blockquotes:
-
-- Left border uses `--accent`
-- Text uses `--text-muted`
-- Italic is allowed
-
-Links:
-
-- Use `--accent-strong`
-- Add underline on hover
-
-Tables:
-
-- Allow horizontal scrolling
-- Use subtle cell borders
-- Use a very light table-header background
-
-Images:
-
-- Radius `16px`
-- Do not frame them with a thick border treatment
-
-### 6.9 Config Panels and Modals
-
-The config panel is a full work area, not a tiny dialog.
+- `h4`: `15px`
 
 Rules:
 
-- The outer overlay uses blur
-- `#configModal` behaves like a near-full shell panel on desktop
-- Max width follows the app shell, and desktop runtime may tighten it to `1160px`
-- Panel radius `20px`
-- Keep clear `header / tabs / content / footer` structure
-- The content area scrolls independently
+- Headings should stay compact and document-like.
+- They should not drift into oversized editorial presentation.
+- Hierarchy should come from spacing and weight rather than strong color.
 
-Inside config panels:
+### 5.3 Font Usage
 
-- Tabs use horizontal pill / light-button styling
-- Status strips use pill-shaped `status-pill`
-- On mobile, form controls should drop strong focus glow
-- On smaller screens, the config panel should switch directly to a full-screen layout
+- Use body font for most UI text.
+- Use display font for headings, dialog titles, and similar structural labels.
+- Use mono font for code, command-like strings, model IDs, and other machine-shaped text.
 
-Confirmation dialogs:
+## 6. Layout Rules
 
-- Use a tighter width around `420px`
-- Keep the structure simple
-- Destructive confirmation buttons may use stronger contrast, but do not flood the dialog with large red surfaces
+### 6.1 App Shell
 
-## 7. Interaction and Motion
+- The app is a full-height desktop layout.
+- The root shell is a two-column structure.
+- The left side is a fixed-width session sidebar.
+- The right side is a flexible chat area.
+- The shell uses the page background directly rather than a giant framed outer panel.
 
-Motion should be short, light, and only serve state changes.
+Do not turn the application into:
 
-Timing references:
+- a marketing homepage with hero sections
+- a detached multi-card dashboard
+- a dense multi-pane IDE frame unless product requirements explicitly change
 
-- Quick press-scale feedback: `0.12s` to `0.16s`
-- Hover / color / border transitions: `0.18s` to `0.2s`
-- Composer or edit-panel state transitions: `0.24s`
-- Sidebar expand / collapse: `420ms`
+### 6.2 Header
 
-Interaction requirements:
+- The header is minimal and utility-first.
+- It mainly hosts theme toggle, settings access, and desktop window controls.
+- It should stay visually quiet.
+- It must not become a branded navigation bar.
 
-- Hover should primarily change background, border, and text color
-- Active state may use very slight scaling
-- Focus should use a low-intensity ring or remove glow entirely to preserve the calm visual tone
-- Scrollbars stay hidden by default and appear during interaction
-- Shimmer should be reserved for generating / connecting states; do not overuse it
+### 6.3 Sidebar
 
-## 8. Responsive Rules
+- The sidebar is narrow, persistent, and functional.
+- It uses plain background treatment instead of elevated framing.
+- Directory groups and thread rows define the main information structure.
+- Selection and hover should be expressed through subtle background changes.
 
-Confirmed key breakpoints:
+### 6.4 Chat Column
 
-- Below `1200px`: multi-assistant layouts collapse to one column
-- Above `901px`: config panels use desktop grid layout
-- Below `900px`: config panels switch to full-screen mobile layout
-- Below `1100px`: top spacing and empty-state title scale down slightly
+- The conversation area uses a centered reading column.
+- Content width should remain compact and stable.
+- It should feel closer to a chat reader than to a wide document editor.
+- Welcome and conversation states should share the same centered content logic.
 
-Mobile requirements:
+### 6.5 Composer Placement
 
-- The web container fills the viewport and drops desktop outer margins
-- The main shell may drop large radii, shadows, and blur in favor of edge-to-edge layout
-- The sidebar becomes a drawer with a scrim
-- Form controls must not go below `16px`, to avoid unwanted browser zoom on focus
+- In conversation mode, the composer sits below the scrollable message region.
+- It shares the same horizontal padding and width logic as the chat column.
+- In welcome state, it belongs inside the centered empty-state stack rather than being docked to the bottom edge.
 
-## 9. Do / Don't
+### 6.6 Dialogs
+
+- Settings is a large modal work surface with internal scrolling.
+- Approval is a smaller confirmation-style dialog.
+- Overlays may blur the background.
+- Dialog surfaces themselves should remain restrained, readable, and neutral.
+
+## 7. Component Rules
+
+### 7.1 Shared Primitive Rule
+
+Shared UI primitives are the default starting point for future work.
+
+Prefer reusing:
+
+- buttons
+- inputs
+- textareas
+- selects
+- comboboxes
+- scroll areas
+- overlays
+
+Do not create feature-local replacements unless the shared primitive cannot reasonably support the requirement.
+
+### 7.2 Buttons
+
+- Buttons are rounded and compact.
+- Primary buttons use contrast inversion rather than brand color.
+- Secondary and ghost buttons stay quiet.
+- Hover emphasis should come from subtle background and text shifts.
+- Small icon buttons should remain visually balanced in circular or near-circular containers.
+
+### 7.3 Inputs And Textareas
+
+- Form controls inherit the app typography.
+- Controls should remain visually light and neutral.
+- Borders should stay subtle.
+- Strong blue focus rings are not part of this UI system.
+
+Composer textarea rules:
+
+- It should feel embedded into the composer shell.
+- It should not look like a separate heavy field inside another card.
+
+### 7.4 Selects, Comboboxes, And Popovers
+
+- Floating selection surfaces use muted backgrounds, soft borders, and moderate radii.
+- Option rows highlight through quiet fill changes.
+- Search-capable pickers should preserve the same monochrome control language.
+- Menus and popovers should feel compact and efficient rather than spacious or decorative.
+
+### 7.5 Session List
+
+- Directory groups use small, low-contrast labels.
+- Thread rows stay compact.
+- The active state uses restrained background emphasis.
+- Destructive actions should usually remain secondary and reveal on hover, focus, or in overflow menus.
+
+### 7.6 Composer
+
+- The composer is one of the few larger rounded surfaces in the app.
+- It should group text entry, attachments, execution mode, model picker, reasoning control, and send or stop action into one cohesive block.
+- It should feel dense and efficient, not oversized and decorative.
+
+### 7.7 Settings Surfaces
+
+- Settings should feel like one coherent tool window.
+- Section separation should rely on spacing and lightweight dividers.
+- Avoid stacking the settings experience into a wall of unrelated cards.
+- Service lists and detail panes should read as parts of one work surface.
+
+### 7.8 Approval Dialog
+
+- The approval dialog uses a compact confirmation pattern.
+- Risk information and command preview should be readable and structured.
+- The dialog should not become dramatic or overly color-coded.
+
+## 8. Content Rendering Rules
+
+### 8.1 User Messages
+
+- User turns are right-aligned compact bubbles.
+- They should stay visually lighter than typical consumer chat bubbles.
+- Use restrained fill, compact padding, and modest radius.
+- Supporting actions such as copy may stay hidden until hover or focus.
+
+### 8.2 Assistant Messages
+
+- Assistant output should read like flowing content, not like a giant bordered response card.
+- The primary answer surface is typography plus spacing.
+- Standard assistant output should avoid unnecessary framing.
+- Errors may use a soft container when needed.
+
+### 8.3 Markdown
+
+Markdown should stay compact, readable, and consistent with the rest of the UI.
+
+Rules:
+
+- Keep headings modest and document-like.
+- Preserve readable paragraph spacing.
+- Keep inline code and code blocks neutral.
+- Avoid flashy syntax-driven presentation.
+- Tables, quotes, and links should remain readable without becoming visually heavy.
+
+### 8.4 Tool Output And Timeline Items
+
+- Thinking blocks, tool cards, and related timeline items may use containers.
+- Those containers must stay within the same monochrome low-contrast surface language.
+- Tool output is part of the conversation flow, not a separate dashboard.
+
+### 8.5 Streaming
+
+- Streaming text should prioritize legibility and continuity.
+- Motion should feel tied to content arrival, not ornamental animation.
+- Limited shimmer is acceptable for active thinking or title regeneration.
+- Shimmer must not become a pervasive motif across the product.
+
+### 8.6 Empty And Welcome States
+
+- Welcome content should stay short, centered, and functional.
+- It should guide the user toward action.
+- It should not become a branded hero screen.
+
+Do not:
+
+- wrap every assistant message in a heavy card
+- turn tool output into colorful dashboard tiles
+- inflate the welcome state into a homepage-like layout
+
+## 9. Interaction, Motion, And Accessibility
+
+### 9.1 Interaction
+
+- Hover states should be subtle.
+- Most hover feedback should come from neutral background or foreground changes.
+- Focus states must remain visible.
+- Focus treatment should stay calm rather than glow-heavy.
+- Secondary actions may reveal on hover, but essential actions must remain keyboard reachable.
+
+### 9.2 Motion
+
+Motion should stay short, practical, and low-drama.
+
+Current motion vocabulary includes:
+
+- fade-up entrance
+- collapsible open and close transitions
+- loading spin
+- limited shimmer for active generation-related states
+
+Rules:
+
+- Reuse this motion vocabulary before introducing a new one-off animation style.
+- Motion should support state change and readability, not decoration.
+
+### 9.3 Reduced Motion
+
+- Respect `prefers-reduced-motion`.
+- Streaming and shimmer-like effects must degrade gracefully.
+- Reduced-motion behavior should preserve clarity without relying on animated emphasis.
+
+### 9.4 Accessibility
+
+- Preserve semantic buttons, dialogs, labels, and keyboard patterns.
+- Do not hide essential information behind hover-only interaction.
+- Maintain readable contrast within the restrained grayscale palette.
+- Long-form chat content must remain readable for extended sessions.
+
+### 9.5 Scroll Behavior
+
+- Scroll areas should stay visually minimal.
+- Reduced or hidden scrollbar styling is acceptable when navigation remains clear in practice.
+- Long dialogs and long conversations should scroll independently where appropriate.
+
+## 10. Responsive And Runtime Notes
+
+- This product is desktop-first.
+- The primary runtime target is the Tauri desktop app.
+- Browser rendering should remain functional for development.
+- The interface should still reflect the desktop product rather than a public web page.
+
+Responsive rules:
+
+- Preserve content continuity first.
+- Preserve control usability second.
+- Do not reshape the app into a mobile-first shell unless product requirements explicitly change.
+- On narrower widths, simplify without introducing decorative adaptation.
+
+## 11. Do / Don’t
 
 ### Do
 
-- Use neutral gray-black as the primary visual language
-- Preserve the desktop-workspace layout and stable content width
-- Use the `20 / 16 / 12 / 8 / pill` radius scale consistently
-- Keep borders and shadows low-contrast
-- Make interaction feedback rely on subtle background changes
-- Maintain readability and hierarchy consistency across dark and light themes
-- Let the message area, composer, and config panels share one token system
+- Use a monochrome or near-monochrome base.
+- Keep dark mode as the visual baseline.
+- Let spacing, contrast, and type weight carry hierarchy.
+- Keep the chat column compact and readable.
+- Reuse shared primitives and shared tokens.
+- Preserve the desktop utility-software character of the app.
 
 ### Don’t
 
-- Do not use the old pure-white Ollama-like style that previously existed in this repository as a baseline
-- Do not introduce high-saturation brand colors as large-area backgrounds
-- Do not add exaggerated glassmorphism, neon outlines, or colorful glow
-- Do not turn the chat area into a marketing homepage with hero + feature blocks
-- Do not create a wall of heavy message cards
-- Do not introduce oversized titles or highly decorative type
-- Do not make hover, focus, or active feedback overly aggressive
-- Do not make the light theme a mechanical color inversion
+- Do not introduce high-saturation brand colors as large surfaces.
+- Do not turn the app into a marketing homepage.
+- Do not build a wall of heavy assistant cards.
+- Do not add dramatic shadows, glow, or neon edges.
+- Do not introduce unrelated visual systems inside individual features.
+- Do not make hover, focus, or active behavior aggressive.
 
-## 10. Prompts for Implementation Agents
+## 12. Direction For Future Work
 
-If you want to keep implementing this visual system, you can use prompts like these:
+When adding or revising UI in this repository, the default question should be:
 
-- "Build a desktop-first AI chat workspace with a dark default theme, neutral gray-black colors, and low-contrast glass panels. Avoid strong brand-color dominance."
-- "Use a main shell with max width 1260px, a 264px topic sidebar on the left, and a conversation area on the right. The two panels should read as one continuous surface."
-- "Keep conversation body content centered with a max width of 900px. User messages are right-aligned bubbles; assistant messages stay in a transparent text-flow layout."
-- "Design the composer as a lightly glassy edit panel with 16px radius, 52px starting height, and a bottom toolbar with 34px-tall buttons."
-- "Keep action buttons neutral, with subtle hover states and slight press-scale feedback. Do not use strong blue focus glow."
-- "Treat the config panel as a large work-area modal on desktop and a full-screen panel on mobile."
+"Does this look like it belongs to the current Prism-Agent desktop client?"
+
+If the answer depends on brighter color, heavier framing, louder animation, or a different layout model, the change is probably drifting away from the current design system.
