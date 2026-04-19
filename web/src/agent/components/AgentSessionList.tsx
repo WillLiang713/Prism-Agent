@@ -1,4 +1,4 @@
-import { MoreHorizontal, Sparkles, Trash2, Plus, Folder } from 'lucide-react';
+import { MoreHorizontal, Sparkles, Trash2, Plus, Folder, FolderPlus } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useAgentSessionStore } from '../sessionStore';
 import * as PopoverPrimitive from '@radix-ui/react-popover';
@@ -22,6 +22,7 @@ export function AgentSessionList({
   onResume,
   onDelete,
   onRegenerateTitle,
+  onPickWorkspace,
 }: {
   sessions: AgentSession[];
   threadList: AgentThreadMeta[];
@@ -31,6 +32,7 @@ export function AgentSessionList({
   onResume: (threadId: string, cwd: string) => void;
   onDelete: (threadId: string) => void;
   onRegenerateTitle: (threadId: string) => Promise<unknown>;
+  onPickWorkspace: () => void;
 }) {
   const [regeneratingIds, setRegeneratingIds] = useState<Set<string>>(() => new Set());
 
@@ -63,6 +65,16 @@ export function AgentSessionList({
 
   return (
     <aside className="flex h-full w-[260px] shrink-0 flex-col bg-background">
+      <div className="px-3 pt-3 pb-2">
+        <button
+          type="button"
+          onClick={onPickWorkspace}
+          className="group flex w-full cursor-pointer items-center gap-2 rounded-lg border border-dashed border-border/70 bg-transparent px-3 py-2 text-sm font-medium text-mutedForeground transition-colors hover:border-border hover:bg-muted/60 hover:text-foreground"
+        >
+          <FolderPlus className="h-4 w-4 shrink-0" />
+          <span className="truncate">目录</span>
+        </button>
+      </div>
       <ScrollArea className="flex-1 px-2">
         <div className="space-y-4 pb-4">
           {groupedThreads.map((group) => (
@@ -237,7 +249,7 @@ export function AgentSessionList({
           ))}
           {groupedThreads.length === 0 ? (
             <div className="px-5 py-8 text-center text-xs text-mutedForeground/50">
-              暂无记录
+              暂无目录，点击上方「目录」开始
             </div>
           ) : null}
         </div>
