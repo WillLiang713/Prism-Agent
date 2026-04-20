@@ -68,6 +68,7 @@ export function useAgentChat() {
     return {
       provider: runtimeRequestConfig.provider,
       model: runtimeRequestConfig.model,
+      providerSelection: runtimeRequestConfig.providerSelection,
       apiKey: runtimeRequestConfig.apiKey,
       apiUrl: runtimeRequestConfig.apiUrl,
       systemPrompt: runtimeRequestConfig.systemPrompt,

@@ -25,6 +25,7 @@ export interface SidecarHealth {
 export interface AgentRuntimeConfig {
   provider: string;
   model: string;
+  providerSelection?: ProviderSelection;
   apiKey?: string;
   apiUrl?: string;
   systemPrompt?: string;

@@ -12,6 +12,7 @@ export interface AgentHealth {
 export interface AgentRuntimeConfig {
   provider: string;
   model: string;
+  providerSelection?: 'openai_chat' | 'openai_responses' | 'anthropic' | 'gemini';
   apiKey?: string;
   apiUrl?: string;
   systemPrompt?: string;

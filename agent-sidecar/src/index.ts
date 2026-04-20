@@ -48,6 +48,7 @@ import type {
   ListModelsParams,
   ListModelsResult,
   OuterMethods,
+  ProviderSelection,
   RespondApprovalParams,
   ResumeSessionParams,
   SendMessageParams,
@@ -59,6 +60,14 @@ import type {
 const SIDECAR_VERSION = '0.3.0';
 const AGENT_VERSION = '0.66.1';
 const SUPPORTED_PROVIDERS = ['openai', 'anthropic', 'gemini'] as const;
+const DEFAULT_DYNAMIC_MODEL_CONTEXT_WINDOW = 128_000;
+const DEFAULT_DYNAMIC_MODEL_MAX_TOKENS = 16_384;
+const DEFAULT_DYNAMIC_MODEL_COST = {
+  input: 0,
+  output: 0,
+  cacheRead: 0,
+  cacheWrite: 0,
+} as const;
 
 type PendingApproval = {
   sessionId: string;
@@ -639,10 +648,10 @@ function createBridgeExtension(context: { sessionId: string; threadId: string })
       if (!requestId) {
         return undefined;
       }
+      const approvalMode = requestApprovalModes.get(requestId) ?? 'manual';
 
       if (event.toolName === 'bash') {
         const command = typeof event.input.command === 'string' ? event.input.command : '';
-        const approvalMode = requestApprovalModes.get(requestId) ?? 'manual';
         const shouldSkipApproval = approvalMode === 'auto'
           ? true
           : shouldAutoApproveCommand(command, runtime.workspaceRoot);
@@ -689,6 +698,10 @@ function createBridgeExtension(context: { sessionId: string; threadId: string })
       }
 
       if (event.toolName === 'edit' || event.toolName === 'write') {
+        if (approvalMode === 'auto') {
+          return undefined;
+        }
+
         const targetPath = typeof event.input.path === 'string' ? event.input.path : '';
         const approvalId = randomUUID();
         emit({
@@ -812,18 +825,27 @@ function normalizeRuntimeConfig(config?: AgentRuntimeConfig | null) {
 
   const provider = config.provider?.trim() || '';
   const model = config.model?.trim() || '';
+  const rawProviderSelection = config.providerSelection?.trim();
+  const providerSelection: ProviderSelection | undefined =
+    rawProviderSelection === 'openai_chat' ||
+    rawProviderSelection === 'openai_responses' ||
+    rawProviderSelection === 'anthropic' ||
+    rawProviderSelection === 'gemini'
+      ? rawProviderSelection
+      : undefined;
   const apiKey = config.apiKey?.trim() || '';
   const apiUrl = config.apiUrl?.trim() || '';
   const systemPrompt = config.systemPrompt?.trim() || '';
   const serviceName = config.serviceName?.trim() || '';
 
-  if (!provider && !model && !apiKey && !apiUrl && !systemPrompt && !serviceName) {
+  if (!provider && !model && !rawProviderSelection && !apiKey && !apiUrl && !systemPrompt && !serviceName) {
     return null;
   }
 
   return {
     provider,
     model,
+    providerSelection,
     apiKey,
     apiUrl,
     systemPrompt,
@@ -854,6 +876,84 @@ function applyProviderOverrides(config: NonNullable<ReturnType<typeof normalizeR
     baseUrl: config.apiUrl || undefined,
     apiKey: config.apiKey || undefined,
   });
+}
+
+function resolveRuntimeProviderSelection(
+  config: NonNullable<ReturnType<typeof normalizeRuntimeConfig>>,
+): ProviderSelection | null {
+  const rawSelection = config.providerSelection?.trim();
+  if (
+    rawSelection === 'openai_chat' ||
+    rawSelection === 'openai_responses' ||
+    rawSelection === 'anthropic' ||
+    rawSelection === 'gemini'
+  ) {
+    return rawSelection;
+  }
+
+  if (config.provider === 'anthropic') return 'anthropic';
+  if (config.provider === 'gemini') return 'gemini';
+  if (config.provider === 'openai') return 'openai_chat';
+  return null;
+}
+
+function resolveRuntimeProviderApi(selection: ProviderSelection) {
+  switch (selection) {
+    case 'openai_responses':
+      return 'openai-responses' as const;
+    case 'anthropic':
+      return 'anthropic-messages' as const;
+    case 'gemini':
+      return 'google-generative-ai' as const;
+    case 'openai_chat':
+    default:
+      return 'openai-completions' as const;
+  }
+}
+
+function tryRegisterDynamicRuntimeModel(
+  config: NonNullable<ReturnType<typeof normalizeRuntimeConfig>>,
+) {
+  const selection = resolveRuntimeProviderSelection(config);
+  if (!selection || !config.provider || !config.model || !config.apiUrl || !config.apiKey) {
+    return undefined;
+  }
+
+  modelRegistry.registerProvider(config.provider, {
+    baseUrl: config.apiUrl,
+    apiKey: config.apiKey,
+    api: resolveRuntimeProviderApi(selection),
+    models: [
+      {
+        id: config.model,
+        name: config.model,
+        reasoning: selection !== 'gemini',
+        input: ['text', 'image'],
+        cost: DEFAULT_DYNAMIC_MODEL_COST,
+        contextWindow: DEFAULT_DYNAMIC_MODEL_CONTEXT_WINDOW,
+        maxTokens: DEFAULT_DYNAMIC_MODEL_MAX_TOKENS,
+        compat:
+          selection === 'openai_chat'
+            ? {
+                supportsDeveloperRole: false,
+                supportsReasoningEffort: false,
+              }
+            : undefined,
+      },
+    ],
+  });
+
+  return modelRegistry.find(config.provider, config.model);
+}
+
+function resolveRuntimeModel(config: NonNullable<ReturnType<typeof normalizeRuntimeConfig>>) {
+  applyProviderOverrides(config);
+  const builtInModel = modelRegistry.find(config.provider, config.model);
+  if (builtInModel) {
+    return builtInModel;
+  }
+
+  return tryRegisterDynamicRuntimeModel(config);
 }
 
 function resolveRuntimeConfigStatus(config?: AgentRuntimeConfig | null): AgentRuntimeStatus {
@@ -889,8 +989,7 @@ function resolveRuntimeConfigStatus(config?: AgentRuntimeConfig | null): AgentRu
     };
   }
 
-  applyProviderOverrides(normalized);
-  const model = modelRegistry.find(normalized.provider, normalized.model);
+  const model = resolveRuntimeModel(normalized);
   if (!model) {
     return {
       configured: true,
@@ -930,7 +1029,7 @@ async function applyRuntimeConfig(runtime: RuntimeSessionRecord, config?: AgentR
     throw new Error(status.reason || '模型配置不可用。');
   }
 
-  const model = modelRegistry.find(status.provider, status.model);
+  const model = normalized ? resolveRuntimeModel(normalized) : undefined;
   if (!model) {
     throw new Error(`找不到模型 ${status.provider}/${status.model}。`);
   }

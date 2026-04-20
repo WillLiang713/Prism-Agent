@@ -1,8 +1,8 @@
-import { MessageSquarePlus, Loader2, AlertCircle } from 'lucide-react';
+import { Loader2, AlertCircle } from 'lucide-react';
 import { useEffect, useEffectEvent, useMemo, useRef } from 'react';
 
 import { ScrollArea } from '../components/ui/scroll-area';
-import { ApprovalDialog } from './components/ApprovalDialog';
+import { ApprovalPrompt } from './components/ApprovalPrompt';
 import { AgentChatInput } from './components/AgentChatInput';
 import { AgentMessageList } from './components/AgentMessageList';
 import { SkillsDisplay } from './components/SkillsDisplay';
@@ -172,6 +172,14 @@ export function AgentChatPanel({
                 {activeSession?.skills && (
                   <SkillsDisplay skills={activeSession.skills} />
                 )}
+                {activeApproval && (
+                  <ApprovalPrompt
+                    approval={activeApproval}
+                    onDecision={(decision) => {
+                      onRespondApproval(activeApproval.approvalId, decision);
+                    }}
+                  />
+                )}
                 <AgentChatInput
                   inputDisabled={inputDisabled}
                   submitDisabled={submitDisabled}
@@ -207,6 +215,14 @@ export function AgentChatPanel({
               {activeSession?.skills && (
                 <SkillsDisplay skills={activeSession.skills} />
               )}
+              {activeApproval && (
+                <ApprovalPrompt
+                  approval={activeApproval}
+                  onDecision={(decision) => {
+                    onRespondApproval(activeApproval.approvalId, decision);
+                  }}
+                />
+              )}
               {activeSession && (
                 <AgentChatInput
                   inputDisabled={inputDisabled}
@@ -226,17 +242,6 @@ export function AgentChatPanel({
           </div>
         )}
       </div>
-
-      <ApprovalDialog
-        approval={activeApproval}
-        open={Boolean(activeApproval)}
-        onDecision={(decision) => {
-          if (!activeApproval) {
-            return;
-          }
-          onRespondApproval(activeApproval.approvalId, decision);
-        }}
-      />
     </div>
   );
 }
