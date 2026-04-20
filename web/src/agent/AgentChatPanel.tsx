@@ -23,7 +23,7 @@ export function AgentChatPanel({
   agentRuntimeStatus,
   agentConfigValidating,
   onApprovalModeChange,
-  onPickWorkspace,
+  onSelectWorkspace,
   onSendMessage,
   onStop,
   onRespondApproval,
@@ -36,7 +36,7 @@ export function AgentChatPanel({
   agentRuntimeStatus: AgentRuntimeStatus;
   agentConfigValidating: boolean;
   onApprovalModeChange: (mode: AgentApprovalMode) => void;
-  onPickWorkspace: () => void;
+  onSelectWorkspace: (cwd: string) => void;
   onSendMessage: (payload: {
     text: string;
     images: Array<{ name: string; mediaType: string; dataUrl: string }>;
@@ -189,7 +189,7 @@ export function AgentChatPanel({
                   fallbackModel={agentRuntimeStatus.model}
                   workspaceRoot={activeSession?.workspaceRoot}
                   onApprovalModeChange={onApprovalModeChange}
-                  onPickWorkspace={onPickWorkspace}
+                  onSelectWorkspace={onSelectWorkspace}
                   onStop={onStop}
                   onSubmit={onSendMessage}
                 />
@@ -233,7 +233,7 @@ export function AgentChatPanel({
                   fallbackModel={agentRuntimeStatus.model}
                   workspaceRoot={activeSession?.workspaceRoot}
                   onApprovalModeChange={onApprovalModeChange}
-                  onPickWorkspace={onPickWorkspace}
+                  onSelectWorkspace={onSelectWorkspace}
                   onStop={onStop}
                   onSubmit={onSendMessage}
                 />

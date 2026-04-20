@@ -8,6 +8,7 @@ import { useUIStore } from '../store/uiStore';
 import { AgentChatPanel } from './AgentChatPanel';
 import { AgentSessionList } from './components/AgentSessionList';
 import { useAgentChat } from './useAgentChat';
+import { useAgentSessionStore } from './sessionStore';
 import { WindowControls } from '../components/layout/WindowControls';
 import { isDesktopRuntime } from '../lib/runtime';
 import { resolveWorkspaceSelection } from './workspaceSelection';
@@ -37,6 +38,7 @@ export function AgentAppLayout() {
   } = useAgentChat();
 
   const isDesktop = isDesktopRuntime();
+  const pinDirectory = useAgentSessionStore((state) => state.pinDirectory);
   const headerIconButtonClass =
     'h-8 w-8 rounded-full border border-transparent text-foreground hover:bg-muted hover:text-foreground';
 
@@ -51,11 +53,11 @@ export function AgentAppLayout() {
     await startNewSession(selection.cwd);
   };
 
-  const handlePickWorkspace = async () => {
+  const handlePinWorkspace = async () => {
     if (!isDesktop) {
-      const selected = window.prompt('输入要打开的工作目录路径');
+      const selected = window.prompt('输入要添加到列表的目录路径');
       if (selected?.trim()) {
-        await handleWorkspaceSelection(selected.trim());
+        pinDirectory(selected.trim());
       }
       return;
     }
@@ -63,10 +65,10 @@ export function AgentAppLayout() {
     const selected = await open({
       directory: true,
       multiple: false,
-      title: '选择工作目录',
+      title: '添加目录到会话列表',
     });
     if (typeof selected === 'string') {
-      await handleWorkspaceSelection(selected);
+      pinDirectory(selected);
     }
   };
 
@@ -88,6 +90,9 @@ export function AgentAppLayout() {
             void archiveThread(threadId);
           }}
           onRegenerateTitle={(threadId) => regenerateThreadTitle(threadId)}
+          onPickWorkspace={() => {
+            void handlePinWorkspace();
+          }}
         />
         <section className="flex min-w-0 flex-1 flex-col">
           <header
@@ -118,8 +123,8 @@ export function AgentAppLayout() {
               agentRuntimeStatus={agentRuntimeStatus}
               agentConfigValidating={agentConfigValidating}
               onApprovalModeChange={setApprovalMode}
-              onPickWorkspace={() => {
-                void handlePickWorkspace();
+              onSelectWorkspace={(cwd) => {
+                void handleWorkspaceSelection(cwd);
               }}
               onSendMessage={(payload) => {
                 void sendMessage(payload);
