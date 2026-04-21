@@ -1,7 +1,7 @@
 import * as React from 'react';
 import * as PopoverPrimitive from '@radix-ui/react-popover';
 import { Command } from 'cmdk';
-import { Check, ChevronDown } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
 
 import { cn } from '../../lib/utils';
 
@@ -15,6 +15,7 @@ export interface ComboboxProps {
   className?: string;
   allowCustom?: boolean;
   mono?: boolean;
+  dropdownWidth?: 'trigger' | 'compact' | number;
 }
 
 export function Combobox({
@@ -27,6 +28,7 @@ export function Combobox({
   className,
   allowCustom = true,
   mono = true, // Default to true as currently only used for models
+  dropdownWidth = 'trigger',
 }: ComboboxProps) {
   const [open, setOpen] = React.useState(false);
   const [search, setSearch] = React.useState('');
@@ -37,6 +39,13 @@ export function Combobox({
   }, [open]);
 
   const displayValue = value || '';
+  const triggerWidth = triggerRef.current?.offsetWidth;
+  const resolvedDropdownWidth =
+    typeof dropdownWidth === 'number'
+      ? dropdownWidth
+      : dropdownWidth === 'compact'
+        ? Math.min(Math.max(triggerWidth ?? 220, 220), 240)
+        : triggerWidth;
 
   return (
     <PopoverPrimitive.Root open={open} onOpenChange={setOpen}>
@@ -66,7 +75,7 @@ export function Combobox({
         <PopoverPrimitive.Content
           align="start"
           sideOffset={4}
-          style={{ width: triggerRef.current?.offsetWidth }}
+          style={resolvedDropdownWidth ? { width: resolvedDropdownWidth } : undefined}
           className="z-50 overflow-hidden rounded-xl border border-border bg-muted p-1 text-foreground shadow-[0_18px_40px_rgba(0,0,0,0.22)]"
         >
           <Command shouldFilter={true} className="flex flex-col">
@@ -96,12 +105,9 @@ export function Combobox({
                     onValueChange(selected);
                     setOpen(false);
                   }}
-                  className="relative flex w-full cursor-pointer select-none items-center rounded-full py-2 pl-8 pr-3 text-sm text-foreground outline-none transition-colors hover:bg-card data-[selected=true]:bg-card"
+                  className="flex w-full cursor-pointer select-none items-center justify-center rounded-full px-3 py-2 text-center text-sm text-foreground outline-none transition-colors hover:bg-card data-[selected=true]:bg-card"
                 >
-                  <span className="absolute left-3 flex h-3.5 w-3.5 items-center justify-center">
-                    {value === option && <Check className="h-4 w-4" />}
-                  </span>
-                  <span className={cn('truncate', mono && 'font-mono lowercase tracking-tight')}>
+                  <span className={cn('block w-full truncate text-center', mono && 'font-mono lowercase tracking-tight')}>
                     {option}
                   </span>
                 </Command.Item>

@@ -1,4 +1,4 @@
-import { ArrowUp, Check, FolderOpen, Paperclip, Play, X } from 'lucide-react';
+import { ArrowUp, FolderOpen, Paperclip, Play, X } from 'lucide-react';
 import {
   useMemo,
   useRef,
@@ -222,7 +222,6 @@ export function AgentChatInput({
                         >
                           <FolderOpen className="h-3.5 w-3.5 shrink-0 text-mutedForeground" />
                           <span className="min-w-0 flex-1 truncate text-left">{name}</span>
-                          {isActive ? <Check className="h-3.5 w-3.5 shrink-0 text-mutedForeground" /> : null}
                         </button>
                       </PopoverPrimitive.Close>
                     );
@@ -239,7 +238,7 @@ export function AgentChatInput({
                 <span className="font-medium">{approvalMode === 'auto' ? '自动' : '手动'}</span>
               </div>
             </SelectTrigger>
-            <SelectContent side="top" className="min-w-0">
+            <SelectContent side="top" widthMode="compact">
               <SelectItem value="auto" className="cursor-pointer">自动</SelectItem>
               <SelectItem value="manual" className="cursor-pointer">手动</SelectItem>
             </SelectContent>
@@ -256,7 +255,7 @@ export function AgentChatInput({
                 <span className="font-medium">{reasoningOptions.find((option) => option.value === reasoningEffort)?.label || '高'}</span>
               </div>
             </SelectTrigger>
-            <SelectContent side="top" className="min-w-0">
+            <SelectContent side="top" widthMode="compact">
               {reasoningOptions.map((option) => (
                 <SelectItem key={option.value} value={option.value} className="cursor-pointer">
                   {option.label}

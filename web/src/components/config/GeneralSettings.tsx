@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 
 import * as PopoverPrimitive from '@radix-ui/react-popover';
 import { Command } from 'cmdk';
-import { Check, ChevronDown, RefreshCw } from 'lucide-react';
+import { ChevronDown, RefreshCw } from 'lucide-react';
 
 import { agentListModels } from '../../agent/client';
 import { cn } from '../../lib/utils';
@@ -195,15 +195,9 @@ export function GeneralSettings() {
                           key={`${group.serviceId}:${model}`}
                           value={`${group.serviceName} ${model}`}
                           onSelect={() => handleSelectModel(group.serviceId, model)}
-                          className="relative flex w-full cursor-pointer select-none items-center rounded-full py-2 pl-8 pr-3 text-sm text-foreground outline-none transition-colors hover:bg-card data-[selected=true]:bg-card"
+                          className="flex w-full cursor-pointer select-none items-center justify-center rounded-full px-3 py-2 text-center text-sm text-foreground outline-none transition-colors hover:bg-card data-[selected=true]:bg-card"
                         >
-                          <span className="absolute left-3 flex h-3.5 w-3.5 items-center justify-center">
-                            {runtimeModelConfig.titleModel === model &&
-                              selectedServiceId === group.serviceId && (
-                                <Check className="h-4 w-4" />
-                              )}
-                          </span>
-                          <span className="truncate font-mono lowercase tracking-tight">
+                          <span className="block w-full truncate text-center font-mono lowercase tracking-tight">
                             {model}
                           </span>
                         </Command.Item>

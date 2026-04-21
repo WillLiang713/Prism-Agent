@@ -1,6 +1,6 @@
 import * as PopoverPrimitive from '@radix-ui/react-popover';
 import { Command } from 'cmdk';
-import { Check, ChevronDown, RefreshCw } from 'lucide-react';
+import { ChevronDown, RefreshCw } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
 import { agentListModels } from '../client';
@@ -95,7 +95,7 @@ export function HeaderModelPicker({ currentModel }: { currentModel: string }) {
           align="center"
           side="top"
           sideOffset={6}
-          className="z-50 w-[280px] overflow-hidden rounded-xl border border-border bg-muted p-1 text-foreground shadow-[0_18px_40px_rgba(0,0,0,0.22)]"
+          className="z-50 w-[248px] overflow-hidden rounded-xl border border-border bg-muted p-1 text-foreground shadow-[0_18px_40px_rgba(0,0,0,0.22)]"
         >
           <Command shouldFilter={true} className="flex flex-col">
             <div className="flex items-center gap-1 px-1">
@@ -129,12 +129,9 @@ export function HeaderModelPicker({ currentModel }: { currentModel: string }) {
                   key={option}
                   value={option}
                   onSelect={() => handlePick(option)}
-                  className="relative flex cursor-pointer select-none items-center rounded-md py-1.5 pl-7 pr-2 text-sm text-foreground outline-none transition-colors data-[selected=true]:bg-card"
+                  className="flex cursor-pointer select-none items-center justify-center rounded-md px-2 py-1.5 text-center text-sm text-foreground outline-none transition-colors data-[selected=true]:bg-card"
                 >
-                  <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
-                    {currentModel === option && <Check className="h-3.5 w-3.5" />}
-                  </span>
-                  <span className="truncate font-mono font-normal lowercase">{option}</span>
+                  <span className="block w-full truncate text-center font-mono font-normal lowercase">{option}</span>
                 </Command.Item>
               ))}
             </Command.List>
