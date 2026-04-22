@@ -369,7 +369,10 @@ async function main() {
       args: [...tauriInvocation.args, 'dev'],
     },
     {
-      env: runtimeEnv,
+      env: {
+        ...runtimeEnv,
+        PRISM_DEV_PARENT_PID: String(process.pid),
+      },
     },
   );
 }

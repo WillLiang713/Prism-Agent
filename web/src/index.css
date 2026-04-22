@@ -17,6 +17,12 @@
   --success: 0 0% 12%;
   --warning: 0 0% 22%;
   --danger: 0 0% 12%;
+  --diff-add-bg: 142 72% 88%;
+  --diff-add-border: 142 54% 42%;
+  --diff-add-fg: 142 64% 18%;
+  --diff-remove-bg: 355 88% 90%;
+  --diff-remove-border: 355 62% 46%;
+  --diff-remove-fg: 355 58% 24%;
   --font-body: "Geist Variable", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei UI", "Microsoft YaHei", -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
   --font-display: "Geist Variable", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei UI", "Microsoft YaHei", -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", system-ui, sans-serif;
   --font-mono: "Geist Mono Variable", ui-monospace, "SFMono-Regular", "SF Mono", Menlo, Consolas, "Liberation Mono", "Courier New", monospace;
@@ -37,6 +43,12 @@
   --success: 0 0% 90%;
   --warning: 0 0% 80%;
   --danger: 0 0% 90%;
+  --diff-add-bg: 146 58% 18%;
+  --diff-add-border: 146 48% 38%;
+  --diff-add-fg: 146 72% 82%;
+  --diff-remove-bg: 355 52% 18%;
+  --diff-remove-border: 355 48% 40%;
+  --diff-remove-fg: 355 78% 84%;
 }
 
 html,

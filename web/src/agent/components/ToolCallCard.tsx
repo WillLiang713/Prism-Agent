@@ -1,6 +1,7 @@
 import { ChevronDown } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
+import { CodeDiffView } from './CodeDiffView';
 import { MarkdownContent } from './MarkdownContent';
 import type { AgentToolEvent } from '../sessionStore';
 
@@ -10,6 +11,8 @@ type ToolHeaderParts = {
   isMonospace: boolean;
   fullText: string;
 };
+
+const TOOL_AUTO_COLLAPSE_DELAY_MS = 2200;
 
 function normalizeArgs(args: unknown) {
   if (typeof args !== 'string') {
@@ -252,14 +255,26 @@ function getInlineResultTone(status: AgentToolEvent['status']) {
   return 'text-foreground/88';
 }
 
-export function ToolCallCard({ event }: { event: AgentToolEvent }) {
+export function ToolCallCard({
+  event,
+  autoExpandEnabled,
+}: {
+  event: AgentToolEvent;
+  autoExpandEnabled: boolean;
+}) {
   const [isOpen, setIsOpen] = useState(false);
-
-  useEffect(() => {
-    if (event.ok === false || event.status === 'error' || event.status === 'blocked') {
-      setIsOpen(true);
-    }
-  }, [event.ok, event.status]);
+  const collapseTimeoutRef = useRef<number | null>(null);
+  const hasMountedRef = useRef(false);
+  const userInteractedRef = useRef(false);
+  const autoManagedRef = useRef(false);
+  const previousSnapshotRef = useRef<{
+    status: AgentToolEvent['status'];
+    ok: AgentToolEvent['ok'];
+    output: string;
+    diff?: string;
+    exitCode?: number | null;
+    summary?: string;
+  } | null>(null);
 
   const commandText = useMemo(() => extractCommand(event.args), [event.args]);
   const header = useMemo(() => buildToolHeader(event, commandText), [event, commandText]);
@@ -287,9 +302,78 @@ export function ToolCallCard({ event }: { event: AgentToolEvent }) {
     Boolean(event.diff) ||
     typeof event.exitCode === 'number';
 
-  const formattedOutput = event.diff
-    ? `\`\`\`diff\n${event.diff}\n\`\`\`${event.output ? `\n\n${event.output}` : ''}`
-    : event.output;
+  const formattedOutput = event.output;
+
+  useEffect(() => {
+    return () => {
+      if (collapseTimeoutRef.current !== null) {
+        window.clearTimeout(collapseTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    const previous = previousSnapshotRef.current;
+    const previousWasAutoManaged = autoManagedRef.current;
+    const isErrorState = event.ok === false || event.status === 'error' || event.status === 'blocked';
+    const isSuccessfulDone = event.status === 'done' && event.ok !== false;
+    const canAutoManage = hasExpandableContent && autoExpandEnabled && !userInteractedRef.current;
+    const shouldOpenOnInitialRunning =
+      !hasMountedRef.current && canAutoManage && event.status === 'running';
+    const contentChanged =
+      previous !== null &&
+      (previous.output !== event.output ||
+        previous.diff !== event.diff ||
+        previous.exitCode !== event.exitCode ||
+        previous.summary !== event.summary ||
+        previous.ok !== event.ok);
+    const statusChanged = previous !== null && previous.status !== event.status;
+    const shouldAutoReveal =
+      hasMountedRef.current &&
+      ((canAutoManage && event.status === 'running' && (statusChanged || contentChanged)) ||
+        (hasExpandableContent &&
+          !userInteractedRef.current &&
+          previousWasAutoManaged &&
+          previous?.status === 'running' &&
+          event.status === 'done'));
+
+    if (collapseTimeoutRef.current !== null) {
+      window.clearTimeout(collapseTimeoutRef.current);
+      collapseTimeoutRef.current = null;
+    }
+
+    if (isErrorState) {
+      setIsOpen(true);
+    } else if (shouldOpenOnInitialRunning || shouldAutoReveal) {
+      setIsOpen(true);
+      if (isSuccessfulDone) {
+        collapseTimeoutRef.current = window.setTimeout(() => {
+          setIsOpen(false);
+        }, TOOL_AUTO_COLLAPSE_DELAY_MS);
+      }
+    }
+
+    autoManagedRef.current = event.status === 'running' ? canAutoManage : false;
+
+    previousSnapshotRef.current = {
+      status: event.status,
+      ok: event.ok,
+      output: event.output,
+      diff: event.diff,
+      exitCode: event.exitCode,
+      summary: event.summary,
+    };
+    hasMountedRef.current = true;
+  }, [
+    event.status,
+    event.ok,
+    event.output,
+    event.diff,
+    event.exitCode,
+    event.summary,
+    hasExpandableContent,
+    autoExpandEnabled,
+  ]);
 
   return (
     <details
@@ -297,7 +381,20 @@ export function ToolCallCard({ event }: { event: AgentToolEvent }) {
       open={isOpen}
       onToggle={(event) => setIsOpen((event.currentTarget as HTMLDetailsElement).open)}
     >
-      <summary className="flex w-fit max-w-full list-none items-center gap-1.5 text-mutedForeground/80 hover:text-foreground">
+      <summary
+        className="flex w-fit max-w-full list-none items-center gap-1.5 text-mutedForeground/80 hover:text-foreground"
+        onClick={(summaryEvent) => {
+          if (!hasExpandableContent) {
+            summaryEvent.preventDefault();
+            return;
+          }
+          userInteractedRef.current = true;
+          if (collapseTimeoutRef.current !== null) {
+            window.clearTimeout(collapseTimeoutRef.current);
+            collapseTimeoutRef.current = null;
+          }
+        }}
+      >
         <span
           className={`min-w-0 truncate ${hasExpandableContent ? 'cursor-pointer' : 'cursor-default'} ${
             isCommandLike ? 'font-mono text-xs' : 'text-sm'
@@ -332,7 +429,8 @@ export function ToolCallCard({ event }: { event: AgentToolEvent }) {
               {renderArgs(event.args)}
             </pre>
           ) : null}
-          {(event.diff || (event.output && !inlineOutput)) ? (
+          {event.diff ? <CodeDiffView diff={event.diff} /> : null}
+          {event.output && !inlineOutput ? (
             isPlainTextOutput ? (
               <pre className="overflow-x-auto whitespace-pre-wrap break-all rounded-lg border border-border/60 bg-background/40 px-3 py-2.5 text-xs leading-6 text-foreground font-mono">
                 {formattedOutput}

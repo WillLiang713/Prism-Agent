@@ -46,27 +46,27 @@ export function ThinkingBlock({
 
   return (
     <details
-      className="group text-sm text-mutedForeground"
+      className="group text-xs text-mutedForeground"
       onToggle={(event) => setIsOpen((event.currentTarget as HTMLDetailsElement).open)}
     >
-      <summary className="flex w-fit cursor-pointer list-none items-center gap-1.5 font-medium text-mutedForeground/80 hover:text-foreground">
+      <summary className="flex w-fit cursor-pointer list-none items-center gap-1.5 leading-5 text-mutedForeground/80 hover:text-foreground">
         <span className={cn(status === 'streaming' && 'thinking-title-shimmer')}>{label}</span>
         <ChevronDown className="h-3.5 w-3.5 shrink-0 text-mutedForeground/70 opacity-0 transition-all duration-200 group-hover:opacity-85 group-focus-within:opacity-85 group-open:rotate-180 group-open:opacity-100" />
       </summary>
       {isOpen ? (
         text.trim() ? (
           status === 'streaming' ? (
-            <div className="mt-2 whitespace-pre-wrap break-words text-sm leading-[1.8] text-mutedForeground">
+            <div className="mt-1.5 whitespace-pre-wrap break-words text-xs leading-6 text-mutedForeground">
               {text}
             </div>
           ) : (
             <MarkdownContent
               text={text}
-              className="mt-2 text-sm leading-[1.8] text-mutedForeground [&_pre]:text-foreground"
+              className="mt-1.5 text-xs leading-6 text-mutedForeground [&_pre]:text-foreground [&_pre]:text-xs"
             />
           )
         ) : (
-          <div className="mt-2" />
+          <div className="mt-1.5" />
         )
       ) : null}
     </details>

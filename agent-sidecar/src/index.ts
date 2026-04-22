@@ -1,3 +1,4 @@
+import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
@@ -37,6 +38,7 @@ import {
   isTitleConfigUsable,
   type TitleModelPayload,
 } from './titleGenerator.js';
+import { createWriteUnifiedDiff, type WriteDiffSeed } from './writeDiff.js';
 import type {
   AgentApprovalMode,
   AgentEvent,
@@ -85,6 +87,7 @@ type RuntimeOptions = {
 const authStorage = AuthStorage.create();
 const modelRegistry = ModelRegistry.create(authStorage);
 const pendingApprovals = new Map<string, PendingApproval>();
+const pendingWriteDiffSeeds = new Map<string, WriteDiffSeed>();
 const requestApprovalModes = new Map<string, AgentApprovalMode>();
 const sessionRegistry = new SessionRegistry(resolveDataDir());
 const eventSubscribers = new Set<(event: AgentEvent) => void>();
@@ -597,6 +600,7 @@ async function runPrompt(runtime: RuntimeSessionRecord, requestId: string, paylo
     }
   } finally {
     emitThinkingEndIfNeeded(runtime, requestId, sessionRegistry.isCancelled(runtime.sessionId, requestId) ? 'aborted' : 'done');
+    clearPendingWriteDiffsForSession(runtime.sessionId);
     requestApprovalModes.delete(requestId);
     sessionRegistry.clearRequest(runtime.sessionId, requestId);
     await sessionRegistry.saveSnapshot(runtime.snapshot);
@@ -698,6 +702,10 @@ function createBridgeExtension(context: { sessionId: string; threadId: string })
       }
 
       if (event.toolName === 'edit' || event.toolName === 'write') {
+        if (event.toolName === 'write') {
+          await captureWriteDiffSeed(runtime.sessionId, event.toolCallId, runtime.workspaceRoot, event.input);
+        }
+
         if (approvalMode === 'auto') {
           return undefined;
         }
@@ -716,6 +724,7 @@ function createBridgeExtension(context: { sessionId: string; threadId: string })
         });
         const decision = await waitForApproval(runtime.sessionId, requestId, approvalId);
         if (decision === 'deny') {
+          clearWriteDiffSeed(runtime.sessionId, event.toolCallId);
           finalizeToolEvent(runtime, event.toolCallId, event.toolName, {
             ok: false,
             output: '已拒绝应用文件修改。',
@@ -751,7 +760,9 @@ function createBridgeExtension(context: { sessionId: string; threadId: string })
       }
 
       const output = contentToText(event.content);
-      const diff = extractDiff(event.toolName, event.details);
+      const diff =
+        extractDiff(event.toolName, event.details) ??
+        extractWriteDiff(runtime.sessionId, event.toolCallId, event.toolName, event.input, !event.isError);
       const exitCode = extractExitCode(event.details);
       finalizeToolEvent(runtime, event.toolCallId, event.toolName, {
         ok: !event.isError,
@@ -1291,6 +1302,111 @@ async function fetchProviderModels(params: ListModelsParams): Promise<ListModels
   }
 
   throw new Error(`不支持的服务类型：${selection}`);
+}
+
+function getWriteDiffSeedKey(sessionId: string, toolCallId: string) {
+  return `${sessionId}:${toolCallId}`;
+}
+
+function clearWriteDiffSeed(sessionId: string, toolCallId: string) {
+  pendingWriteDiffSeeds.delete(getWriteDiffSeedKey(sessionId, toolCallId));
+}
+
+function clearPendingWriteDiffsForSession(sessionId: string) {
+  const prefix = `${sessionId}:`;
+  for (const key of pendingWriteDiffSeeds.keys()) {
+    if (key.startsWith(prefix)) {
+      pendingWriteDiffSeeds.delete(key);
+    }
+  }
+}
+
+function extractWriteToolPath(input: unknown) {
+  if (!input || typeof input !== 'object') {
+    return null;
+  }
+
+  const candidate = input as Record<string, unknown>;
+  const pathValue = candidate.path ?? candidate.file_path;
+  return typeof pathValue === 'string' && pathValue.trim() ? pathValue.trim() : null;
+}
+
+function extractWriteToolContent(input: unknown) {
+  if (!input || typeof input !== 'object') {
+    return null;
+  }
+
+  const candidate = input as Record<string, unknown>;
+  return typeof candidate.content === 'string' ? candidate.content : null;
+}
+
+async function captureWriteDiffSeed(
+  sessionId: string,
+  toolCallId: string,
+  workspaceRoot: string,
+  input: unknown,
+) {
+  const toolPath = extractWriteToolPath(input);
+  const nextContent = extractWriteToolContent(input);
+
+  if (!toolPath || nextContent === null) {
+    clearWriteDiffSeed(sessionId, toolCallId);
+    return;
+  }
+
+  const absolutePath = path.isAbsolute(toolPath) ? path.normalize(toolPath) : path.resolve(workspaceRoot, toolPath);
+
+  try {
+    const previousContent = await fs.readFile(absolutePath, 'utf8');
+    pendingWriteDiffSeeds.set(getWriteDiffSeedKey(sessionId, toolCallId), {
+      path: toolPath,
+      existed: true,
+      previousContent,
+    });
+  } catch (error) {
+    const isMissingFile =
+      error instanceof Error &&
+      'code' in error &&
+      typeof (error as { code?: unknown }).code === 'string' &&
+      (error as { code: string }).code === 'ENOENT';
+
+    if (!isMissingFile) {
+      console.warn('[write-diff] failed to capture previous file content:', error);
+    }
+
+    pendingWriteDiffSeeds.set(getWriteDiffSeedKey(sessionId, toolCallId), {
+      path: toolPath,
+      existed: false,
+      previousContent: null,
+    });
+  }
+}
+
+function extractWriteDiff(
+  sessionId: string,
+  toolCallId: string,
+  toolName: string,
+  input: unknown,
+  succeeded: boolean,
+) {
+  if (toolName !== 'write') {
+    return undefined;
+  }
+
+  const seedKey = getWriteDiffSeedKey(sessionId, toolCallId);
+  const seed = pendingWriteDiffSeeds.get(seedKey);
+  pendingWriteDiffSeeds.delete(seedKey);
+
+  if (!succeeded || !seed) {
+    return undefined;
+  }
+
+  const nextContent = extractWriteToolContent(input);
+  if (nextContent === null) {
+    return undefined;
+  }
+
+  return createWriteUnifiedDiff(seed, nextContent);
 }
 
 function normalizeModelIds(ids: Array<string | undefined> | undefined) {

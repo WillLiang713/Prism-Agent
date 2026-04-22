@@ -13,6 +13,12 @@ const CHAT_SIDE_PADDING = 'calc(1.5rem + 10px)';
 const CHAT_PANEL_MAX_WIDTH = '760px';
 const BOTTOM_STICK_THRESHOLD_PX = 160;
 const SUPPRESSED_RUNTIME_REASON = '未指定主模型，请在设置中选择或输入模型名称。';
+const AUTO_SCROLL_MAX_FRAMES = 4;
+
+function getScrollViewport(root: HTMLDivElement | null) {
+  const viewport = root?.querySelector('[data-radix-scroll-area-viewport]');
+  return viewport instanceof HTMLDivElement ? viewport : null;
+}
 
 export function AgentChatPanel({
   initialized,
@@ -49,6 +55,7 @@ export function AgentChatPanel({
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const stickToBottomRef = useRef(true);
   const scrollFrameRef = useRef<number | null>(null);
+  const scrollFrameBudgetRef = useRef(0);
   const activeApproval = useMemo(() => activeSession?.approvals[0] || null, [activeSession]);
   const inputDisabled = !backendReady;
   const submitDisabled = inputDisabled || !agentRuntimeStatus.ready;
@@ -66,6 +73,7 @@ export function AgentChatPanel({
       cancelAnimationFrame(scrollFrameRef.current);
       scrollFrameRef.current = null;
     }
+    scrollFrameBudgetRef.current = 0;
   });
 
   const scheduleScrollToBottom = useEffectEvent(() => {
@@ -73,21 +81,30 @@ export function AgentChatPanel({
       return;
     }
 
-    scrollFrameRef.current = requestAnimationFrame(() => {
+    scrollFrameBudgetRef.current = AUTO_SCROLL_MAX_FRAMES;
+
+    const runScrollFrame = () => {
       scrollFrameRef.current = null;
-      const root = scrollRef.current;
-      const viewport = root?.querySelector('[data-radix-scroll-area-viewport]');
+      const viewport = getScrollViewport(scrollRef.current);
       if (!(viewport instanceof HTMLDivElement) || !stickToBottomRef.current) {
         return;
       }
+
       viewport.scrollTop = viewport.scrollHeight;
-    });
+      scrollFrameBudgetRef.current -= 1;
+
+      const distanceToBottom = viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight;
+      if (distanceToBottom > 1 && scrollFrameBudgetRef.current > 0) {
+        scrollFrameRef.current = requestAnimationFrame(runScrollFrame);
+      }
+    };
+
+    scrollFrameRef.current = requestAnimationFrame(runScrollFrame);
   });
 
   useEffect(() => {
-    const root = scrollRef.current;
-    const viewport = root?.querySelector('[data-radix-scroll-area-viewport]');
-    if (!(viewport instanceof HTMLDivElement)) {
+    const viewport = getScrollViewport(scrollRef.current);
+    if (!viewport) {
       return;
     }
 
@@ -106,25 +123,37 @@ export function AgentChatPanel({
   }, [activeSession?.sessionId]);
 
   useEffect(() => {
-    const root = scrollRef.current;
-    const viewport = root?.querySelector('[data-radix-scroll-area-viewport]');
+    const viewport = getScrollViewport(scrollRef.current);
     const content = viewport?.firstElementChild;
-    if (!(viewport instanceof HTMLDivElement) || !(content instanceof HTMLElement)) {
+    if (!viewport || !(content instanceof HTMLElement)) {
       return;
     }
 
-    const observer = new ResizeObserver(() => {
+    const resizeObserver = new ResizeObserver(() => {
       scheduleScrollToBottom();
     });
-    observer.observe(content);
+    resizeObserver.observe(content);
 
-    return () => observer.disconnect();
+    const mutationObserver = new MutationObserver(() => {
+      scheduleScrollToBottom();
+    });
+    mutationObserver.observe(content, {
+      childList: true,
+      subtree: true,
+      characterData: true,
+      attributes: true,
+      attributeFilter: ['open'],
+    });
+
+    return () => {
+      resizeObserver.disconnect();
+      mutationObserver.disconnect();
+    };
   }, [activeSession?.sessionId]);
 
   useEffect(() => {
-    const root = scrollRef.current;
-    const viewport = root?.querySelector('[data-radix-scroll-area-viewport]');
-    if (!(viewport instanceof HTMLDivElement)) {
+    const viewport = getScrollViewport(scrollRef.current);
+    if (!viewport) {
       return;
     }
 

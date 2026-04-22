@@ -65,12 +65,25 @@ const AgentMessageItem = memo(function AgentMessageItem({
     );
   }
 
+  let lastRunningToolCallId: string | null = null;
+  for (let index = message.timeline.length - 1; index >= 0; index -= 1) {
+    const item = message.timeline[index];
+    if (item.type === 'tool' && item.status === 'running') {
+      lastRunningToolCallId = item.toolCallId;
+      break;
+    }
+  }
+
   return (
     <article className="space-y-4 min-w-0 overflow-hidden">
       {message.timeline.length > 0 ? (
         <div className="space-y-2 min-w-0">
           {message.timeline.map((item) => (
-            <TimelineItem key={item.id} item={item} />
+            <TimelineItem
+              key={item.id}
+              item={item}
+              autoExpandEnabled={item.type === 'tool' && item.toolCallId === lastRunningToolCallId}
+            />
           ))}
         </div>
       ) : null}
@@ -86,7 +99,13 @@ const AgentMessageItem = memo(function AgentMessageItem({
   );
 });
 
-function TimelineItem({ item }: { item: AgentTimelineItem }) {
+function TimelineItem({
+  item,
+  autoExpandEnabled,
+}: {
+  item: AgentTimelineItem;
+  autoExpandEnabled: boolean;
+}) {
   if (item.type === 'thinking') {
     return (
       <ThinkingBlock
@@ -98,7 +117,7 @@ function TimelineItem({ item }: { item: AgentTimelineItem }) {
     );
   }
 
-  return <ToolCallCard event={item} />;
+  return <ToolCallCard event={item} autoExpandEnabled={autoExpandEnabled} />;
 }
 
 function CopyMessageButton({ text }: { text: string }) {

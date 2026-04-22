@@ -1,6 +1,8 @@
 mod agent_sidecar;
 
 #[cfg(windows)]
+use std::env;
+#[cfg(windows)]
 use std::sync::{
     atomic::{AtomicBool, Ordering},
     Arc as StdArc,
@@ -18,7 +20,8 @@ use tauri::{
 
 #[cfg(windows)]
 use windows::Win32::{
-    Foundation::{HWND, LPARAM, LRESULT, WPARAM},
+    Foundation::{CloseHandle, HWND, LPARAM, LRESULT, STILL_ACTIVE, WPARAM},
+    System::Threading::{GetExitCodeProcess, OpenProcess, PROCESS_QUERY_LIMITED_INFORMATION},
     UI::{
         Shell::{DefSubclassProc, RemoveWindowSubclass, SetWindowSubclass},
         WindowsAndMessaging::{
@@ -155,6 +158,53 @@ fn request_exit(app: &tauri::AppHandle) {
     }
     app.exit(0);
 }
+
+#[cfg(windows)]
+fn resolve_dev_parent_pid() -> Option<u32> {
+    if !cfg!(debug_assertions) {
+        return None;
+    }
+
+    env::var("PRISM_DEV_PARENT_PID")
+        .ok()
+        .and_then(|value| value.trim().parse::<u32>().ok())
+        .filter(|pid| *pid > 0)
+}
+
+#[cfg(windows)]
+fn is_process_alive(pid: u32) -> bool {
+    let Ok(handle) = (unsafe { OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, false, pid) }) else {
+        return false;
+    };
+
+    let mut exit_code = 0u32;
+    let result = unsafe { GetExitCodeProcess(handle, &mut exit_code) };
+    let _ = unsafe { CloseHandle(handle) };
+
+    result.is_ok() && exit_code == STILL_ACTIVE.0 as u32
+}
+
+#[cfg(windows)]
+fn install_dev_parent_monitor(app: &tauri::AppHandle) {
+    let Some(parent_pid) = resolve_dev_parent_pid() else {
+        return;
+    };
+
+    let app_handle = app.clone();
+    tauri::async_runtime::spawn(async move {
+        loop {
+            tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+
+            if !is_process_alive(parent_pid) {
+                request_exit(&app_handle);
+                break;
+            }
+        }
+    });
+}
+
+#[cfg(not(windows))]
+fn install_dev_parent_monitor(_app: &tauri::AppHandle) {}
 
 #[cfg(windows)]
 unsafe extern "system" fn handle_session_end_subclass(
@@ -340,6 +390,7 @@ pub fn run() {
             install_windows_session_end_monitor(app.handle(), &window)
                 .map_err(std::io::Error::other)?;
 
+            install_dev_parent_monitor(app.handle());
             create_tray(app.handle()).map_err(std::io::Error::other)?;
 
             Ok(())
