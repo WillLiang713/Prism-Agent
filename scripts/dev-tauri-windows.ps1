@@ -5,20 +5,20 @@ $ErrorActionPreference = "Stop"
 $projectRoot = Split-Path -Parent $PSScriptRoot
 Set-Location $projectRoot
 
-function Resolve-NpmCommand {
-  $npmCommand = Get-Command npm.cmd -ErrorAction SilentlyContinue
-  if ($npmCommand) {
-    return $npmCommand.Source
+function Resolve-BunCommand {
+  $bunCommand = Get-Command bun.exe -ErrorAction SilentlyContinue
+  if ($bunCommand) {
+    return $bunCommand.Source
   }
 
-  $npmCommand = Get-Command npm -ErrorAction SilentlyContinue
-  if ($npmCommand) {
-    return $npmCommand.Source
+  $bunCommand = Get-Command bun -ErrorAction SilentlyContinue
+  if ($bunCommand) {
+    return $bunCommand.Source
   }
 
-  throw "npm was not found."
+  throw "bun was not found."
 }
 
-$npmCommand = Resolve-NpmCommand
-& $npmCommand "run" "tauri:dev"
+$bunCommand = Resolve-BunCommand
+& $bunCommand "run" "tauri:dev"
 exit $LASTEXITCODE

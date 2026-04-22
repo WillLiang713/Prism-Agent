@@ -55,7 +55,7 @@ export function AgentAppLayout() {
 
   const handlePinWorkspace = async () => {
     if (!isDesktop) {
-      const selected = window.prompt('输入要添加到列表的目录路径');
+      const selected = window.prompt('输入要载入到列表的目录路径');
       if (selected?.trim()) {
         pinDirectory(selected.trim());
       }
@@ -65,7 +65,7 @@ export function AgentAppLayout() {
     const selected = await open({
       directory: true,
       multiple: false,
-      title: '添加目录到会话列表',
+      title: '选择要载入的目录',
     });
     if (typeof selected === 'string') {
       pinDirectory(selected);

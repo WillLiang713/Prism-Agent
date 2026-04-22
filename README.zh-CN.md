@@ -30,9 +30,10 @@ Prism-Agent 现在是一个**桌面优先**的 AI 编码桌面应用，技术栈
 
 本地开发前请先确认：
 
-- 已安装 Node.js 和 npm
+- 已安装 Bun
+- 已安装 Node.js
 - 已安装 Rust 和 Cargo
-- 已执行 `npm install` 安装项目依赖
+- 已执行 `bun install` 安装项目依赖
 
 如果你的 `cargo` 在 `~/.cargo/bin` 下，一键开发脚本会自动把它补进 `PATH`。
 
@@ -41,14 +42,13 @@ Prism-Agent 现在是一个**桌面优先**的 AI 编码桌面应用，技术栈
 先安装依赖：
 
 ```bash
-npm install
-npm --prefix web install
+bun install
 ```
 
 然后一条命令启动完整开发环境：
 
 ```bash
-npm run dev
+bun run dev
 ```
 
 这条命令会自动：
@@ -60,8 +60,8 @@ npm run dev
 如果你想手动分开启动，也可以：
 
 ```bash
-npm --prefix web run dev -- --host 127.0.0.1
-source "$HOME/.cargo/env" && cargo tauri dev
+bun run --filter prism-web dev -- --host 127.0.0.1
+source "$HOME/.cargo/env" && bun tauri dev
 ```
 
 ## 打包
@@ -69,15 +69,15 @@ source "$HOME/.cargo/env" && cargo tauri dev
 桌面版打包命令：
 
 ```bash
-npm run build
+bun run build
 ```
 
 这个仓库当前主要面向 Windows 桌面版发布。
 
 ## 说明
 
-- 手动执行 `cargo tauri dev` 时，默认要求 Vite 开发服务已经先启动
-- 日常开发推荐直接用 `npm run dev`
+- 手动执行 `bun tauri dev` 时，默认要求 Vite 开发服务已经先启动
+- 日常开发推荐直接用 `bun run dev`
 - 当前只支持桌面模式
 - 直接在普通浏览器里打开前端页面，不是当前支持的正式使用方式
 

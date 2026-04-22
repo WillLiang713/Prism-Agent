@@ -30,9 +30,10 @@ There is still a `web/` frontend project in the repo, but it is no longer a stan
 
 Before local development, make sure you have:
 
-- Node.js + npm
+- Bun
+- Node.js
 - Rust + Cargo
-- Node.js + npm dependencies installed via `npm install`
+- Project dependencies installed via `bun install`
 
 If `cargo` is installed under `~/.cargo/bin`, the one-command dev script will auto-append it to `PATH`.
 
@@ -41,14 +42,13 @@ If `cargo` is installed under `~/.cargo/bin`, the one-command dev script will au
 Install dependencies:
 
 ```bash
-npm install
-npm --prefix web install
+bun install
 ```
 
 Start the full desktop development environment with one command:
 
 ```bash
-npm run dev
+bun run dev
 ```
 
 This command will:
@@ -61,8 +61,8 @@ This command will:
 If you want to run the pieces manually:
 
 ```bash
-npm --prefix web run dev -- --host 127.0.0.1
-source "$HOME/.cargo/env" && cargo tauri dev
+bun run --filter prism-web dev -- --host 127.0.0.1
+source "$HOME/.cargo/env" && bun tauri dev
 ```
 
 ## Build
@@ -70,15 +70,15 @@ source "$HOME/.cargo/env" && cargo tauri dev
 Build the desktop app:
 
 ```bash
-npm run build
+bun run build
 ```
 
 Windows packaging is the primary supported release target in this repo.
 
 ## Notes
 
-- `cargo tauri dev` expects the Vite dev server to already be available when run manually
-- `npm run dev` is the recommended daily workflow
+- `bun tauri dev` expects the Vite dev server to already be available when run manually
+- `bun run dev` is the recommended daily workflow
 - The app currently targets desktop mode only
 - Opening the frontend directly in a normal browser is not a supported end-user mode
 

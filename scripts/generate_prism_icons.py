@@ -18,33 +18,17 @@ def draw_icon(size: int = MASTER_SIZE) -> Image.Image:
     draw.rounded_rectangle(
         (0, 0, size - 1, size - 1),
         radius=tile_radius,
-        fill=(0, 0, 0, 255),
+        fill=(5, 5, 5, 255),
     )
 
-    prism = [
-        (int(size * 0.31), int(size * 0.25)),
-        (int(size * 0.60), int(size * 0.50)),
-        (int(size * 0.31), int(size * 0.75)),
+    arrow = [
+        (size * 0.3828125, size * 0.265625),
+        (size * 0.6796875, size * 0.5),
+        (size * 0.3828125, size * 0.734375),
     ]
-    draw.polygon(prism, fill=(255, 255, 255, 255))
-
-    beam_width = max(10, int(size * 0.05))
-    draw.line(
-        [
-            (int(size * 0.60), int(size * 0.50)),
-            (int(size * 0.80), int(size * 0.41)),
-        ],
-        fill=(86, 86, 86, 255),
-        width=beam_width,
-    )
-    draw.line(
-        [
-            (int(size * 0.60), int(size * 0.50)),
-            (int(size * 0.80), int(size * 0.59)),
-        ],
-        fill=(228, 228, 228, 255),
-        width=beam_width,
-    )
+    arrow_width = max(12, int(size * 0.0625))
+    draw.polygon(arrow, fill=(255, 255, 255, 255))
+    draw.line(arrow + [arrow[0]], fill=(255, 255, 255, 255), width=arrow_width, joint="curve")
 
     return image
 

@@ -36,36 +36,8 @@ async function findOnPath(names, env) {
   return null;
 }
 
-async function resolveNodeCommand(env) {
-  if (process.execPath && (await pathExists(process.execPath))) {
-    return process.execPath;
-  }
-
-  const fallback = await findOnPath([isWindows ? 'node.exe' : 'node'], env);
-  if (fallback) {
-    return fallback;
-  }
-
-  throw new Error('Node.js executable was not found.');
-}
-
-async function resolveNpmInvocation(env) {
-  const nodeCommand = await resolveNodeCommand(env);
-  const candidates = [
-    process.env.npm_execpath,
-    path.join(path.dirname(nodeCommand), 'node_modules', 'npm', 'bin', 'npm-cli.js'),
-  ].filter(Boolean);
-
-  for (const candidate of candidates) {
-    if (await pathExists(candidate)) {
-      return {
-        command: nodeCommand,
-        args: [candidate],
-      };
-    }
-  }
-
-  const fallback = await findOnPath(isWindows ? ['npm.cmd', 'npm.exe', 'npm'] : ['npm'], env);
+async function resolveBunInvocation(env) {
+  const fallback = await findOnPath(isWindows ? ['bun.exe', 'bun.cmd', 'bun'] : ['bun'], env);
   if (fallback) {
     return {
       command: fallback,
@@ -74,7 +46,7 @@ async function resolveNpmInvocation(env) {
     };
   }
 
-  throw new Error('npm executable was not found.');
+  throw new Error('Bun executable was not found.');
 }
 
 function startDescendantTracking(child) {
@@ -277,7 +249,7 @@ process.on('SIGTERM', () => {
 
 async function main() {
   const env = { ...process.env };
-  const npmInvocation = await resolveNpmInvocation(env);
+  const bunInvocation = await resolveBunInvocation(env);
   const authToken = randomBytes(24).toString('hex');
   const port = await findAvailablePort('127.0.0.1');
   const apiBase = `http://127.0.0.1:${port}`;
@@ -286,12 +258,12 @@ async function main() {
   startProcess(
     'agent-sidecar',
     {
-      ...npmInvocation,
+      ...bunInvocation,
       args: [
-        ...npmInvocation.args,
-        '--workspace',
-        'agent-sidecar',
+        ...bunInvocation.args,
         'run',
+        '--filter',
+        '@prism/agent-sidecar',
         'dev',
         '--',
         '--transport=http',
@@ -316,8 +288,18 @@ async function main() {
   startProcess(
     'web',
     {
-      ...npmInvocation,
-      args: [...npmInvocation.args, '--prefix', 'web', 'run', 'dev', '--', '--host', '127.0.0.1', '--strictPort'],
+      ...bunInvocation,
+      args: [
+        ...bunInvocation.args,
+        'run',
+        '--filter',
+        'prism-web',
+        'dev',
+        '--',
+        '--host',
+        '127.0.0.1',
+        '--strictPort',
+      ],
     },
     {
       env: {

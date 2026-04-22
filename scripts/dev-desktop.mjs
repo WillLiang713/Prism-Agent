@@ -51,23 +51,8 @@ async function resolveNodeCommand(env) {
   throw new Error('Node.js executable was not found.');
 }
 
-async function resolveNpmInvocation(env) {
-  const nodeCommand = await resolveNodeCommand(env);
-  const candidates = [
-    process.env.npm_execpath,
-    path.join(path.dirname(nodeCommand), 'node_modules', 'npm', 'bin', 'npm-cli.js'),
-  ].filter(Boolean);
-
-  for (const candidate of candidates) {
-    if (await pathExists(candidate)) {
-      return {
-        command: nodeCommand,
-        args: [candidate],
-      };
-    }
-  }
-
-  const fallback = await findOnPath(isWindows ? ['npm.cmd', 'npm.exe', 'npm'] : ['npm'], env);
+async function resolveBunInvocation(env) {
+  const fallback = await findOnPath(isWindows ? ['bun.exe', 'bun.cmd', 'bun'] : ['bun'], env);
   if (fallback) {
     return {
       command: fallback,
@@ -76,49 +61,23 @@ async function resolveNpmInvocation(env) {
     };
   }
 
-  throw new Error('npm executable was not found.');
+  throw new Error('Bun executable was not found.');
 }
 
 async function resolveTauriInvocation(env) {
-  const nodeCommand = await resolveNodeCommand(env);
-  const localCli = path.join(projectRoot, 'node_modules', '@tauri-apps', 'cli', 'tauri.js');
-
-  if (await pathExists(localCli)) {
-    return {
-      command: nodeCommand,
-      args: [localCli],
-    };
-  }
-
-  const fallback = await findOnPath(isWindows ? ['tauri.cmd', 'tauri.exe', 'tauri'] : ['tauri'], env);
-  if (fallback) {
-    return {
-      command: fallback,
-      args: [],
-      shell: isWindows && /\.(cmd|bat)$/i.test(fallback),
-    };
-  }
-
-  throw new Error('Tauri CLI was not found.');
+  const bunInvocation = await resolveBunInvocation(env);
+  return {
+    ...bunInvocation,
+    args: [...bunInvocation.args, 'tauri'],
+  };
 }
 
 async function resolveWebInvocation(env) {
-  const nodeCommand = await resolveNodeCommand(env);
-  const localCliCandidates = [
-    path.join(projectRoot, 'node_modules', 'vite', 'bin', 'vite.js'),
-    path.join(projectRoot, 'web', 'node_modules', 'vite', 'bin', 'vite.js'),
-  ];
-
-  for (const candidate of localCliCandidates) {
-    if (await pathExists(candidate)) {
-      return {
-        command: nodeCommand,
-        args: [candidate],
-      };
-    }
-  }
-
-  return resolveNpmInvocation(env);
+  const bunInvocation = await resolveBunInvocation(env);
+  return {
+    ...bunInvocation,
+    args: [...bunInvocation.args, 'run', '--filter', 'prism-web', 'dev', '--'],
+  };
 }
 
 async function ensureCargoPath(env) {
@@ -395,7 +354,6 @@ async function main() {
         ],
       },
       {
-        cwd: path.join(projectRoot, 'web'),
         env: runtimeEnv,
       },
     );
