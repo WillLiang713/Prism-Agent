@@ -6,11 +6,6 @@
       "sourceType": "github",
       "computedHash": "516bd2154eb843a8240e43d5b285229129853114ad7075a5e141e1c08e408c84"
     },
-    "huashu-design": {
-      "source": "alchaincyf/huashu-design",
-      "sourceType": "github",
-      "computedHash": "165e363621476fb8d04a202e52e01a59b74aec6a215a4add96f8ec4eba1d5574"
-    },
     "playwright-best-practices": {
       "source": "currents-dev/playwright-best-practices-skill",
       "sourceType": "github",

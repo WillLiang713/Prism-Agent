@@ -7,14 +7,9 @@
 
 - All UI work must strictly follow the rules defined in `DESIGN.md`.
 - All frontend work must also strictly follow the rules in `web-design-guidelines`; treat them as mandatory requirements, not optional suggestions.
-- For UI design exploration, high-fidelity prototypes, HTML demos, interaction mockups, style-direction work, and design reviews, prefer using the `huashu-design` skill as the default design workflow.
-- When a UI task still needs visual direction, interaction ideas, variations, or a high-fidelity mock before code is obvious, start with `huashu-design` first.
 - Use `frontend-design` for production-grade implementation inside the repository, especially when translating an approved direction into React components, pages, or shippable UI code.
-- If a task includes both exploration and implementation, use the sequence `huashu-design` -> `frontend-design`: explore and compare directions first, then implement the chosen direction in repo code.
-- For small UI fixes or routine refactors that already fit the shipped design system, `frontend-design` may be used directly without forcing a separate `huashu-design` phase.
 - When designing, implementing, or reviewing UI, treat `DESIGN.md` as the primary source of truth for visual style, layout, components, spacing, and interaction details.
 - For frontend design, implementation, review, and refactoring, `DESIGN.md` and `web-design-guidelines` must both be satisfied together.
-- When using `huashu-design` in this repository, keep it constrained by the current Prism-Agent desktop UI language; if its output conflicts with `DESIGN.md` or the shipped UI, align it back to `DESIGN.md` instead of introducing a new visual system.
 - If an existing UI implementation conflicts with `DESIGN.md`, prioritize aligning the result with `DESIGN.md` unless the user explicitly requests an exception.
 
 ## Difficult Bug Investigation
