@@ -25,6 +25,7 @@ venv
 *.log
 *.out
 *.err
+*.tsbuildinfo
 
 tmp
 .worktrees/

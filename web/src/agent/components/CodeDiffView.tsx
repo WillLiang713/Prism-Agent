@@ -52,26 +52,24 @@ function getLineNumberCellClass(kind: DiffRowKind, side: 'left' | 'right') {
   return 'bg-background/35 text-mutedForeground/72';
 }
 
-function getCodeCellClass(kind: DiffRowKind, side: 'left' | 'right') {
+function getCodeTextClass(kind: DiffRowKind, side: 'left' | 'right') {
   if (kind === 'removed' && side === 'left') {
-    return 'bg-[hsl(var(--diff-remove-bg))] text-[hsl(var(--diff-remove-fg))]';
+    return 'text-[hsl(var(--diff-remove-fg))]';
   }
 
   if (kind === 'added' && side === 'right') {
-    return 'bg-[hsl(var(--diff-add-bg))] text-[hsl(var(--diff-add-fg))]';
+    return 'text-[hsl(var(--diff-add-fg))]';
   }
 
   if (kind === 'modified') {
-    return side === 'left'
-      ? 'bg-[hsl(var(--diff-remove-bg))] text-[hsl(var(--diff-remove-fg))]'
-      : 'bg-[hsl(var(--diff-add-bg))] text-[hsl(var(--diff-add-fg))]';
+    return side === 'left' ? 'text-[hsl(var(--diff-remove-fg))]' : 'text-[hsl(var(--diff-add-fg))]';
   }
 
   if (kind === 'removed' || kind === 'added') {
-    return 'bg-muted/24 text-mutedForeground/32';
+    return 'text-mutedForeground/32';
   }
 
-  return 'bg-background/15 text-foreground/88';
+  return 'text-foreground/88';
 }
 
 function getLineNumberCellStyle(kind: DiffRowKind, side: 'left' | 'right'): CSSProperties | undefined {
@@ -104,7 +102,7 @@ function getLineNumberCellStyle(kind: DiffRowKind, side: 'left' | 'right'): CSSP
   return undefined;
 }
 
-function getCodeCellStyle(kind: DiffRowKind, side: 'left' | 'right'): CSSProperties | undefined {
+function getCodeContentStyle(kind: DiffRowKind, side: 'left' | 'right'): CSSProperties | undefined {
   if (kind === 'removed' && side === 'left') {
     return {
       backgroundColor: 'hsl(var(--diff-remove-bg) / 0.92)',
@@ -135,7 +133,15 @@ function getCodeCellStyle(kind: DiffRowKind, side: 'left' | 'right'): CSSPropert
         };
   }
 
-  return undefined;
+  if (kind === 'removed' || kind === 'added') {
+    return {
+      backgroundColor: 'hsl(var(--muted) / 0.24)',
+    };
+  }
+
+  return {
+    backgroundColor: 'hsl(var(--background) / 0.15)',
+  };
 }
 
 function getMarkerStyle(kind: DiffRowKind, side: 'left' | 'right'): CSSProperties | undefined {
@@ -170,6 +176,64 @@ function getMarker(kind: DiffRowKind, side: 'left' | 'right') {
   return ' ';
 }
 
+function getDiffLineNumberProps(
+  kind: DiffRowKind,
+  side: 'left' | 'right',
+  lineNumber: number | null,
+) {
+  return {
+    className: cn(
+      'w-9 px-1 py-0.5 text-right align-top font-mono text-[10.5px] leading-5',
+      getLineNumberCellClass(kind, side),
+    ),
+    style: getLineNumberCellStyle(kind, side),
+    lineNumber: lineNumber ?? '',
+  };
+}
+
+function getSplitDividerStyle(side: 'left' | 'right'): CSSProperties | undefined {
+  if (side !== 'right') {
+    return undefined;
+  }
+
+  return {
+    boxShadow: 'inset 1px 0 0 hsl(var(--border) / 0.4)',
+  };
+}
+
+function getSingleSidedRowShellStyle(kind: 'added' | 'removed'): CSSProperties {
+  return {
+    backgroundColor:
+      kind === 'added' ? 'hsl(var(--diff-add-bg) / 0.18)' : 'hsl(var(--diff-remove-bg) / 0.18)',
+    boxShadow:
+      kind === 'added'
+        ? 'inset 0 1px 0 hsl(var(--diff-add-border) / 0.22), inset 0 -1px 0 hsl(var(--diff-add-border) / 0.22)'
+        : 'inset 0 1px 0 hsl(var(--diff-remove-border) / 0.22), inset 0 -1px 0 hsl(var(--diff-remove-border) / 0.22)',
+  };
+}
+
+function renderDiffCodeContent(
+  kind: DiffRowKind,
+  side: 'left' | 'right',
+  text: string,
+) {
+  return (
+    <div
+      className="inline-flex min-w-full w-max items-start gap-0.5 px-1.5 py-0.5"
+      style={getCodeContentStyle(kind, side)}
+      translate="no"
+    >
+      <span
+        className="w-2 shrink-0 select-none text-center opacity-80"
+        style={getMarkerStyle(kind, side)}
+      >
+        {getMarker(kind, side)}
+      </span>
+      <span className="whitespace-pre text-inherit">{text || ' '}</span>
+    </div>
+  );
+}
+
 function renderDiffRowCell(
   row: ParsedDiffRow,
   side: 'left' | 'right',
@@ -178,38 +242,58 @@ function renderDiffRowCell(
   const isLeft = side === 'left';
   const lineNumber = isLeft ? row.leftLineNumber : row.rightLineNumber;
   const text = isLeft ? row.leftText : row.rightText;
+  const lineNumberProps = getDiffLineNumberProps(row.kind, side, lineNumber);
 
   return (
     <>
       <td
         key={`${key}-line`}
-        className={cn(
-          'w-9 px-1 py-px text-right align-top font-mono text-[9.5px] leading-4',
-          getLineNumberCellClass(row.kind, side),
-        )}
-        style={getLineNumberCellStyle(row.kind, side)}
+        className={lineNumberProps.className}
+        style={{
+          ...lineNumberProps.style,
+          ...getSplitDividerStyle(side),
+        }}
       >
-        {lineNumber ?? ''}
+        {lineNumberProps.lineNumber}
       </td>
       <td
         key={`${key}-code`}
         className={cn(
-          'px-1.5 py-px align-top font-mono text-[10px] leading-4',
-          getCodeCellClass(row.kind, side),
+          'p-0 align-top font-mono text-xs leading-5',
+          getCodeTextClass(row.kind, side),
         )}
-        style={getCodeCellStyle(row.kind, side)}
       >
-        <div className="flex min-w-0 items-start gap-0.5" translate="no">
-          <span
-            className="w-2 shrink-0 select-none text-center opacity-80"
-            style={getMarkerStyle(row.kind, side)}
-          >
-            {getMarker(row.kind, side)}
-          </span>
-          <span className="min-w-0 whitespace-pre text-inherit">{text || ' '}</span>
-        </div>
+        {renderDiffCodeContent(row.kind, side, text)}
       </td>
     </>
+  );
+}
+
+function renderSingleSidedDiffRow(row: ParsedDiffRow) {
+  const kind = row.kind === 'removed' ? 'removed' : 'added';
+  const side = kind === 'removed' ? 'left' : 'right';
+  const lineNumber = side === 'left' ? row.leftLineNumber : row.rightLineNumber;
+  const text = side === 'left' ? row.leftText : row.rightText;
+  const lineNumberProps = getDiffLineNumberProps(kind, side, lineNumber);
+
+  return (
+    <tr key={row.id}>
+      <td colSpan={4} className="p-0 align-top">
+        <div className="inline-flex min-w-full w-max" style={getSingleSidedRowShellStyle(kind)}>
+          <div className={cn(lineNumberProps.className, 'shrink-0')} style={lineNumberProps.style}>
+            {lineNumberProps.lineNumber}
+          </div>
+          <div
+            className={cn(
+              'min-w-0 flex-1 p-0 align-top font-mono text-xs leading-5',
+              getCodeTextClass(kind, side),
+            )}
+          >
+            {renderDiffCodeContent(kind, side, text)}
+          </div>
+        </div>
+      </td>
+    </tr>
   );
 }
 
@@ -219,7 +303,7 @@ export const CodeDiffView = memo(function CodeDiffView({ diff }: { diff: string 
 
   if (files.length === 0 && renderedDiffLines.length === 0) {
     return (
-      <pre className="overflow-x-auto whitespace-pre-wrap break-all rounded-sm border border-border/60 bg-background/35 px-1.5 py-1 text-[10px] leading-4 text-foreground font-mono">
+      <pre className="overflow-x-auto whitespace-pre-wrap break-all rounded-sm border border-border/60 bg-background/35 px-1.5 py-1.5 text-xs leading-5 text-foreground font-mono">
         {diff}
       </pre>
     );
@@ -243,7 +327,7 @@ export const CodeDiffView = memo(function CodeDiffView({ diff }: { diff: string 
                 return (
                   <tr key={line.id}>
                     <td
-                      className="px-1 py-px text-right align-top font-mono text-[9.5px] leading-4"
+                      className="px-1 py-0.5 text-right align-top font-mono text-[10.5px] leading-5"
                       style={
                         isAdded
                           ? {
@@ -261,24 +345,32 @@ export const CodeDiffView = memo(function CodeDiffView({ diff }: { diff: string 
                       {line.lineNumber}
                     </td>
                     <td
-                      className="px-1.5 py-px align-top font-mono text-[10px] leading-4 text-foreground/86"
-                      style={
+                      className={cn(
+                        'p-0 align-top font-mono text-xs leading-5',
                         isAdded
-                          ? {
-                              backgroundColor: 'hsl(var(--diff-add-bg) / 0.92)',
-                              color: 'hsl(var(--diff-add-fg))',
-                              boxShadow: 'inset 2px 0 0 hsl(var(--diff-add-border))',
-                            }
+                          ? 'text-[hsl(var(--diff-add-fg))]'
                           : isRemoved
-                            ? {
-                                backgroundColor: 'hsl(var(--diff-remove-bg) / 0.92)',
-                                color: 'hsl(var(--diff-remove-fg))',
-                                boxShadow: 'inset 2px 0 0 hsl(var(--diff-remove-border))',
-                              }
-                            : undefined
-                      }
+                            ? 'text-[hsl(var(--diff-remove-fg))]'
+                            : 'text-foreground/86',
+                      )}
                     >
-                      <div className="flex min-w-0 items-start gap-0.5" translate="no">
+                      <div
+                        className="inline-flex min-w-full w-max items-start gap-0.5 px-1.5 py-0.5"
+                        style={
+                          isAdded
+                            ? {
+                                backgroundColor: 'hsl(var(--diff-add-bg) / 0.92)',
+                                boxShadow: 'inset 2px 0 0 hsl(var(--diff-add-border))',
+                              }
+                            : isRemoved
+                              ? {
+                                  backgroundColor: 'hsl(var(--diff-remove-bg) / 0.92)',
+                                  boxShadow: 'inset 2px 0 0 hsl(var(--diff-remove-border))',
+                                }
+                              : undefined
+                        }
+                        translate="no"
+                      >
                         <span
                           className="w-2 shrink-0 select-none text-center"
                           style={
@@ -291,7 +383,7 @@ export const CodeDiffView = memo(function CodeDiffView({ diff }: { diff: string 
                         >
                           {isAdded ? '+' : isRemoved ? '-' : ' '}
                         </span>
-                        <span className="min-w-0 whitespace-pre text-inherit">{line.text || ' '}</span>
+                        <span className="whitespace-pre text-inherit">{line.text || ' '}</span>
                       </div>
                     </td>
                   </tr>
@@ -316,12 +408,12 @@ export const CodeDiffView = memo(function CodeDiffView({ diff }: { diff: string 
           >
             <div className="flex items-center justify-between gap-1 bg-muted/18 px-1.5 py-0.5">
               <div
-                className="min-w-0 truncate font-mono text-[10px] leading-4 text-foreground/88"
+                className="min-w-0 truncate font-mono text-[11px] leading-5 text-foreground/88"
                 translate="no"
               >
                 {getDiffFileLabel(file)}
               </div>
-              <div className="flex shrink-0 items-center gap-0.5 font-mono text-[9px] leading-4">
+              <div className="flex shrink-0 items-center gap-0.5 font-mono text-[10px] leading-5">
                 {status ? (
                   <span
                     className="rounded-sm border px-1 py-px"
@@ -367,18 +459,22 @@ export const CodeDiffView = memo(function CodeDiffView({ diff }: { diff: string 
                       <tr className="bg-muted/12">
                         <td
                           colSpan={4}
-                          className="px-1.5 py-px font-mono text-[9px] leading-4 text-mutedForeground/62"
+                          className="px-1.5 py-0.5 font-mono text-[10px] leading-5 text-mutedForeground/62"
                           translate="no"
                         >
                           {hunk.header}
                         </td>
                       </tr>
-                      {hunk.rows.map((row) => (
-                        <tr key={row.id}>
-                          {renderDiffRowCell(row, 'left', `${row.id}-left`)}
-                          {renderDiffRowCell(row, 'right', `${row.id}-right`)}
-                        </tr>
-                      ))}
+                      {hunk.rows.map((row) =>
+                        row.kind === 'added' || row.kind === 'removed' ? (
+                          renderSingleSidedDiffRow(row)
+                        ) : (
+                          <tr key={row.id}>
+                            {renderDiffRowCell(row, 'left', `${row.id}-left`)}
+                            {renderDiffRowCell(row, 'right', `${row.id}-right`)}
+                          </tr>
+                        ),
+                      )}
                     </Fragment>
                   ))}
                 </tbody>
