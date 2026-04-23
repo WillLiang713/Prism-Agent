@@ -16,8 +16,6 @@ src-tauri/binaries/prism-backend-*.exe
 # Virtual environments
 .venv
 venv
-.claude
-.codex
 
 # Environment variables and secrets
 .env

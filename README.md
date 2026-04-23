@@ -1,6 +1,6 @@
 # Prism-Agent
 
-[简体中文](./README.zh-CN.md)
+[简体中文](./docs/README.zh-CN.md)
 
 Prism-Agent is now a desktop-first AI coding desktop app built with `React + Vite + Tauri`.
 
@@ -93,6 +93,7 @@ Windows packaging is the primary supported release target in this repo.
 
 ```text
 Prism-Agent/
+├── docs/                  # Chinese docs and project reference docs
 ├── agent-sidecar/         # Node sidecar for the pi agent runtime
 ├── scripts/               # Dev and build helper scripts
 ├── src-tauri/             # Tauri desktop shell

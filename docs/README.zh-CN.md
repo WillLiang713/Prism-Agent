@@ -1,6 +1,6 @@
 # Prism-Agent
 
-[English](./README.md)
+[English](../README.md)
 
 Prism-Agent 现在是一个**桌面优先**的 AI 编码桌面应用，技术栈是 `React + Vite + Tauri`。
 
@@ -92,15 +92,16 @@ bun run build
 
 ```text
 Prism-Agent/
+├── docs/                  # 中文文档和项目参考文档
 ├── agent-sidecar/         # pi agent 运行时的 Node sidecar
 ├── scripts/               # 开发与打包辅助脚本
 ├── src-tauri/             # Tauri 桌面壳
 ├── web/                   # React/Vite 桌面前端
 ├── package.json
-└── README.zh-CN.md
+└── README.md
 ```
 
 ## 第三方字体
 
 - 桌面界面当前使用 Geist / Geist Mono，CJK 文本回退到系统 UI 字体。
-- 详见 [docs/THIRD_PARTY_FONTS.md](./docs/THIRD_PARTY_FONTS.md)。
+- 详见 [THIRD_PARTY_FONTS.md](./THIRD_PARTY_FONTS.md)。
