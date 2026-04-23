@@ -31,6 +31,8 @@
 - All UI work must strictly follow the rules defined in `DESIGN.md`.
 - All frontend work must also strictly follow the rules in `web-design-guidelines`; treat them as mandatory requirements, not optional suggestions.
 - Use `frontend-design` for production-grade implementation inside the repository, especially when translating an approved direction into React components, pages, or shippable UI code.
+- For React frontend implementation, review, refactoring, and performance optimization work, use `vercel-react-best-practices` as the default performance guidance.
+- Apply `vercel-react-best-practices` especially when touching component structure, rendering behavior, state subscriptions, async data flow, or bundle-size-sensitive frontend code.
 - When designing, implementing, or reviewing UI, treat `DESIGN.md` as the primary source of truth for visual style, layout, components, spacing, and interaction details.
 - For frontend design, implementation, review, and refactoring, `DESIGN.md` and `web-design-guidelines` must both be satisfied together.
 - If an existing UI implementation conflicts with `DESIGN.md`, prioritize aligning the result with `DESIGN.md` unless the user explicitly requests an exception.

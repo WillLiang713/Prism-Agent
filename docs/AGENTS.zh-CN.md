@@ -31,6 +31,8 @@
 - 所有 UI 相关工作都必须严格遵循 `DESIGN.md` 中定义的规则。
 - 所有前端相关工作也必须严格遵循 `web-design-guidelines` 中的规则；这些规则属于强制要求，不是可选建议。
 - `frontend-design` 主要负责仓库内的生产级前端实现，尤其适合把已经确认的设计方向落成 React 组件、页面和可交付 UI 代码。
+- 对于 React 前端实现、代码审查、重构和性能优化相关工作，默认应将 `vercel-react-best-practices` 作为性能层面的主要参考。
+- 尤其是在修改组件结构、渲染行为、状态订阅、异步数据链路或对 bundle 体积敏感的前端代码时，应优先应用 `vercel-react-best-practices`。
 - 在设计、实现或审查 UI 时，应将 `DESIGN.md` 视为视觉风格、布局、组件、间距和交互细节的首要依据。
 - 对于前端设计、实现、审查和重构，必须同时满足 `DESIGN.md` 与 `web-design-guidelines` 两套要求。
 - 如果现有 UI 实现与 `DESIGN.md` 冲突，除非用户明确要求例外，否则应优先使结果与 `DESIGN.md` 保持一致。
