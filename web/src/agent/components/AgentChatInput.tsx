@@ -1,4 +1,4 @@
-import { ArrowUp, ChevronDown, FolderOpen, Paperclip, Play, X } from 'lucide-react';
+import { ArrowUp, Paperclip, Play, X } from 'lucide-react';
 import {
   useMemo,
   useRef,
@@ -7,10 +7,6 @@ import {
   type FormEvent,
   type KeyboardEvent,
 } from 'react';
-import * as PopoverPrimitive from '@radix-ui/react-popover';
-
-import { useAgentSessionStore } from '../sessionStore';
-
 import { reasoningOptions } from '../../lib/configOptions';
 import { Button } from '../../components/ui/button';
 import { ContentImage } from '../../components/ui/content-image';
@@ -30,8 +26,6 @@ export function AgentChatInput({
   approvalMode,
   fallbackModel,
   onApprovalModeChange,
-  workspaceRoot,
-  onSelectWorkspace,
   onSubmit,
   onStop,
 }: {
@@ -42,8 +36,6 @@ export function AgentChatInput({
   approvalMode: AgentApprovalMode;
   fallbackModel?: string;
   onApprovalModeChange: (mode: AgentApprovalMode) => void;
-  workspaceRoot?: string;
-  onSelectWorkspace: (cwd: string) => void;
   onSubmit: (payload: {
     text: string;
     images: Array<{ name: string; mediaType: string; dataUrl: string }>;
@@ -63,8 +55,6 @@ export function AgentChatInput({
     [services, runtimeModelConfig, serviceManagerSelectedId],
   );
   const displayModelId = selectedModelId || fallbackModel || '';
-  const workspaceName = workspaceRoot?.split(/[\\/]/).filter(Boolean).pop() || '选择工作区';
-  const pinnedDirectories = useAgentSessionStore((state) => state.pinnedDirectories);
   const [text, setText] = useState('');
   const [reasoningEffort, setReasoningEffort] = useState<AgentReasoningEffort>('high');
   const [images, setImages] = useState<Array<{ name: string; mediaType: string; dataUrl: string }>>(
@@ -181,56 +171,6 @@ export function AgentChatInput({
             <Paperclip className="h-4 w-4 text-mutedForeground" />
           </Button>
 
-          <PopoverPrimitive.Root>
-            <PopoverPrimitive.Trigger asChild>
-              <Button
-                type="button"
-                variant="secondary"
-                disabled={inputDisabled}
-                title={workspaceRoot || '切换工作区'}
-                aria-label={workspaceRoot ? `当前工作区：${workspaceRoot}，点击切换` : '切换工作区'}
-                className="h-8 min-w-[112px] max-w-[180px] shrink-0 rounded-full bg-card px-3 text-xs font-medium shadow-none"
-              >
-                <FolderOpen className="h-4 w-4 shrink-0 text-mutedForeground" />
-                <span className="min-w-0 flex-1 truncate text-center font-medium">{workspaceName}</span>
-                <ChevronDown className="h-4 w-4 shrink-0 text-mutedForeground" />
-              </Button>
-            </PopoverPrimitive.Trigger>
-            <PopoverPrimitive.Portal>
-              <PopoverPrimitive.Content
-                side="top"
-                align="start"
-                sideOffset={6}
-                collisionPadding={8}
-                className="z-50 min-w-[220px] max-w-[320px] overflow-hidden rounded-xl border border-border bg-muted p-1 text-foreground shadow-[0_18px_40px_rgba(0,0,0,0.22)]"
-              >
-                {pinnedDirectories.length === 0 ? (
-                  <div className="px-3 py-2 text-xs text-mutedForeground">
-                    暂无目录，请在侧边栏添加
-                  </div>
-                ) : (
-                  pinnedDirectories.map((path) => {
-                    const isActive = path === workspaceRoot;
-                    const name = path.split(/[\\/]/).filter(Boolean).pop() || path;
-                    return (
-                      <PopoverPrimitive.Close asChild key={path}>
-                        <button
-                          type="button"
-                          onClick={() => onSelectWorkspace(path)}
-                          title={path}
-                          className="flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm text-foreground outline-none transition-colors hover:bg-card"
-                        >
-                          <FolderOpen className="h-3.5 w-3.5 shrink-0 text-mutedForeground" />
-                          <span className="min-w-0 flex-1 truncate text-left">{name}</span>
-                        </button>
-                      </PopoverPrimitive.Close>
-                    );
-                  })
-                )}
-              </PopoverPrimitive.Content>
-            </PopoverPrimitive.Portal>
-          </PopoverPrimitive.Root>
-
           <Select value={approvalMode} onValueChange={(value) => onApprovalModeChange(value as AgentApprovalMode)}>
             <SelectTrigger
               className="relative h-8 w-[96px] cursor-pointer px-3 text-xs [&>svg:last-child]:absolute [&>svg:last-child]:right-3 [&>svg:last-child]:top-1/2 [&>svg:last-child]:-translate-y-1/2"
@@ -240,8 +180,8 @@ export function AgentChatInput({
               <span className="absolute left-1/2 top-1/2 max-w-[calc(100%-3.5rem)] -translate-x-1/2 -translate-y-1/2 truncate text-center font-medium">{approvalMode === 'auto' ? '自动' : '手动'}</span>
             </SelectTrigger>
             <SelectContent side="top" widthMode="compact">
-              <SelectItem value="auto" className="cursor-pointer">自动</SelectItem>
-              <SelectItem value="manual" className="cursor-pointer">手动</SelectItem>
+              <SelectItem value="auto" className="cursor-pointer text-center">自动</SelectItem>
+              <SelectItem value="manual" className="cursor-pointer text-center">手动</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -259,7 +199,7 @@ export function AgentChatInput({
             </SelectTrigger>
             <SelectContent side="top" widthMode="compact">
               {reasoningOptions.map((option) => (
-                <SelectItem key={option.value} value={option.value} className="cursor-pointer">
+                <SelectItem key={option.value} value={option.value} className="cursor-pointer text-center">
                   {option.label}
                 </SelectItem>
               ))}

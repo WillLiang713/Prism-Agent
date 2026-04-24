@@ -45,7 +45,9 @@ export const SelectContent = React.forwardRef<
       ref={ref}
       className={cn(
         'relative z-50 max-h-96 overflow-hidden rounded-xl border border-border bg-muted p-1 text-foreground shadow-[0_18px_40px_rgba(0,0,0,0.22)]',
-        widthMode === 'compact' ? 'min-w-[5.5rem]' : 'min-w-[8rem]',
+        widthMode === 'compact'
+          ? 'min-w-[5.5rem]'
+          : 'w-[var(--radix-select-trigger-width)] min-w-[8rem]',
         position === 'popper' &&
           'data-[side=bottom]:translate-y-1 data-[side=left]:-translate-x-1 data-[side=right]:translate-x-1 data-[side=top]:-translate-y-1',
         className,
@@ -62,7 +64,7 @@ export const SelectContent = React.forwardRef<
           position === 'popper' &&
             (widthMode === 'compact'
               ? 'h-[var(--radix-select-trigger-height)] w-auto min-w-[5.5rem]'
-              : 'h-[var(--radix-select-trigger-height)] w-full min-w-[var(--radix-select-trigger-width)]'),
+              : 'w-full'),
         )}
       >
         {children}
@@ -92,20 +94,27 @@ SelectLabel.displayName = SelectPrimitive.Label.displayName;
 export const SelectItem = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.Item>,
   React.ComponentPropsWithoutRef<typeof SelectPrimitive.Item>
->(({ className, children, ...props }, ref) => (
-  <SelectPrimitive.Item
-    ref={ref}
-    className={cn(
-      'flex w-full cursor-pointer select-none items-center justify-center rounded-full px-3 py-2 text-center text-sm text-foreground outline-none transition-colors hover:bg-card focus:bg-card data-[highlighted]:bg-card data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
-      className,
-    )}
-    {...props}
-  >
-    <SelectPrimitive.ItemText>
-      <span className="block w-full text-center">{children}</span>
-    </SelectPrimitive.ItemText>
-  </SelectPrimitive.Item>
-));
+>(({ className, children, ...props }, ref) => {
+  const isTextCentered = typeof className === 'string' && className.includes('text-center');
+  const itemAlignmentClassName = isTextCentered ? 'justify-center' : 'justify-start';
+  const textAlignClassName = isTextCentered ? 'text-center' : 'text-left';
+
+  return (
+    <SelectPrimitive.Item
+      ref={ref}
+      className={cn(
+        'flex w-full cursor-pointer select-none items-center rounded-full px-3 py-2 text-sm text-foreground outline-none transition-colors hover:bg-card focus:bg-card data-[highlighted]:bg-card data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
+        itemAlignmentClassName,
+        className,
+      )}
+      {...props}
+    >
+      <SelectPrimitive.ItemText className="w-full min-w-0">
+        <span className={cn('block w-full truncate', textAlignClassName)}>{children}</span>
+      </SelectPrimitive.ItemText>
+    </SelectPrimitive.Item>
+  );
+});
 
 SelectItem.displayName = SelectPrimitive.Item.displayName;
 

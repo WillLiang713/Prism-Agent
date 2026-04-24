@@ -65,7 +65,7 @@ export function SkillsDisplay({ skills }: { skills: AgentSkillsSnapshot }) {
                 <Tooltip key={skill.id}>
                   <TooltipTrigger asChild>
                     <span
-                      className={`cursor-default select-none rounded-md border px-2.5 py-0.5 text-[11px] font-medium transition-all ${
+                      className={`cursor-pointer select-none rounded-md border px-2.5 py-0.5 text-[11px] font-medium transition-[border-color,color,background-color] ${
                         skill.hasIssue
                           ? 'border-warm/50 bg-warm/5 text-warm'
                           : 'border-border/40 bg-muted/20 text-mutedForeground hover:border-border/60 hover:text-mutedForeground/90'

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import * as PopoverPrimitive from '@radix-ui/react-popover';
 import { Command } from 'cmdk';
@@ -26,7 +26,6 @@ export function GeneralSettings() {
   const [success, setSuccess] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
-  const triggerRef = useRef<HTMLButtonElement>(null);
 
   const currentService = resolveSelectedService(services, serviceManagerSelectedId);
   const displayModel = runtimeModelConfig.titleModel || '';
@@ -105,12 +104,18 @@ export function GeneralSettings() {
 
   return (
     <div className="space-y-5 pt-6 md:pt-0">
-      <div className="grid gap-2 text-xs">
-        <div className="flex items-center justify-between gap-2 px-4">
-          <span className="text-mutedForeground">标题模型</span>
-          <div className="flex min-w-0 items-center gap-2">
+      <div className="grid gap-3 rounded-2xl border border-border/50 bg-background/20 p-4 text-xs md:grid-cols-[minmax(0,1fr)_minmax(20rem,28rem)] md:items-center">
+        <div className="space-y-1">
+          <span className="font-medium text-foreground">标题模型</span>
+          <p className="max-w-md text-[11px] leading-5 text-mutedForeground">
+            用于生成会话标题；留空时跟随当前服务的默认模型
+          </p>
+        </div>
+        <div className="grid min-w-0 gap-2">
+          <div className="flex min-w-0 items-center justify-end gap-2 px-1">
             {error ? (
               <span
+                aria-live="polite"
                 className="max-w-[160px] truncate text-[11px] text-danger/80"
                 title={error}
               >
@@ -118,6 +123,7 @@ export function GeneralSettings() {
               </span>
             ) : success ? (
               <span
+                aria-live="polite"
                 className="max-w-[160px] truncate text-[11px] text-success/80 dark:text-success"
                 title={success}
               >
@@ -128,7 +134,7 @@ export function GeneralSettings() {
               type="button"
               onClick={() => refreshAllModels()}
               disabled={loading}
-              className="flex shrink-0 items-center gap-1 text-[11px] text-mutedForeground/80 hover:text-foreground disabled:opacity-50"
+              className="flex shrink-0 items-center gap-1 rounded-md text-[11px] text-mutedForeground/80 outline-none hover:text-foreground focus-visible:ring-1 focus-visible:ring-foreground/20 disabled:opacity-50"
               title="从所有服务获取模型列表"
             >
               <RefreshCw
@@ -137,36 +143,47 @@ export function GeneralSettings() {
               {loading ? '获取中' : '获取'}
             </button>
           </div>
-        </div>
 
         <PopoverPrimitive.Root open={open} onOpenChange={setOpen}>
           <PopoverPrimitive.Trigger asChild>
             <button
-              ref={triggerRef}
               type="button"
-              className="flex h-11 w-full cursor-pointer items-center justify-between gap-2 rounded-full border border-border bg-card px-4 py-3 text-sm text-foreground outline-none transition-colors"
+              className="relative flex h-11 w-full cursor-pointer items-center overflow-hidden rounded-full border border-border bg-card px-4 py-3 text-sm text-foreground outline-none transition-colors hover:bg-muted focus-visible:ring-1 focus-visible:ring-foreground/20"
             >
               <span
+                aria-hidden="true"
                 className={cn(
-                  'truncate',
+                  'invisible block max-w-full truncate px-6',
                   !displayModel && 'text-mutedForeground',
                   displayModel && 'font-mono lowercase tracking-tight',
                 )}
               >
                 {displayModel || placeholder}
               </span>
-              <ChevronDown className="h-4 w-4 shrink-0 opacity-60" />
+              <span
+                className={cn(
+                  'pointer-events-none absolute left-1/2 top-1/2 max-w-[calc(100%-3.5rem)] -translate-x-1/2 -translate-y-1/2 truncate text-center',
+                  !displayModel && 'text-mutedForeground',
+                  displayModel && 'font-mono lowercase tracking-tight',
+                )}
+              >
+                {displayModel || placeholder}
+              </span>
+              <ChevronDown className="absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 opacity-60" />
             </button>
           </PopoverPrimitive.Trigger>
           <PopoverPrimitive.Portal>
             <PopoverPrimitive.Content
               align="start"
               sideOffset={4}
-              style={{ width: triggerRef.current?.offsetWidth }}
-              className="z-50 overflow-hidden rounded-xl border border-border bg-muted p-1 text-foreground shadow-[0_18px_40px_rgba(0,0,0,0.22)]"
+              collisionPadding={12}
+              className="z-50 w-[var(--radix-popover-trigger-width)] max-w-[calc(100vw-1.5rem)] overflow-hidden rounded-xl border border-border bg-muted p-1 text-foreground shadow-[0_18px_40px_rgba(0,0,0,0.22)]"
             >
               <Command shouldFilter={true} className="flex flex-col">
                 <Command.Input
+                  aria-label="搜索标题模型"
+                  name="title-model-search"
+                  autoComplete="off"
                   value={search}
                   onValueChange={(next) => {
                     setSearch(next);
@@ -187,17 +204,15 @@ export function GeneralSettings() {
                   {serviceModelGroups.map((group) => (
                     <Command.Group
                       key={group.serviceId}
-                      heading={group.serviceName}
-                      className="[&_[cmdk-group-heading]]:px-3 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-[11px] [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:tracking-wider [&_[cmdk-group-heading]]:text-mutedForeground/60"
                     >
                       {group.models.map((model) => (
                         <Command.Item
                           key={`${group.serviceId}:${model}`}
                           value={`${group.serviceName} ${model}`}
                           onSelect={() => handleSelectModel(group.serviceId, model)}
-                          className="flex w-full cursor-pointer select-none items-center justify-center rounded-full px-3 py-2 text-center text-sm text-foreground outline-none transition-colors hover:bg-card data-[selected=true]:bg-card"
+                          className="flex w-full cursor-pointer select-none items-center rounded-full px-3 py-2 text-sm text-foreground outline-none transition-colors hover:bg-card data-[selected=true]:bg-card"
                         >
-                          <span className="block w-full truncate text-center font-mono lowercase tracking-tight">
+                          <span className="block w-full truncate font-mono lowercase tracking-tight">
                             {model}
                           </span>
                         </Command.Item>
@@ -209,6 +224,7 @@ export function GeneralSettings() {
             </PopoverPrimitive.Content>
           </PopoverPrimitive.Portal>
         </PopoverPrimitive.Root>
+      </div>
       </div>
     </div>
   );

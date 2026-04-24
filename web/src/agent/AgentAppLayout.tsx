@@ -11,7 +11,6 @@ import { useAgentChat } from './useAgentChat';
 import { useAgentSessionStore } from './sessionStore';
 import { WindowControls } from '../components/layout/WindowControls';
 import { isDesktopRuntime } from '../lib/runtime';
-import { resolveWorkspaceSelection } from './workspaceSelection';
 
 export function AgentAppLayout() {
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -41,17 +40,6 @@ export function AgentAppLayout() {
   const pinDirectory = useAgentSessionStore((state) => state.pinDirectory);
   const headerIconButtonClass =
     'h-8 w-8 rounded-full border border-transparent text-foreground hover:bg-muted hover:text-foreground';
-
-  const handleWorkspaceSelection = async (selectedWorkspace: string) => {
-    const selection = resolveWorkspaceSelection(selectedWorkspace, threadList);
-
-    if (selection.mode === 'resume') {
-      await resumeThread(selection.threadId, selection.cwd);
-      return;
-    }
-
-    await startNewSession(selection.cwd);
-  };
 
   const handlePinWorkspace = async () => {
     if (!isDesktop) {
@@ -123,9 +111,6 @@ export function AgentAppLayout() {
               agentRuntimeStatus={agentRuntimeStatus}
               agentConfigValidating={agentConfigValidating}
               onApprovalModeChange={setApprovalMode}
-              onSelectWorkspace={(cwd) => {
-                void handleWorkspaceSelection(cwd);
-              }}
               onSendMessage={(payload) => {
                 void sendMessage(payload);
               }}

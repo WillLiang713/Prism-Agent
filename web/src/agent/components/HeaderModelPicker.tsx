@@ -100,7 +100,8 @@ export function HeaderModelPicker({ currentModel }: { currentModel: string }) {
           align="center"
           side="top"
           sideOffset={6}
-          className="z-50 w-[248px] overflow-hidden rounded-xl border border-border bg-muted p-1 text-foreground shadow-[0_18px_40px_rgba(0,0,0,0.22)]"
+          collisionPadding={12}
+          className="z-50 w-[min(22rem,calc(100vw-1.5rem))] overflow-hidden rounded-xl border border-border bg-muted p-1 text-foreground shadow-[0_18px_40px_rgba(0,0,0,0.22)]"
         >
           <Command shouldFilter={true} className="flex flex-col">
             <div className="flex items-center gap-1 px-1">
@@ -108,7 +109,7 @@ export function HeaderModelPicker({ currentModel }: { currentModel: string }) {
                 value={search}
                 onValueChange={setSearch}
                 placeholder="搜索模型…"
-                className="h-8 w-full rounded-md bg-transparent px-2 text-sm text-foreground placeholder:text-mutedForeground outline-none"
+                className="h-8 min-w-0 flex-1 rounded-md bg-transparent px-2 text-sm text-foreground placeholder:text-mutedForeground outline-none"
               />
               <button
                 type="button"
@@ -127,7 +128,7 @@ export function HeaderModelPicker({ currentModel }: { currentModel: string }) {
                 event.currentTarget.scrollTop += event.deltaY;
               }}
             >
-              <Command.Empty className="py-3 text-center text-xs text-mutedForeground">
+              <Command.Empty className="px-2 py-3 text-center text-xs text-mutedForeground">
                 {loading ? '获取中…' : modelOptions.length === 0 ? '点击右上角获取模型列表' : '无匹配项'}
               </Command.Empty>
               {modelOptions.map((option) => (
@@ -135,9 +136,10 @@ export function HeaderModelPicker({ currentModel }: { currentModel: string }) {
                   key={option}
                   value={option}
                   onSelect={() => handlePick(option)}
-                  className="flex cursor-pointer select-none items-center justify-center rounded-md px-2 py-1.5 text-center text-sm text-foreground outline-none transition-colors data-[selected=true]:bg-card"
+                  title={option}
+                  className="flex cursor-pointer select-none items-center rounded-md px-2 py-1.5 text-sm text-foreground outline-none transition-colors data-[selected=true]:bg-card"
                 >
-                  <span className="block w-full truncate text-center font-mono font-normal lowercase">{option}</span>
+                  <span className="block w-full truncate font-mono font-normal lowercase">{option}</span>
                 </Command.Item>
               ))}
             </Command.List>
