@@ -397,12 +397,12 @@ export function ToolCallCard({
       >
         <span
           className={`min-w-0 truncate ${hasExpandableContent ? 'cursor-pointer' : 'cursor-default'} ${
-            isCommandLike ? 'font-mono text-xs' : 'text-sm'
+            isCommandLike ? 'font-mono text-[13px] leading-5' : 'text-sm'
           }`}
         >
           <span className="shrink-0">{header.title}</span>
           {header.detail ? (
-            <span className="ml-1.5 min-w-0 truncate text-mutedForeground/60">
+            <span className="ml-1.5 min-w-0 truncate text-mutedForeground/70">
               {header.detail}
             </span>
           ) : null}

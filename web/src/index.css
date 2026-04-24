@@ -25,7 +25,7 @@
   --diff-remove-fg: 355 58% 24%;
   --font-body: "Geist Variable", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei UI", "Microsoft YaHei", -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
   --font-display: "Geist Variable", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei UI", "Microsoft YaHei", -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", system-ui, sans-serif;
-  --font-mono: "Geist Mono Variable", ui-monospace, "SFMono-Regular", "SF Mono", Menlo, Consolas, "Liberation Mono", "Courier New", monospace;
+  --font-mono: "JetBrains Mono Variable", "Cascadia Code", "Cascadia Mono", Consolas, "Geist Mono Variable", ui-monospace, "SFMono-Regular", "SF Mono", Menlo, "Liberation Mono", "Courier New", monospace;
 }
 
 .dark {

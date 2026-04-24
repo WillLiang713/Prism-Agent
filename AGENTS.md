@@ -18,6 +18,7 @@
 - For `agent-sidecar/` changes, prefer at least a sidecar build or equivalent targeted validation.
 - For changes that affect the desktop integration, runtime wiring, or Tauri configuration, prefer validating the desktop startup path rather than checking only isolated modules.
 - If you modify files that already have nearby tests, run the relevant tests unless the user explicitly asks you not to or the environment prevents it.
+- Do not leave one-off test files created only for investigation. Delete temporary tests before finishing, or convert them into intentional regression tests in the existing test suite and call that out clearly.
 - If you could not run a meaningful validation step, say so clearly and explain the gap.
 
 ## Generated Artifacts
@@ -57,6 +58,7 @@
 - Do not start background services on your own when browser automation can proceed with an already-running service, to avoid conflicting with services the user has already started.
 - When starting browser-based tests, do not keep backend services running in the foreground; start them in the background or use a detached process so the test workflow does not get stuck.
 - After completing tests, clean up any cache files, temporary artifacts, and test output created during the run; do not leave junk in the repository.
+- Treat newly created ad hoc `*.test.*`, `*.spec.*`, fixture, and repro files as temporary unless they are deliberate source-controlled regression coverage. Remove temporary ones before the final response.
 - After browser-based tests finish, terminate any leftover backend, browser, driver, or test-related processes started for the run so they do not accumulate and slow down or freeze the machine.
 
 ## Documentation Sync

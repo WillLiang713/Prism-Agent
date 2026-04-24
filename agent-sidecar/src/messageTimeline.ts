@@ -49,15 +49,19 @@ export function closeOpenThinking(
   message: AgentSessionMessage,
   options: { status: FinalThinkingStatus; endedAt?: number; durationSec?: number },
 ) {
-  const current = getOpenThinkingItem(message);
-  if (!current) {
+  const entry = getOpenThinkingEntry(message);
+  if (!entry) {
     return null;
   }
 
   const endedAt = options.endedAt ?? Date.now();
+  const { timeline, index, item: current } = entry;
   current.status = options.status;
   current.endedAt = endedAt;
   current.durationSec = resolveDurationSec(current.startedAt, endedAt, options.durationSec);
+  if (!current.text.trim()) {
+    timeline.splice(index, 1);
+  }
   return current;
 }
 
@@ -118,11 +122,15 @@ function ensureTimeline(message: AgentSessionMessage) {
 }
 
 function getOpenThinkingItem(message: AgentSessionMessage) {
+  return getOpenThinkingEntry(message)?.item ?? null;
+}
+
+function getOpenThinkingEntry(message: AgentSessionMessage) {
   const timeline = ensureTimeline(message);
   for (let index = timeline.length - 1; index >= 0; index -= 1) {
     const item = timeline[index];
     if (item.type === 'thinking' && item.status === 'streaming') {
-      return item;
+      return { timeline, index, item };
     }
   }
   return null;

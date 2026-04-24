@@ -4,6 +4,9 @@ import { useEffect, useMemo, useState } from 'react';
 import { cn } from '../../lib/utils';
 import { MarkdownContent } from './MarkdownContent';
 
+const THINKING_MARKDOWN_CLASS =
+  'mt-2 border-l border-border/70 pl-3 text-sm leading-6 text-mutedForeground/95 [&_blockquote]:my-2 [&_h1]:mb-1.5 [&_h1]:mt-2 [&_h1]:text-sm [&_h1]:leading-6 [&_h2]:mb-1.5 [&_h2]:mt-2 [&_h2]:text-sm [&_h2]:leading-6 [&_h3]:mb-1.5 [&_h3]:mt-2 [&_h3]:text-sm [&_h3]:leading-6 [&_h4]:mb-1.5 [&_h4]:mt-2 [&_h4]:text-sm [&_h4]:leading-6 [&_ol]:my-2 [&_p]:my-2 [&_p]:leading-6 [&_pre]:my-2 [&_pre]:text-xs [&_pre]:text-foreground [&_ul]:my-2';
+
 export function ThinkingBlock({
   text,
   status,
@@ -56,13 +59,13 @@ export function ThinkingBlock({
       {isOpen ? (
         text.trim() ? (
           status === 'streaming' ? (
-            <div className="mt-1.5 whitespace-pre-wrap break-words text-xs leading-6 text-mutedForeground">
+            <div className="mt-2 whitespace-pre-wrap break-words border-l border-border/70 pl-3 text-sm leading-6 text-mutedForeground/95">
               {text}
             </div>
           ) : (
             <MarkdownContent
               text={text}
-              className="mt-1.5 text-xs leading-6 text-mutedForeground [&_pre]:text-foreground [&_pre]:text-xs"
+              className={THINKING_MARKDOWN_CLASS}
             />
           )
         ) : (

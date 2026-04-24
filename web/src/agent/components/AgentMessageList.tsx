@@ -107,6 +107,10 @@ function TimelineItem({
   autoExpandEnabled: boolean;
 }) {
   if (item.type === 'thinking') {
+    if (item.status !== 'streaming' && !item.text.trim()) {
+      return null;
+    }
+
     return (
       <ThinkingBlock
         text={item.text}

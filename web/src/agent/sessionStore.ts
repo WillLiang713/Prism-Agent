@@ -214,12 +214,17 @@ function closeOpenThinkingItem(
   }
 
   const nextTimeline = [...message.timeline];
-  nextTimeline[openIndex] = {
+  const closedItem = {
     ...current,
     status: options.status,
     endedAt,
     durationSec: resolveDurationSec(current.startedAt, endedAt, options.durationSec),
   };
+  if (!closedItem.text.trim()) {
+    nextTimeline.splice(openIndex, 1);
+  } else {
+    nextTimeline[openIndex] = closedItem;
+  }
 
   return {
     ...message,
@@ -377,9 +382,10 @@ function finalizeTimeline(message: AgentMessage, outcome: 'done' | 'aborted') {
 
 function normalizeBootstrapTimeline(message: AgentSessionBootstrap['messages'][number]) {
   if (message.timeline?.length) {
-    return message.timeline.map((item) => {
+    const timeline: AgentTimelineItem[] = [];
+    for (const item of message.timeline) {
       if (item.type === 'thinking') {
-        return createThinkingTimelineItem({
+        const thinkingItem = createThinkingTimelineItem({
           id: item.id,
           text: item.text,
           status: item.status,
@@ -387,9 +393,13 @@ function normalizeBootstrapTimeline(message: AgentSessionBootstrap['messages'][n
           endedAt: item.endedAt,
           durationSec: item.durationSec,
         });
+        if (shouldKeepTimelineItem(thinkingItem)) {
+          timeline.push(thinkingItem);
+        }
+        continue;
       }
 
-      return createToolTimelineItem({
+      timeline.push(createToolTimelineItem({
         id: item.id,
         toolCallId: item.toolCallId,
         name: item.name,
@@ -401,12 +411,13 @@ function normalizeBootstrapTimeline(message: AgentSessionBootstrap['messages'][n
         exitCode: item.exitCode,
         summary: item.summary,
         skillName: item.skillName,
-      });
-    });
+      }));
+    }
+    return timeline;
   }
 
   const timeline: AgentTimelineItem[] = [];
-  if (message.thinking || message.thinkingStartedAt || message.thinkingDurationSec) {
+  if (message.thinking?.trim()) {
     timeline.push(
       createThinkingTimelineItem({
         id: `${message.id}-thinking`,
@@ -440,6 +451,10 @@ function normalizeBootstrapTimeline(message: AgentSessionBootstrap['messages'][n
   }
 
   return timeline;
+}
+
+function shouldKeepTimelineItem(item: AgentTimelineItem) {
+  return item.type !== 'thinking' || item.status === 'streaming' || item.text.trim().length > 0;
 }
 
 function normalizeBootstrapMessages(messages: AgentSessionBootstrap['messages']): AgentMessage[] {
