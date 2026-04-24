@@ -1,4 +1,4 @@
-import { ArrowUp, FolderOpen, Paperclip, Play, X } from 'lucide-react';
+import { ArrowUp, ChevronDown, FolderOpen, Paperclip, Play, X } from 'lucide-react';
 import {
   useMemo,
   useRef,
@@ -189,15 +189,11 @@ export function AgentChatInput({
                 disabled={inputDisabled}
                 title={workspaceRoot || '切换工作区'}
                 aria-label={workspaceRoot ? `当前工作区：${workspaceRoot}，点击切换` : '切换工作区'}
-                className="relative h-8 min-w-[112px] max-w-[180px] shrink-0 overflow-hidden rounded-full bg-card px-3 text-xs font-medium shadow-none"
+                className="h-8 min-w-[112px] max-w-[180px] shrink-0 rounded-full bg-card px-3 text-xs font-medium shadow-none"
               >
-                <FolderOpen className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-mutedForeground" />
-                <span aria-hidden="true" className="invisible block max-w-[132px] truncate pl-6 font-medium">
-                  {workspaceName}
-                </span>
-                <span className="absolute left-1/2 top-1/2 max-w-[calc(100%-3rem)] -translate-x-1/2 -translate-y-1/2 truncate text-center font-medium">
-                  {workspaceName}
-                </span>
+                <FolderOpen className="h-4 w-4 shrink-0 text-mutedForeground" />
+                <span className="min-w-0 flex-1 truncate text-center font-medium">{workspaceName}</span>
+                <ChevronDown className="h-4 w-4 shrink-0 text-mutedForeground" />
               </Button>
             </PopoverPrimitive.Trigger>
             <PopoverPrimitive.Portal>

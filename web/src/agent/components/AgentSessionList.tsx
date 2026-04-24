@@ -1,13 +1,33 @@
-import { MoreHorizontal, Sparkles, Trash2, Plus, Folder, FolderPlus } from 'lucide-react';
+import { MoreHorizontal, Plus, Folder, Trash2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useAgentSessionStore } from '../sessionStore';
 import * as PopoverPrimitive from '@radix-ui/react-popover';
 
 import { ScrollArea } from '../../components/ui/scroll-area';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../../components/ui/tooltip';
+import { cn } from '../../lib/utils';
 import type { AgentThreadMeta } from '../client';
 import type { AgentSession } from '../sessionStore';
 import { buildSessionGroups } from './sessionGroups';
+
+const sessionMenuContentClassName =
+  'z-50 min-w-24 w-max overflow-hidden rounded-xl border border-border bg-muted p-1 text-foreground shadow-[0_18px_40px_rgba(0,0,0,0.22)]';
+
+const sessionMenuItemClassName =
+  'flex h-8 w-full cursor-pointer select-none items-center justify-start gap-2 whitespace-nowrap rounded-lg px-2.5 text-sm text-foreground outline-none transition-colors hover:bg-card focus-visible:bg-card disabled:cursor-not-allowed disabled:text-mutedForeground/45 disabled:hover:bg-transparent';
+
+const sessionMenuDangerItemClassName = cn(
+  sessionMenuItemClassName,
+  'hover:bg-danger/10 hover:text-danger focus-visible:bg-danger/10 focus-visible:text-danger',
+);
+
+const sessionMenuGenerateItemClassName = cn(
+  sessionMenuItemClassName,
+  'relative bg-transparent before:absolute before:left-1 before:top-1/2 before:h-4 before:w-0.5 before:-translate-y-1/2 before:rounded-full before:bg-foreground/18',
+  'hover:bg-card focus-visible:bg-card',
+  'dark:before:bg-foreground/24',
+  'disabled:before:bg-transparent',
+);
 
 function previewLabel(thread: AgentThreadMeta) {
   return thread.name || thread.preview || '新任务';
@@ -69,10 +89,9 @@ export function AgentSessionList({
         <button
           type="button"
           onClick={onPickWorkspace}
-          className="group flex w-full cursor-pointer items-center gap-2 rounded-full border border-border bg-transparent px-3 py-2 text-sm font-medium text-foreground/85 transition-colors hover:border-foreground/20 hover:bg-muted/60 hover:text-foreground"
+          className="group flex w-full cursor-pointer items-center justify-center rounded-full border border-border bg-transparent px-3 py-2 text-sm font-medium text-foreground/85 transition-colors hover:border-foreground/20 hover:bg-muted/60 hover:text-foreground"
         >
-          <FolderPlus className="h-4 w-4 shrink-0" />
-          <span className="truncate">载入</span>
+          <span className="truncate text-center">载入</span>
         </button>
       </div>
       <ScrollArea className="flex-1 px-2">
@@ -81,22 +100,23 @@ export function AgentSessionList({
             <div key={group.cwd} className="mb-4 last:mb-0">
               <div className="group/dir px-3 pt-2 pb-1.5 flex items-center justify-between text-[12px] font-semibold text-mutedForeground/70">
                 <div className="flex items-center gap-2 min-w-0">
-                  <Folder className="h-3.5 w-3.5 shrink-0" />
+                  <Folder className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
                   <span className="truncate" title={group.cwd}>
                     {group.basename}
                   </span>
                 </div>
                 <div className="flex items-center gap-0.5 shrink-0">
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onCreate(group.cwd);
-                        }}
-                        className="cursor-pointer opacity-0 group-hover/dir:opacity-100 p-1 hover:bg-muted rounded-md transition-all text-mutedForeground/80 hover:text-foreground"
-                      >
-                        <Plus className="h-3 w-3" />
-                      </button>
+                  <button
+                    type="button"
+                    aria-label={`在 ${group.basename} 中新建任务`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onCreate(group.cwd);
+                    }}
+                    className="cursor-pointer rounded-md p-1 text-mutedForeground/80 opacity-0 outline-none transition-[opacity,background-color,color,box-shadow] hover:bg-muted hover:text-foreground focus-visible:bg-muted focus-visible:text-foreground focus-visible:opacity-100 focus-visible:ring-1 focus-visible:ring-foreground/20 group-hover/dir:opacity-100"
+                  >
+                    <Plus className="h-3 w-3" aria-hidden="true" />
+                  </button>
 
                   <PopoverPrimitive.Root>
                     <PopoverPrimitive.Trigger asChild>
@@ -104,30 +124,30 @@ export function AgentSessionList({
                         type="button"
                         onClick={(e) => e.stopPropagation()}
                         aria-label="目录操作"
-                        className="cursor-pointer opacity-0 group-hover/dir:opacity-100 data-[state=open]:opacity-100 p-1 hover:bg-muted rounded-md transition-all text-mutedForeground/80 hover:text-foreground"
+                        className="cursor-pointer rounded-md p-1 text-mutedForeground/80 opacity-0 outline-none transition-[opacity,background-color,color,box-shadow] hover:bg-muted hover:text-foreground focus-visible:bg-muted focus-visible:text-foreground focus-visible:opacity-100 focus-visible:ring-1 focus-visible:ring-foreground/20 data-[state=open]:opacity-100 group-hover/dir:opacity-100"
                       >
-                        <MoreHorizontal className="h-3 w-3" />
+                        <MoreHorizontal className="h-3 w-3" aria-hidden="true" />
                       </button>
                     </PopoverPrimitive.Trigger>
                     <PopoverPrimitive.Portal>
                       <PopoverPrimitive.Content
-                        side="right"
-                        align="start"
-                        sideOffset={6}
-                        collisionPadding={8}
+                        side="bottom"
+                        align="end"
+                        sideOffset={4}
+                        collisionPadding={12}
                         onClick={(e) => e.stopPropagation()}
-                        className="z-50 min-w-[140px] overflow-hidden rounded-xl border border-border bg-muted p-1 text-foreground shadow-[0_18px_40px_rgba(0,0,0,0.22)]"
+                        className={sessionMenuContentClassName}
                       >
                         <PopoverPrimitive.Close asChild>
                           <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                unpinDirectory(group.cwd);
-                              }}
-                              className="flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm text-foreground outline-none transition-colors hover:bg-[rgba(239,68,68,0.16)] hover:text-danger focus-visible:bg-[rgba(239,68,68,0.16)] focus-visible:text-danger"
-                            >
-                            <Trash2 className="h-3.5 w-3.5" />
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              unpinDirectory(group.cwd);
+                            }}
+                            className={sessionMenuDangerItemClassName}
+                          >
+                            <Trash2 className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
                             <span>移除目录</span>
                           </button>
                         </PopoverPrimitive.Close>
@@ -190,19 +210,19 @@ export function AgentSessionList({
                               type="button"
                               onClick={(e) => e.stopPropagation()}
                               aria-label="更多操作"
-                              className="cursor-pointer opacity-0 group-hover:opacity-100 data-[state=open]:opacity-100 p-1.5 hover:bg-muted rounded-md transition-all text-mutedForeground/80 hover:text-foreground"
+                              className="cursor-pointer rounded-md p-1.5 text-mutedForeground/80 opacity-0 outline-none transition-[opacity,background-color,color,box-shadow] hover:bg-muted hover:text-foreground focus-visible:bg-muted focus-visible:text-foreground focus-visible:opacity-100 focus-visible:ring-1 focus-visible:ring-foreground/20 data-[state=open]:opacity-100 group-hover:opacity-100"
                             >
-                              <MoreHorizontal className="h-3.5 w-3.5" />
+                              <MoreHorizontal className="h-3.5 w-3.5" aria-hidden="true" />
                             </button>
                           </PopoverPrimitive.Trigger>
                           <PopoverPrimitive.Portal>
                             <PopoverPrimitive.Content
-                              side="right"
-                              align="start"
-                              sideOffset={6}
-                              collisionPadding={8}
+                              side="bottom"
+                              align="end"
+                              sideOffset={4}
+                              collisionPadding={12}
                               onClick={(e) => e.stopPropagation()}
-                              className="z-50 min-w-[140px] overflow-hidden rounded-xl border border-border bg-muted p-1 text-foreground shadow-[0_18px_40px_rgba(0,0,0,0.22)]"
+                              className={sessionMenuContentClassName}
                             >
                               <PopoverPrimitive.Close asChild>
                                 <button
@@ -213,9 +233,8 @@ export function AgentSessionList({
                                     void handleRegenerate(thread.threadId);
                                   }}
                                   disabled={regenerateDisabled}
-                                  className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm text-foreground outline-none transition-colors hover:bg-card disabled:cursor-not-allowed disabled:text-mutedForeground/45 disabled:hover:bg-transparent"
+                                  className={sessionMenuGenerateItemClassName}
                                 >
-                                  <Sparkles className="h-3.5 w-3.5" />
                                   <span>{isRegenerating ? '生成中…' : '生成标题'}</span>
                                 </button>
                               </PopoverPrimitive.Close>
@@ -226,9 +245,8 @@ export function AgentSessionList({
                                     e.stopPropagation();
                                     onDelete(thread.threadId);
                                   }}
-                                  className="flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm text-foreground outline-none transition-colors hover:bg-[rgba(239,68,68,0.16)] hover:text-danger focus-visible:bg-[rgba(239,68,68,0.16)] focus-visible:text-danger"
+                                  className={sessionMenuDangerItemClassName}
                                 >
-                                  <Trash2 className="h-3.5 w-3.5" />
                                   <span>删除任务</span>
                                 </button>
                               </PopoverPrimitive.Close>

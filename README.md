@@ -53,7 +53,7 @@ bun run dev
 
 This command will:
 
-- start the Vite frontend on `http://127.0.0.1:5283`
+- start the Vite frontend on `http://127.0.0.1:5284`
 - reuse the existing Vite server if it is already running
 - wait until the frontend is reachable
 - start the Tauri desktop shell

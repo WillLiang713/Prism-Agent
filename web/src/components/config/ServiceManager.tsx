@@ -1,10 +1,8 @@
-import { Eye, EyeOff, Plus, RefreshCw, Trash2 } from 'lucide-react';
-import { useEffect, useState } from 'react';
-import { agentListModels } from '../../agent/client';
+import { Eye, EyeOff, Plus, Trash2 } from 'lucide-react';
+import { useState } from 'react';
 import { useConfigStore } from '../../store/configStore';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
-import { Combobox } from '../ui/combobox';
 import {
   Select,
   SelectContent,
@@ -31,43 +29,7 @@ export function ServiceManager() {
   const selectedService =
     services.find((service) => service.id === serviceManagerSelectedId) || services[0];
 
-  const [modelOptions, setModelOptions] = useState<string[]>([]);
-  const [modelListLoading, setModelListLoading] = useState(false);
-  const [modelListError, setModelListError] = useState<string | null>(null);
-  const [modelListSuccess, setModelListSuccess] = useState<string | null>(null);
   const [showApiKey, setShowApiKey] = useState(false);
-
-  useEffect(() => {
-    setModelOptions([]);
-    setModelListError(null);
-    setModelListSuccess(null);
-    if (selectedService?.model.apiKey && selectedService?.model.apiUrl) {
-      void refreshModelList();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedService?.id]);
-
-  async function refreshModelList() {
-    if (!selectedService) return;
-    setModelListLoading(true);
-    setModelListError(null);
-    setModelListSuccess(null);
-    try {
-      const result = await agentListModels({
-        providerSelection: selectedService.model.providerSelection,
-        apiUrl: selectedService.model.apiUrl,
-        apiKey: selectedService.model.apiKey,
-      });
-      setModelOptions(result.models.map((m) => m.id));
-      setModelListSuccess(`已获取 ${result.models.length} 个模型`);
-      setTimeout(() => setModelListSuccess(null), 3000);
-    } catch (error) {
-      setModelListError(error instanceof Error ? error.message : String(error));
-      setModelOptions([]);
-    } finally {
-      setModelListLoading(false);
-    }
-  }
 
   function handleServiceChange<K extends keyof typeof selectedService.model>(
     field: K,
@@ -159,6 +121,7 @@ export function ServiceManager() {
           <span className="px-4 text-mutedForeground">名称</span>
           <Input
             className="bg-card border border-border"
+            placeholder="输入服务名称"
             value={selectedService.name}
             onChange={(event) =>
               upsertService({
@@ -194,6 +157,7 @@ export function ServiceManager() {
             <span className="px-4 text-mutedForeground">地址</span>
             <Input
               className="bg-card border border-border"
+              placeholder="输入 API 地址，如 https://api.openai.com"
               value={selectedService.model.apiUrl}
               onChange={(event) => handleServiceChange('apiUrl', event.currentTarget.value)}
             />
@@ -204,6 +168,7 @@ export function ServiceManager() {
             <Input
               className="bg-card border border-border pr-10"
               type="text"
+              placeholder="输入 API 密钥"
               style={showApiKey ? undefined : { WebkitTextSecurity: 'disc' } as React.CSSProperties}
               value={selectedService.model.apiKey}
               onChange={(event) => handleServiceChange('apiKey', event.currentTarget.value)}
@@ -217,37 +182,6 @@ export function ServiceManager() {
                 {showApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
             </div>
-          </div>
-          <div className="grid gap-2 text-xs">
-            <div className="flex items-center justify-between gap-2 px-4">
-              <span className="text-mutedForeground">模型</span>
-              <div className="flex min-w-0 items-center gap-2">
-                {modelListError ? (
-                  <span
-                    className="max-w-[140px] truncate text-[11px] text-danger/80"
-                    title={modelListError}
-                  >
-                    {modelListError}
-                  </span>
-                ) : modelListSuccess ? (<span className="max-w-[140px] truncate text-[11px] text-success/80 dark:text-success" title={modelListSuccess}>{modelListSuccess}</span>) : null}
-                <button
-                  type="button"
-                  onClick={() => refreshModelList()}
-                  disabled={modelListLoading}
-                  className="flex shrink-0 items-center gap-1 text-[11px] text-mutedForeground/80 hover:text-foreground disabled:opacity-50"
-                  title="从端点获取模型列表"
-                >
-                  <RefreshCw className={`h-3 w-3 ${modelListLoading ? 'animate-spin' : ''}`} />
-                  {modelListLoading ? '获取中' : '获取'}
-                </button>
-              </div>
-            </div>
-            <Combobox
-              value={selectedService.model.model}
-              onValueChange={(next) => handleServiceChange('model', next)}
-              options={modelOptions}
-              placeholder="选择或输入模型…"
-            />
           </div>
         </div>
         

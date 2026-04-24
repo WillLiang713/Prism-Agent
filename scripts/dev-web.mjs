@@ -10,9 +10,18 @@ import { fileURLToPath } from 'node:url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(__dirname, '..');
 const isWindows = process.platform === 'win32';
+const webFrontendPort = Number(process.env.PRISM_WEB_DEV_PORT ?? 5284);
 const children = new Map();
 const descendantCache = new Map();
 let shuttingDown = false;
+
+function appendAllowedOrigin(env, origin) {
+  const existing = String(env.PRISM_ALLOWED_ORIGINS || '').trim();
+  return {
+    ...env,
+    PRISM_ALLOWED_ORIGINS: existing ? `${existing},${origin}` : origin,
+  };
+}
 
 async function pathExists(filePath) {
   try {
@@ -253,6 +262,7 @@ async function main() {
   const authToken = randomBytes(24).toString('hex');
   const port = await findAvailablePort('127.0.0.1');
   const apiBase = `http://127.0.0.1:${port}`;
+  const webFrontendOrigin = `http://127.0.0.1:${webFrontendPort}`;
 
   console.log(`[dev:web] starting agent sidecar on ${apiBase}`);
   startProcess(
@@ -276,7 +286,7 @@ async function main() {
       ],
     },
     {
-      env,
+      env: appendAllowedOrigin(env, webFrontendOrigin),
     },
   );
 
@@ -284,7 +294,9 @@ async function main() {
     Authorization: `Bearer ${authToken}`,
   });
 
-  console.log('[dev:web] starting web frontend on http://127.0.0.1:5283');
+  const webFrontendUrl = `${webFrontendOrigin}/?platform=web`;
+
+  console.log(`[dev:web] starting web frontend on ${webFrontendUrl}`);
   startProcess(
     'web',
     {
@@ -298,6 +310,8 @@ async function main() {
         '--',
         '--host',
         '127.0.0.1',
+        '--port',
+        String(webFrontendPort),
         '--strictPort',
       ],
     },
@@ -311,7 +325,7 @@ async function main() {
     },
   );
 
-  await waitForServer('http://127.0.0.1:5283/?platform=web');
+  await waitForServer(webFrontendUrl);
 }
 
 main().catch(async (error) => {

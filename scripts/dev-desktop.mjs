@@ -10,7 +10,7 @@ import { fileURLToPath } from 'node:url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(__dirname, '..');
 const isWindows = process.platform === 'win32';
-const defaultWebPort = Number(process.env.PRISM_WEB_DEV_PORT ?? 5283);
+const defaultWebPort = Number(process.env.PRISM_WEB_DEV_PORT ?? 5284);
 const webPortSearchLimit = 20;
 
 const children = new Map();
@@ -253,6 +253,14 @@ function webUrlForPort(port) {
   return `http://127.0.0.1:${port}/?platform=desktop`;
 }
 
+function appendAllowedOrigin(env, origin) {
+  const existing = String(env.PRISM_ALLOWED_ORIGINS || '').trim();
+  return {
+    ...env,
+    PRISM_ALLOWED_ORIGINS: existing ? `${existing},${origin}` : origin,
+  };
+}
+
 async function fetchText(url, timeoutMs = 1500) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -397,6 +405,7 @@ async function main() {
   const webInvocation = await resolveWebInvocation(runtimeEnv);
   const tauriInvocation = await resolveTauriInvocation(runtimeEnv);
   const webEndpoint = await resolveWebEndpoint();
+  const webEndpointOrigin = new URL(webEndpoint.url).origin;
 
   if (webEndpoint.reuse) {
     console.log(`[dev] reusing existing web frontend on ${webEndpoint.url}`);
@@ -437,7 +446,7 @@ async function main() {
     },
     {
       env: {
-        ...runtimeEnv,
+        ...appendAllowedOrigin(runtimeEnv, webEndpointOrigin),
         PRISM_DEV_PARENT_PID: String(process.pid),
       },
     },

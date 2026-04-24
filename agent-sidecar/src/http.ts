@@ -57,11 +57,15 @@ type RouteMatch =
 const DEFAULT_ALLOWED_ORIGINS = new Set([
   'http://127.0.0.1:5283',
   'http://localhost:5283',
+  'http://127.0.0.1:5284',
+  'http://localhost:5284',
   'http://tauri.localhost',
   'https://tauri.localhost',
   'tauri://localhost',
   'app://localhost',
 ]);
+
+const CONFIGURED_ALLOWED_ORIGINS_ENV = 'PRISM_ALLOWED_ORIGINS';
 
 export function createHttpServer(options: HttpServerOptions) {
   const server = http.createServer((request, response) => {
@@ -368,10 +372,19 @@ function resolveAllowedOrigin(origin: string) {
   if (!origin) {
     return null;
   }
-  if (DEFAULT_ALLOWED_ORIGINS.has(origin)) {
+  if (DEFAULT_ALLOWED_ORIGINS.has(origin) || getConfiguredAllowedOrigins().has(origin)) {
     return origin;
   }
   return null;
+}
+
+function getConfiguredAllowedOrigins() {
+  return new Set(
+    String(process.env[CONFIGURED_ALLOWED_ORIGINS_ENV] || '')
+      .split(/[,\s]+/)
+      .map((value) => value.trim())
+      .filter(Boolean),
+  );
 }
 
 function isAuthorized(request: IncomingMessage, token: string) {

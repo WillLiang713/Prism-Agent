@@ -4,7 +4,7 @@
   "version": "0.5.5",
   "identifier": "com.prism.agent.desktop",
   "build": {
-    "devUrl": "http://127.0.0.1:5283/?platform=desktop",
+    "devUrl": "http://127.0.0.1:5284/?platform=desktop",
     "frontendDist": "../web/dist"
   },
   "app": {
