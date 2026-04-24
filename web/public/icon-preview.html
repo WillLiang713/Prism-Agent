@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Prism Icon 方案预览</title>
+<style>
+  :root { color-scheme: dark; }
+  body {
+    margin: 0; padding: 40px;
+    background: #0a0a0a; color: #e0e0e0;
+    font-family: system-ui, -apple-system, sans-serif;
+  }
+  h1 { font-size: 24px; font-weight: 600; margin-bottom: 8px; }
+  .subtitle { color: #888; margin-bottom: 40px; font-size: 14px; }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 32px;
+  }
+  .card {
+    background: #111; border: 1px solid #222;
+    border-radius: 12px; padding: 28px;
+    display: flex; flex-direction: column; align-items: center;
+    transition: border-color 0.2s;
+  }
+  .card:hover { border-color: #444; }
+  .icon-row {
+    display: flex; gap: 24px; align-items: center;
+    margin-bottom: 16px; flex-wrap: wrap; justify-content: center;
+  }
+  .icon-wrap { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  .icon-wrap .size-label { font-size: 11px; color: #666; }
+  .icon-wrap svg { display: block; }
+  .card h3 { font-size: 15px; margin: 0 0 8px 0; font-weight: 600; }
+  .card p { font-size: 12px; color: #999; margin: 0; text-align: center; line-height: 1.5; }
+  .current-badge {
+    display: inline-block; background: #222; color: #888;
+    font-size: 11px; padding: 2px 8px; border-radius: 4px; margin-left: 8px;
+  }
+  .section-title {
+    font-size: 13px; color: #666; margin: 48px 0 20px 0;
+    text-transform: uppercase; letter-spacing: 0.5px;
+    border-bottom: 1px solid #1a1a1a; padding-bottom: 8px;
+  }
+  .chosen-badge {
+    display: inline-block; background: #1a3a2a; color: #6aC8A0;
+    font-size: 11px; padding: 2px 8px; border-radius: 4px; margin-left: 8px;
+  }
+</style>
+</head>
+<body>
+
+<h1>Prism 产品图标优化方案</h1>
+<p class="subtitle">所有方案保持 64×64 圆角方形暗色容器。对比尺寸：64px / 32px / 16px。</p>
+
+<div class="section-title">当前图标</div>
+<div class="grid">
+  <div class="card">
+    <div class="icon-row">
+      <div class="icon-wrap"><span class="size-label">64px</span><svg width="64" height="64" viewBox="0 0 64 64"><rect width="64" height="64" rx="16" fill="#050505"/><path d="M24.5 17L43.5 32L24.5 47Z" fill="#FFFFFF" stroke="#FFFFFF" stroke-linejoin="round" stroke-width="4"/></svg></div>
+      <div class="icon-wrap"><span class="size-label">32px</span><svg width="32" height="32" viewBox="0 0 64 64"><rect width="64" height="64" rx="16" fill="#050505"/><path d="M24.5 17L43.5 32L24.5 47Z" fill="#FFFFFF" stroke="#FFFFFF" stroke-linejoin="round" stroke-width="4"/></svg></div>
+      <div class="icon-wrap"><span class="size-label">16px</span><svg width="16" height="16" viewBox="0 0 64 64"><rect width="64" height="64" rx="16" fill="#050505"/><path d="M24.5 17L43.5 32L24.5 47Z" fill="#FFFFFF" stroke="#FFFFFF" stroke-linejoin="round" stroke-width="4"/></svg></div>
+    </div>
+    <h3>当前图标 <span class="current-badge">旧版</span></h3>
+    <p>纯白向右三角（播放按钮），与"Prism"名称无语义关联</p>
+  </div>
+</div>
+
+<div class="section-title">已采用：A3 — AI 光谱</div>
+<div class="grid">
+  <div class="card" style="border-color: #2a4a3a;">
+    <div class="icon-row">
+      <div class="icon-wrap"><span class="size-label">64px</span><svg width="64" height="64" viewBox="0 0 64 64"><rect width="64" height="64" rx="16" fill="#050505"/><line x1="4" y1="30" x2="20" y2="30" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round"/><path d="M20 15L40 32L20 49Z" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linejoin="round"/><line x1="40" y1="32" x2="56" y2="18" stroke="#8888CC" stroke-width="2" stroke-linecap="round" opacity="0.9"/><line x1="40" y1="32" x2="58" y2="28" stroke="#88AACC" stroke-width="2" stroke-linecap="round" opacity="0.9"/><line x1="40" y1="32" x2="56" y2="46" stroke="#88CCAA" stroke-width="2" stroke-linecap="round" opacity="0.9"/></svg></div>
+      <div class="icon-wrap"><span class="size-label">32px</span><svg width="32" height="32" viewBox="0 0 64 64"><rect width="64" height="64" rx="16" fill="#050505"/><line x1="4" y1="30" x2="20" y2="30" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round"/><path d="M20 15L40 32L20 49Z" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linejoin="round"/><line x1="40" y1="32" x2="56" y2="18" stroke="#8888CC" stroke-width="2" stroke-linecap="round" opacity="0.9"/><line x1="40" y1="32" x2="58" y2="28" stroke="#88AACC" stroke-width="2" stroke-linecap="round" opacity="0.9"/><line x1="40" y1="32" x2="56" y2="46" stroke="#88CCAA" stroke-width="2" stroke-linecap="round" opacity="0.9"/></svg></div>
+      <div class="icon-wrap"><span class="size-label">16px</span><svg width="16" height="16" viewBox="0 0 64 64"><rect width="64" height="64" rx="16" fill="#050505"/><line x1="4" y1="30" x2="20" y2="30" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round"/><path d="M20 15L40 32L20 49Z" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linejoin="round"/><line x1="40" y1="32" x2="56" y2="18" stroke="#8888CC" stroke-width="2" stroke-linecap="round" opacity="0.9"/><line x1="40" y1="32" x2="58" y2="28" stroke="#88AACC" stroke-width="2" stroke-linecap="round" opacity="0.9"/><line x1="40" y1="32" x2="56" y2="46" stroke="#88CCAA" stroke-width="2" stroke-linecap="round" opacity="0.9"/></svg></div>
+    </div>
+    <h3>A3 — AI 光谱 <span class="chosen-badge">已采用</span></h3>
+    <p>白光入射棱镜，折射出紫→蓝→青三色冷色光谱。呼应 AI 产品属性，低饱和度克制配色。</p>
+  </div>
+</div>
+
+<div class="section-title">方案 A 组：棱镜折射</div>
+<div class="grid">
+  <div class="card">
+    <div class="icon-row">
+      <div class="icon-wrap"><span class="size-label">64px</span><svg width="64" height="64" viewBox="0 0 64 64"><rect width="64" height="64" rx="16" fill="#050505"/><line x1="4" y1="30" x2="20" y2="30" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round"/><path d="M20 16L38 32L20 48Z" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linejoin="round"/><line x1="38" y1="32" x2="56" y2="20" stroke="#C08060" stroke-width="2" stroke-linecap="round" opacity="0.85"/><line x1="38" y1="32" x2="58" y2="30" stroke="#E0E0C0" stroke-width="2" stroke-linecap="round" opacity="0.85"/><line x1="38" y1="32" x2="56" y2="42" stroke="#70A0C0" stroke-width="2" stroke-linecap="round" opacity="0.85"/></svg></div>
+      <div class="icon-wrap"><span class="size-label">32px</span><svg width="32" height="32" viewBox="0 0 64 64"><rect width="64" height="64" rx="16" fill="#050505"/><line x1="4" y1="30" x2="20" y2="30" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round"/><path d="M20 16L38 32L20 48Z" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linejoin="round"/><line x1="38" y1="32" x2="56" y2="20" stroke="#C08060" stroke-width="2" stroke-linecap="round" opacity="0.85"/><line x1="38" y1="32" x2="58" y2="30" stroke="#E0E0C0" stroke-width="2" stroke-linecap="round" opacity="0.85"/><line x1="38" y1="32" x2="56" y2="42" stroke="#70A0C0" stroke-width="2" stroke-linecap="round" opacity="0.85"/></svg></div>
+      <div class="icon-wrap"><span class="size-label">16px</span><svg width="16" height="16" viewBox="0 0 64 64"><rect width="64" height="64" rx="16" fill="#050505"/><line x1="4" y1="30" x2="20" y2="30" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round"/><path d="M20 16L38 32L20 48Z" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linejoin="round"/><line x1="38" y1="32" x2="56" y2="20" stroke="#C08060" stroke-width="2" stroke-linecap="round" opacity="0.85"/><line x1="38" y1="32" x2="58" y2="30" stroke="#E0E0C0" stroke-width="2" stroke-linecap="round" opacity="0.85"/><line x1="38" y1="32" x2="56" y2="42" stroke="#70A0C0" stroke-width="2" stroke-linecap="round" opacity="0.85"/></svg></div>
+    </div>
+    <h3>A1 — 经典棱镜</h3>
+    <p>白光从左入射三角棱镜，折射出暖/中/冷三色光谱。最直白诠释"Prism"命名。</p>
+  </div>
+  <div class="card">
+    <div class="icon-row">
+      <div class="icon-wrap"><span class="size-label">64px</span><svg width="64" height="64" viewBox="0 0 64 64"><rect width="64" height="64" rx="16" fill="#050505"/><line x1="4" y1="30" x2="22" y2="30" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round"/><path d="M22 14L42 32L22 50Z" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linejoin="round"/><line x1="42" y1="32" x2="56" y2="16" stroke="#C07050" stroke-width="1.8" stroke-linecap="round" opacity="0.8"/><line x1="42" y1="32" x2="58" y2="24" stroke="#D0B060" stroke-width="1.8" stroke-linecap="round" opacity="0.8"/><line x1="42" y1="32" x2="60" y2="32" stroke="#E0E0D0" stroke-width="1.8" stroke-linecap="round" opacity="0.8"/><line x1="42" y1="32" x2="58" y2="40" stroke="#60B0A0" stroke-width="1.8" stroke-linecap="round" opacity="0.8"/><line x1="42" y1="32" x2="56" y2="48" stroke="#5080C0" stroke-width="1.8" stroke-linecap="round" opacity="0.8"/></svg></div>
+      <div class="icon-wrap"><span class="size-label">32px</span><svg width="32" height="32" viewBox="0 0 64 64"><rect width="64" height="64" rx="16" fill="#050505"/><line x1="4" y1="30" x2="22" y2="30" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round"/><path d="M22 14L42 32L22 50Z" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linejoin="round"/><line x1="42" y1="32" x2="56" y2="16" stroke="#C07050" stroke-width="1.8" stroke-linecap="round" opacity="0.8"/><line x1="42" y1="32" x2="58" y2="24" stroke="#D0B060" stroke-width="1.8" stroke-linecap="round" opacity="0.8"/><line x1="42" y1="32" x2="60" y2="32" stroke="#E0E0D0" stroke-width="1.8" stroke-linecap="round" opacity="0.8"/><line x1="42" y1="32" x2="58" y2="40" stroke="#60B0A0" stroke-width="1.8" stroke-linecap="round" opacity="0.8"/><line x1="42" y1="32" x2="56" y2="48" stroke="#5080C0" stroke-width="1.8" stroke-linecap="round" opacity="0.8"/></svg></div>
+      <div class="icon-wrap"><span class="size-label">16px</span><svg width="16" height="16" viewBox="0 0 64 64"><rect width="64" height="64" rx="16" fill="#050505"/><line x1="4" y1="30" x2="22" y2="30" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round"/><path d="M22 14L42 32L22 50Z" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linejoin="round"/><line x1="42" y1="32" x2="56" y2="16" stroke="#C07050" stroke-width="1.8" stroke-linecap="round" opacity="0.8"/><line x1="42" y1="32" x2="58" y2="24" stroke="#D0B060" stroke-width="1.8" stroke-linecap="round" opacity="0.8"/><line x1="42" y1="32" x2="60" y2="32" stroke="#E0E0D0" stroke-width="1.8" stroke-linecap="round" opacity="0.8"/><line x1="42" y1="32" x2="58" y2="40" stroke="#60B0A0" stroke-width="1.8" stroke-linecap="round" opacity="0.8"/><line x1="42" y1="32" x2="56" y2="48" stroke="#5080C0" stroke-width="1.8" stroke-linecap="round" opacity="0.8"/></svg></div>
+    </div>
+    <h3>A2 — 五色光谱</h3>
+    <p>A1 扩展：折射出 5 条光线覆盖更完整光谱，表达"多维处理"概念。</p>
+  </div>
+</div>
+
+<div class="section-title">方案 B 组：几何棱镜</div>
+<div class="grid">
+  <div class="card">
+    <div class="icon-row">
+      <div class="icon-wrap"><span class="size-label">64px</span><svg width="64" height="64" viewBox="0 0 64 64"><rect width="64" height="64" rx="16" fill="#050505"/><path d="M22 16L38 32L22 48Z" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linejoin="round"/><line x1="22" y1="32" x2="38" y2="32" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round" opacity="0.4"/><line x1="6" y1="30" x2="22" y2="30" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round"/><line x1="38" y1="32" x2="56" y2="22" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" opacity="0.6"/><line x1="38" y1="32" x2="56" y2="42" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" opacity="0.35"/></svg></div>
+      <div class="icon-wrap"><span class="size-label">32px</span><svg width="32" height="32" viewBox="0 0 64 64"><rect width="64" height="64" rx="16" fill="#050505"/><path d="M22 16L38 32L22 48Z" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linejoin="round"/><line x1="22" y1="32" x2="38" y2="32" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round" opacity="0.4"/><line x1="6" y1="30" x2="22" y2="30" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round"/><line x1="38" y1="32" x2="56" y2="22" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" opacity="0.6"/><line x1="38" y1="32" x2="56" y2="42" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" opacity="0.35"/></svg></div>
+      <div class="icon-wrap"><span class="size-label">16px</span><svg width="16" height="16" viewBox="0 0 64 64"><rect width="64" height="64" rx="16" fill="#050505"/><path d="M22 16L38 32L22 48Z" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linejoin="round"/><line x1="22" y1="32" x2="38" y2="32" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round" opacity="0.4"/><line x1="6" y1="30" x2="22" y2="30" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round"/><line x1="38" y1="32" x2="56" y2="22" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" opacity="0.6"/><line x1="38" y1="32" x2="56" y2="42" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" opacity="0.35"/></svg></div>
+    </div>
+    <h3>B1 — 透明棱镜</h3>
+    <p>纯白单色，用不透明度区分入射光/内部线/折射光。极简科技感。</p>
+  </div>
+  <div class="card">
+    <div class="icon-row">
+      <div class="icon-wrap"><span class="size-label">64px</span><svg width="64" height="64" viewBox="0 0 64 64"><rect width="64" height="64" rx="16" fill="#050505"/><path d="M24 18L28 48L24 48Z" fill="#FFFFFF" opacity="0.15"/><path d="M20 16L36 32L20 48Z" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linejoin="round"/><line x1="20" y1="32" x2="36" y2="32" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round" opacity="0.3"/><line x1="6" y1="30" x2="20" y2="30" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round"/><line x1="36" y1="32" x2="54" y2="24" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" opacity="0.7"/><line x1="36" y1="32" x2="54" y2="40" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" opacity="0.4"/></svg></div>
+      <div class="icon-wrap"><span class="size-label">32px</span><svg width="32" height="32" viewBox="0 0 64 64"><rect width="64" height="64" rx="16" fill="#050505"/><path d="M24 18L28 48L24 48Z" fill="#FFFFFF" opacity="0.15"/><path d="M20 16L36 32L20 48Z" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linejoin="round"/><line x1="20" y1="32" x2="36" y2="32" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round" opacity="0.3"/><line x1="6" y1="30" x2="20" y2="30" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round"/><line x1="36" y1="32" x2="54" y2="24" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" opacity="0.7"/><line x1="36" y1="32" x2="54" y2="40" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" opacity="0.4"/></svg></div>
+      <div class="icon-wrap"><span class="size-label">16px</span><svg width="16" height="16" viewBox="0 0 64 64"><rect width="64" height="64" rx="16" fill="#050505"/><path d="M24 18L28 48L24 48Z" fill="#FFFFFF" opacity="0.15"/><path d="M20 16L36 32L20 48Z" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linejoin="round"/><line x1="20" y1="32" x2="36" y2="32" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round" opacity="0.3"/><line x1="6" y1="30" x2="20" y2="30" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round"/><line x1="36" y1="32" x2="54" y2="24" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" opacity="0.7"/><line x1="36" y1="32" x2="54" y2="40" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" opacity="0.4"/></svg></div>
+    </div>
+    <h3>B2 — 立体棱镜</h3>
+    <p>棱镜内半透明面形成 3D 立体感，光线穿过"实体"棱镜。</p>
+  </div>
+  <div class="card">
+    <div class="icon-row">
+      <div class="icon-wrap"><span class="size-label">64px</span><svg width="64" height="64" viewBox="0 0 64 64"><rect width="64" height="64" rx="16" fill="#050505"/><path d="M20 16L38 32L20 48Z" fill="#FFFFFF" opacity="0.08"/><path d="M20 16L38 32L20 48Z" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linejoin="round"/><line x1="6" y1="30" x2="20" y2="30" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round"/><line x1="38" y1="32" x2="54" y2="20" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" opacity="0.7"/><line x1="38" y1="32" x2="56" y2="32" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round" opacity="0.5"/><line x1="38" y1="32" x2="54" y2="44" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" opacity="0.3"/></svg></div>
+      <div class="icon-wrap"><span class="size-label">32px</span><svg width="32" height="32" viewBox="0 0 64 64"><rect width="64" height="64" rx="16" fill="#050505"/><path d="M20 16L38 32L20 48Z" fill="#FFFFFF" opacity="0.08"/><path d="M20 16L38 32L20 48Z" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linejoin="round"/><line x1="6" y1="30" x2="20" y2="30" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round"/><line x1="38" y1="32" x2="54" y2="20" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" opacity="0.7"/><line x1="38" y1="32" x2="56" y2="32" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round" opacity="0.5"/><line x1="38" y1="32" x2="54" y2="44" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" opacity="0.3"/></svg></div>
+      <div class="icon-wrap"><span class="size-label">16px</span><svg width="16" height="16" viewBox="0 0 64 64"><rect width="64" height="64" rx="16" fill="#050505"/><path d="M20 16L38 32L20 48Z" fill="#FFFFFF" opacity="0.08"/><path d="M20 16L38 32L20 48Z" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linejoin="round"/><line x1="6" y1="30" x2="20" y2="30" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round"/><line x1="38" y1="32" x2="54" y2="20" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" opacity="0.7"/><line x1="38" y1="32" x2="56" y2="32" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round" opacity="0.5"/><line x1="38" y1="32" x2="54" y2="44" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" opacity="0.3"/></svg></div>
+    </div>
+    <h3>B3 — 微光棱镜</h3>
+    <p>棱镜内部微填充，折射光三条不同透明度区分。重心在棱镜本体。</p>
+  </div>
+</div>
+
+<div class="section-title">方案 C 组：抽象符号</div>
+<div class="grid">
+  <div class="card">
+    <div class="icon-row">
+      <div class="icon-wrap"><span class="size-label">64px</span><svg width="64" height="64" viewBox="0 0 64 64"><rect width="64" height="64" rx="16" fill="#050505"/><path d="M26 22L40 32L26 42Z" fill="none" stroke="#FFFFFF" stroke-width="2.5" stroke-linejoin="round"/><path d="M16 32L26 32" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round"/><path d="M40 32L52 24" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" opacity="0.5"/><path d="M40 32L52 40" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" opacity="0.3"/></svg></div>
+      <div class="icon-wrap"><span class="size-label">32px</span><svg width="32" height="32" viewBox="0 0 64 64"><rect width="64" height="64" rx="16" fill="#050505"/><path d="M26 22L40 32L26 42Z" fill="none" stroke="#FFFFFF" stroke-width="2.5" stroke-linejoin="round"/><path d="M16 32L26 32" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round"/><path d="M40 32L52 24" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" opacity="0.5"/><path d="M40 32L52 40" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" opacity="0.3"/></svg></div>
+      <div class="icon-wrap"><span class="size-label">16px</span><svg width="16" height="16" viewBox="0 0 64 64"><rect width="64" height="64" rx="16" fill="#050505"/><path d="M26 22L40 32L26 42Z" fill="none" stroke="#FFFFFF" stroke-width="2.5" stroke-linejoin="round"/><path d="M16 32L26 32" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round"/><path d="M40 32L52 24" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" opacity="0.5"/><path d="M40 32L52 40" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" opacity="0.3"/></svg></div>
+    </div>
+    <h3>C1 — 极简棱镜</h3>
+    <p>最小元素：三角 + 进光 + 两条折射。结构精炼。</p>
+  </div>
+  <div class="card">
+    <div class="icon-row">
+      <div class="icon-wrap"><span class="size-label">64px</span><svg width="64" height="64" viewBox="0 0 64 64"><rect width="64" height="64" rx="16" fill="#050505"/><path d="M22 16L38 32L22 48Z" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linejoin="round"/><line x1="22" y1="32" x2="38" y2="32" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round" opacity="0.3"/><line x1="6" y1="32" x2="22" y2="32" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round"/><line x1="38" y1="32" x2="56" y2="22" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round" opacity="0.55"/><line x1="38" y1="32" x2="56" y2="42" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round" opacity="0.3"/><circle cx="22" cy="32" r="1.5" fill="#FFFFFF" opacity="0.5"/><circle cx="38" cy="32" r="1.5" fill="#FFFFFF" opacity="0.8"/></svg></div>
+      <div class="icon-wrap"><span class="size-label">32px</span><svg width="32" height="32" viewBox="0 0 64 64"><rect width="64" height="64" rx="16" fill="#050505"/><path d="M22 16L38 32L22 48Z" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linejoin="round"/><line x1="22" y1="32" x2="38" y2="32" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round" opacity="0.3"/><line x1="6" y1="32" x2="22" y2="32" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round"/><line x1="38" y1="32" x2="56" y2="22" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round" opacity="0.55"/><line x1="38" y1="32" x2="56" y2="42" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round" opacity="0.3"/><circle cx="22" cy="32" r="1.5" fill="#FFFFFF" opacity="0.5"/><circle cx="38" cy="32" r="1.5" fill="#FFFFFF" opacity="0.8"/></svg></div>
+      <div class="icon-wrap"><span class="size-label">16px</span><svg width="16" height="16" viewBox="0 0 64 64"><rect width="64" height="64" rx="16" fill="#050505"/><path d="M22 16L38 32L22 48Z" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linejoin="round"/><line x1="22" y1="32" x2="38" y2="32" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round" opacity="0.3"/><line x1="6" y1="32" x2="22" y2="32" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round"/><line x1="38" y1="32" x2="56" y2="22" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round" opacity="0.55"/><line x1="38" y1="32" x2="56" y2="42" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round" opacity="0.3"/><circle cx="22" cy="32" r="1.5" fill="#FFFFFF" opacity="0.5"/><circle cx="38" cy="32" r="1.5" fill="#FFFFFF" opacity="0.8"/></svg></div>
+    </div>
+    <h3>C2 — 光学节点</h3>
+    <p>在入射点和折射点加入光学节点圆点，增加细节层次。</p>
+  </div>
+  <div class="card">
+    <div class="icon-row">
+      <div class="icon-wrap"><span class="size-label">64px</span><svg width="64" height="64" viewBox="0 0 64 64"><rect width="64" height="64" rx="16" fill="#050505"/><path d="M22 16L38 32L22 48Z" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linejoin="round"/><path d="M22 18L36 32L22 46Z" fill="none" stroke="#FFFFFF" stroke-width="1" stroke-linejoin="round" opacity="0.25"/><line x1="6" y1="32" x2="22" y2="32" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round"/><line x1="38" y1="32" x2="54" y2="26" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round" opacity="0.6"/><line x1="38" y1="32" x2="54" y2="38" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round" opacity="0.35"/></svg></div>
+      <div class="icon-wrap"><span class="size-label">32px</span><svg width="32" height="32" viewBox="0 0 64 64"><rect width="64" height="64" rx="16" fill="#050505"/><path d="M22 16L38 32L22 48Z" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linejoin="round"/><path d="M22 18L36 32L22 46Z" fill="none" stroke="#FFFFFF" stroke-width="1" stroke-linejoin="round" opacity="0.25"/><line x1="6" y1="32" x2="22" y2="32" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round"/><line x1="38" y1="32" x2="54" y2="26" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round" opacity="0.6"/><line x1="38" y1="32" x2="54" y2="38" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round" opacity="0.35"/></svg></div>
+      <div class="icon-wrap"><span class="size-label">16px</span><svg width="16" height="16" viewBox="0 0 64 64"><rect width="64" height="64" rx="16" fill="#050505"/><path d="M22 16L38 32L22 48Z" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linejoin="round"/><path d="M22 18L36 32L22 46Z" fill="none" stroke="#FFFFFF" stroke-width="1" stroke-linejoin="round" opacity="0.25"/><line x1="6" y1="32" x2="22" y2="32" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round"/><line x1="38" y1="32" x2="54" y2="26" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round" opacity="0.6"/><line x1="38" y1="32" x2="54" y2="38" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round" opacity="0.35"/></svg></div>
+    </div>
+    <h3>C3 — 双层棱镜</h3>
+    <p>内外双三角结构，内层低透明度形成"光在内部的路径"。</p>
+  </div>
+</div>
+
+</body>
+</html>

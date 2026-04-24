@@ -1,13 +1,17 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="prism-icon-title prism-icon-desc">
   <title id="prism-icon-title">Prism icon</title>
-  <desc id="prism-icon-desc">A rounded square dark icon featuring a centered white rounded arrow.</desc>
+  <desc id="prism-icon-desc">A rounded square dark icon featuring a triangular prism refracting light into a cool AI spectrum.</desc>
 
   <rect width="64" height="64" rx="16" fill="#050505" />
-  <path
-    d="M24.5 17L43.5 32L24.5 47Z"
-    fill="#FFFFFF"
-    stroke="#FFFFFF"
-    stroke-linejoin="round"
-    stroke-width="4"
-  />
+
+  <!-- 入射白光 -->
+  <line x1="4" y1="30" x2="20" y2="30" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round" />
+
+  <!-- 三角棱镜 -->
+  <path d="M20 15L40 32L20 49Z" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linejoin="round" />
+
+  <!-- AI 冷色光谱（紫 → 蓝 → 青） -->
+  <line x1="40" y1="32" x2="56" y2="18" stroke="#8888CC" stroke-width="2" stroke-linecap="round" opacity="0.9" />
+  <line x1="40" y1="32" x2="58" y2="28" stroke="#88AACC" stroke-width="2" stroke-linecap="round" opacity="0.9" />
+  <line x1="40" y1="32" x2="56" y2="46" stroke="#88CCAA" stroke-width="2" stroke-linecap="round" opacity="0.9" />
 </svg>
