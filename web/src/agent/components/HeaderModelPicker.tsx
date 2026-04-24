@@ -83,11 +83,16 @@ export function HeaderModelPicker({ currentModel }: { currentModel: string }) {
         <button
           ref={triggerRef}
           type="button"
-          className="no-drag inline-flex h-8 cursor-pointer items-center gap-2 rounded-full border border-border bg-card px-3 text-xs font-medium text-foreground outline-none transition-colors hover:bg-muted focus:outline-none focus-visible:ring-1 focus-visible:ring-foreground/20"
+          className="no-drag relative inline-flex h-8 min-w-[120px] max-w-[240px] cursor-pointer items-center overflow-hidden rounded-full border border-border bg-card px-3 text-xs font-medium text-foreground outline-none transition-colors hover:bg-muted focus:outline-none focus-visible:ring-1 focus-visible:ring-foreground/20"
         >
-          <ModelIcon aria-hidden="true" className="h-4 w-4 shrink-0 text-mutedForeground" />
-          <span className="truncate">{currentModel || '选择模型'}</span>
-          <ChevronDown className="h-4 w-4 shrink-0 text-mutedForeground" />
+          <ModelIcon aria-hidden="true" className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-mutedForeground" />
+          <span aria-hidden="true" className="invisible block max-w-[184px] truncate px-7">
+            {currentModel || '选择模型'}
+          </span>
+          <span className="pointer-events-none absolute left-1/2 top-1/2 max-w-[calc(100%-3.5rem)] -translate-x-1/2 -translate-y-1/2 truncate text-center">
+            {currentModel || '选择模型'}
+          </span>
+          <ChevronDown className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-mutedForeground" />
         </button>
       </PopoverPrimitive.Trigger>
       <PopoverPrimitive.Portal>
@@ -110,6 +115,7 @@ export function HeaderModelPicker({ currentModel }: { currentModel: string }) {
                 onClick={() => void refreshList()}
                 disabled={loading}
                 title="获取模型列表"
+                aria-label="获取模型列表"
                 className="flex shrink-0 items-center justify-center rounded-md p-1.5 text-mutedForeground/80 hover:bg-card hover:text-foreground disabled:opacity-50"
               >
                 <RefreshCw className={cn('h-3.5 w-3.5', loading && 'animate-spin')} />

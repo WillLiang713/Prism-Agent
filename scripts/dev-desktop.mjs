@@ -1,5 +1,6 @@
 import { spawn, spawnSync } from 'node:child_process';
 import { access } from 'node:fs/promises';
+import { createServer } from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
 import process from 'node:process';
@@ -9,6 +10,8 @@ import { fileURLToPath } from 'node:url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(__dirname, '..');
 const isWindows = process.platform === 'win32';
+const defaultWebPort = Number(process.env.PRISM_WEB_DEV_PORT ?? 5283);
+const webPortSearchLimit = 20;
 
 const children = new Map();
 const descendantCache = new Map();
@@ -246,30 +249,87 @@ async function stopProcess(child) {
   }
 }
 
-async function waitForServer(url, timeoutMs = 30000) {
+function webUrlForPort(port) {
+  return `http://127.0.0.1:${port}/?platform=desktop`;
+}
+
+async function fetchText(url, timeoutMs = 1500) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const response = await fetch(url, {
+      method: 'GET',
+      signal: controller.signal,
+    });
+    if (!response.ok) {
+      return null;
+    }
+    return await response.text();
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function isPrismFrontendHtml(html) {
+  return html.includes('<div id="root"></div>') && html.includes('/src/main.tsx');
+}
+
+async function isFrontendReady(url) {
+  const html = await fetchText(url);
+  return html !== null && isPrismFrontendHtml(html);
+}
+
+async function isPortAvailable(port) {
+  return await new Promise((resolve) => {
+    const server = createServer();
+    server.once('error', () => resolve(false));
+    server.once('listening', () => {
+      server.close(() => resolve(true));
+    });
+    server.listen(port, '127.0.0.1');
+  });
+}
+
+async function resolveWebEndpoint() {
+  for (let offset = 0; offset < webPortSearchLimit; offset += 1) {
+    const port = defaultWebPort + offset;
+    const url = webUrlForPort(port);
+
+    if (await isFrontendReady(url)) {
+      return { port, url, reuse: true };
+    }
+
+    if (await isPortAvailable(port)) {
+      return { port, url, reuse: false };
+    }
+
+    if (offset === 0) {
+      console.warn(
+        `[dev] port ${port} is occupied by another service; trying the next available port`,
+      );
+    }
+  }
+
+  throw new Error(
+    `Could not find an available web frontend port from ${defaultWebPort} to ${
+      defaultWebPort + webPortSearchLimit - 1
+    }.`,
+  );
+}
+
+async function waitForFrontend(url, timeoutMs = 30000) {
   const startedAt = Date.now();
   while (Date.now() - startedAt < timeoutMs) {
-    try {
-      const response = await fetch(url, { method: 'GET' });
-      if (response.ok || response.status < 500) {
-        return;
-      }
-    } catch {
-      // keep waiting
+    if (await isFrontendReady(url)) {
+      return;
     }
     await delay(500);
   }
 
   throw new Error(`Timed out waiting for ${url}`);
-}
-
-async function isServerReady(url) {
-  try {
-    const response = await fetch(url, { method: 'GET' });
-    return response.ok || response.status < 500;
-  } catch {
-    return false;
-  }
 }
 
 async function killByImageName(imageName) {
@@ -336,12 +396,12 @@ async function main() {
   };
   const webInvocation = await resolveWebInvocation(runtimeEnv);
   const tauriInvocation = await resolveTauriInvocation(runtimeEnv);
-  const webUrl = 'http://127.0.0.1:5283/?platform=desktop';
+  const webEndpoint = await resolveWebEndpoint();
 
-  if (await isServerReady(webUrl)) {
-    console.log('[dev] reusing existing web frontend on http://127.0.0.1:5283');
+  if (webEndpoint.reuse) {
+    console.log(`[dev] reusing existing web frontend on ${webEndpoint.url}`);
   } else {
-    console.log('[dev] starting web frontend on http://127.0.0.1:5283');
+    console.log(`[dev] starting web frontend on ${webEndpoint.url}`);
     startProcess(
       'web',
       {
@@ -350,6 +410,8 @@ async function main() {
           ...webInvocation.args,
           '--host',
           '127.0.0.1',
+          '--port',
+          String(webEndpoint.port),
           '--strictPort',
         ],
       },
@@ -358,7 +420,7 @@ async function main() {
       },
     );
 
-    await waitForServer(webUrl);
+    await waitForFrontend(webEndpoint.url);
   }
 
   console.log('[dev] starting tauri desktop');
@@ -366,7 +428,12 @@ async function main() {
     'tauri',
     {
       ...tauriInvocation,
-      args: [...tauriInvocation.args, 'dev'],
+      args: [
+        ...tauriInvocation.args,
+        'dev',
+        '--config',
+        JSON.stringify({ build: { devUrl: webEndpoint.url } }),
+      ],
     },
     {
       env: {

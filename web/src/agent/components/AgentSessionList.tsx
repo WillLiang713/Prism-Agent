@@ -69,7 +69,7 @@ export function AgentSessionList({
         <button
           type="button"
           onClick={onPickWorkspace}
-          className="group flex w-full cursor-pointer items-center gap-2 rounded-lg border border-border bg-transparent px-3 py-2 text-sm font-medium text-foreground/85 transition-colors hover:border-foreground/20 hover:bg-muted/60 hover:text-foreground"
+          className="group flex w-full cursor-pointer items-center gap-2 rounded-full border border-border bg-transparent px-3 py-2 text-sm font-medium text-foreground/85 transition-colors hover:border-foreground/20 hover:bg-muted/60 hover:text-foreground"
         >
           <FolderPlus className="h-4 w-4 shrink-0" />
           <span className="truncate">载入</span>

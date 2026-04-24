@@ -109,7 +109,7 @@ export function ServiceManager() {
         <Button
           onClick={() => upsertService({ name: '新服务' })}
           variant="ghost"
-          className="h-10 w-full justify-start gap-2 rounded-lg border border-border bg-transparent px-3 py-2 text-sm font-medium text-foreground/85 hover:border-foreground/20 hover:bg-muted/60 hover:text-foreground"
+          className="h-10 w-full justify-start gap-2 rounded-full border border-border bg-transparent px-3 py-2 text-sm font-medium text-foreground/85 hover:border-foreground/20 hover:bg-muted/60 hover:text-foreground"
         >
           <Plus className="h-4 w-4" />
           <span className="font-medium">新建服务</span>
