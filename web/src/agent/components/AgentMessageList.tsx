@@ -203,7 +203,9 @@ function PendingAssistantStatus() {
       aria-live="polite"
       className="flex w-fit max-w-full items-center gap-2 text-xs leading-5 text-mutedForeground/80"
     >
-      <span className="thinking-title-shimmer">正在准备回复</span>
+      <span className="thinking-title-shimmer" data-shimmer-text="正在准备回复">
+        正在准备回复
+      </span>
       <LoadingDots />
     </div>
   );
@@ -216,7 +218,9 @@ function GenerationIdleStatus() {
       aria-live="polite"
       className="flex w-fit max-w-full items-center gap-2 text-xs leading-5 text-mutedForeground/72"
     >
-      <span className="thinking-title-shimmer">继续处理</span>
+      <span className="thinking-title-shimmer" data-shimmer-text="继续处理">
+        继续处理
+      </span>
       <LoadingDots />
     </div>
   );

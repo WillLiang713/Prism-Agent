@@ -193,6 +193,7 @@ export function AgentSessionList({
                               className={`truncate text-sm font-medium leading-tight w-fit max-w-full ${
                                 isRegenerating ? 'thinking-title-shimmer' : ''
                               }`}
+                              data-shimmer-text={isRegenerating ? label : undefined}
                             >
                               {label}
                             </span>

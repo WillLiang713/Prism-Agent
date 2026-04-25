@@ -151,31 +151,60 @@ samp {
 
 @keyframes thinking-title-sweep {
   0% {
-    background-position: 130% 0;
+    opacity: 0;
+    background-position: 135% 0;
+  }
+
+  12% {
+    opacity: 0.96;
+  }
+
+  82% {
+    opacity: 0.96;
   }
 
   100% {
-    background-position: -130% 0;
+    opacity: 0;
+    background-position: -135% 0;
   }
 }
 
 .thinking-title-shimmer {
+  position: relative;
+  display: inline-block;
+  overflow: hidden;
+  isolation: isolate;
+  contain: paint;
+}
+
+.thinking-title-shimmer::after {
+  content: attr(data-shimmer-text);
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: block;
+  overflow: hidden;
+  text-overflow: inherit;
+  white-space: inherit;
   background-image: linear-gradient(
-    110deg,
-    hsl(var(--foreground) / 0.42) 0%,
-    hsl(var(--foreground) / 0.54) 30%,
-    hsl(var(--foreground) / 1) 44%,
-    hsl(var(--foreground) / 1) 50%,
-    hsl(var(--foreground) / 0.56) 62%,
-    hsl(var(--foreground) / 0.42) 100%
+    108deg,
+    transparent 0%,
+    transparent 34%,
+    hsl(var(--foreground) / 0.35) 43%,
+    hsl(var(--foreground) / 0.98) 50%,
+    hsl(var(--foreground) / 0.35) 57%,
+    transparent 66%,
+    transparent 100%
   );
   background-size: 260% 100%;
-  background-position: 130% 0;
+  background-position: 135% 0;
   -webkit-background-clip: text;
   background-clip: text;
-  -webkit-text-fill-color: transparent;
   color: transparent;
-  animation: thinking-title-sweep 2.15s linear infinite;
+  -webkit-text-fill-color: transparent;
+  pointer-events: none;
+  will-change: background-position, opacity;
+  animation: thinking-title-sweep 2.25s linear infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -183,9 +212,8 @@ samp {
     transition: none;
   }
 
-  .thinking-title-shimmer {
-    background-image: none;
+  .thinking-title-shimmer::after {
     animation: none;
-    color: hsl(var(--foreground) / 0.9);
+    opacity: 0;
   }
 }
