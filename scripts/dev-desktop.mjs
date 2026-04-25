@@ -26,8 +26,44 @@ async function pathExists(filePath) {
   }
 }
 
+function getPathEnvKey(env) {
+  if (!isWindows) {
+    return 'PATH';
+  }
+
+  const keys = Object.keys(env).filter((key) => key.toLowerCase() === 'path');
+  return keys.find((key) => (env[key] ?? '').length > 0) ?? keys[0] ?? 'Path';
+}
+
+function getPathEnv(env) {
+  const key = getPathEnvKey(env);
+  return env[key] ?? '';
+}
+
+function setPathEnv(env, value) {
+  const key = getPathEnvKey(env);
+  const next = {
+    ...env,
+    [key]: value,
+  };
+
+  if (isWindows) {
+    for (const existingKey of Object.keys(next)) {
+      if (existingKey !== key && existingKey.toLowerCase() === 'path') {
+        delete next[existingKey];
+      }
+    }
+  }
+
+  return next;
+}
+
+function normalizePathEnv(env) {
+  return setPathEnv(env, getPathEnv(env));
+}
+
 async function findOnPath(names, env) {
-  const pathEntries = (env.PATH ?? '').split(path.delimiter).filter(Boolean);
+  const pathEntries = getPathEnv(env).split(path.delimiter).filter(Boolean);
 
   for (const directory of pathEntries) {
     for (const name of names) {
@@ -93,15 +129,12 @@ async function ensureCargoPath(env) {
     return env;
   }
 
-  const currentPath = env.PATH ?? '';
+  const currentPath = getPathEnv(env);
   if (currentPath.split(path.delimiter).includes(cargoBin)) {
     return env;
   }
 
-  return {
-    ...env,
-    PATH: `${cargoBin}${path.delimiter}${currentPath}`,
-  };
+  return setPathEnv(env, `${cargoBin}${path.delimiter}${currentPath}`);
 }
 
 function startDescendantTracking(child) {
@@ -396,7 +429,7 @@ process.on('exit', () => {
 });
 
 async function main() {
-  const env = await ensureCargoPath({ ...process.env });
+  const env = await ensureCargoPath(normalizePathEnv({ ...process.env }));
   const nodeCommand = await resolveNodeCommand(env);
   const runtimeEnv = {
     ...env,
