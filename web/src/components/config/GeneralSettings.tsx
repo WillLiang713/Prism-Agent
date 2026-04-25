@@ -104,47 +104,15 @@ export function GeneralSettings() {
 
   return (
     <div className="space-y-5 pt-6 md:pt-0">
-      <div className="grid gap-3 rounded-2xl border border-border/50 bg-background/20 p-4 text-xs md:grid-cols-[minmax(0,1fr)_minmax(20rem,28rem)] md:items-center">
+      <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(20rem,28rem)] md:items-center">
         <div className="space-y-1">
-          <span className="font-medium text-foreground">标题模型</span>
+          <span className="text-xs font-medium text-foreground">标题模型</span>
           <p className="max-w-md text-[11px] leading-5 text-mutedForeground">
             用于生成会话标题；留空时跟随当前服务的默认模型
           </p>
         </div>
-        <div className="grid min-w-0 gap-2">
-          <div className="flex min-w-0 items-center justify-end gap-2 px-1">
-            {error ? (
-              <span
-                aria-live="polite"
-                className="max-w-[160px] truncate text-[11px] text-danger/80"
-                title={error}
-              >
-                {error}
-              </span>
-            ) : success ? (
-              <span
-                aria-live="polite"
-                className="max-w-[160px] truncate text-[11px] text-success/80 dark:text-success"
-                title={success}
-              >
-                {success}
-              </span>
-            ) : null}
-            <button
-              type="button"
-              onClick={() => refreshAllModels()}
-              disabled={loading}
-              className="flex shrink-0 items-center gap-1 rounded-md text-[11px] text-mutedForeground/80 outline-none hover:text-foreground focus-visible:ring-1 focus-visible:ring-foreground/20 disabled:opacity-50"
-              title="从所有服务获取模型列表"
-            >
-              <RefreshCw
-                className={`h-3 w-3 ${loading ? 'animate-spin' : ''}`}
-              />
-              {loading ? '获取中' : '获取'}
-            </button>
-          </div>
-
-        <PopoverPrimitive.Root open={open} onOpenChange={setOpen}>
+        <div className="min-w-0">
+          <PopoverPrimitive.Root open={open} onOpenChange={setOpen}>
           <PopoverPrimitive.Trigger asChild>
             <button
               type="button"
@@ -180,18 +148,48 @@ export function GeneralSettings() {
               className="z-50 w-[var(--radix-popover-trigger-width)] max-w-[calc(100vw-1.5rem)] overflow-hidden rounded-xl border border-border bg-muted p-1 text-foreground shadow-[0_18px_40px_rgba(0,0,0,0.22)]"
             >
               <Command shouldFilter={true} className="flex flex-col">
-                <Command.Input
-                  aria-label="搜索标题模型"
-                  name="title-model-search"
-                  autoComplete="off"
-                  value={search}
-                  onValueChange={(next) => {
-                    setSearch(next);
-                    updateRuntimeModelConfig({ titleModel: next, titleModelServiceId: '' });
-                  }}
-                  placeholder="搜索模型…"
-                  className="h-8 w-full rounded-md bg-transparent px-2 text-sm text-foreground placeholder:text-mutedForeground outline-none"
-                />
+                <div className="flex items-center gap-1 border-b border-border/50 px-2 py-1">
+                  <Command.Input
+                    aria-label="搜索标题模型"
+                    name="title-model-search"
+                    autoComplete="off"
+                    value={search}
+                    onValueChange={(next) => {
+                      setSearch(next);
+                      updateRuntimeModelConfig({ titleModel: next, titleModelServiceId: '' });
+                    }}
+                    placeholder="搜索模型…"
+                    className="h-8 min-w-0 flex-1 rounded-md bg-transparent px-1 text-sm text-foreground placeholder:text-mutedForeground outline-none"
+                  />
+                  {error ? (
+                    <span
+                      aria-live="polite"
+                      className="shrink-0 truncate text-[11px] text-danger/80"
+                      title={error}
+                    >
+                      {error}
+                    </span>
+                  ) : success ? (
+                    <span
+                      aria-live="polite"
+                      className="shrink-0 truncate text-[11px] text-success/80 dark:text-success"
+                      title={success}
+                    >
+                      {success}
+                    </span>
+                  ) : null}
+                  <button
+                    type="button"
+                    onClick={() => refreshAllModels()}
+                    disabled={loading}
+                    className="flex shrink-0 items-center justify-center rounded-md p-1 text-mutedForeground/80 outline-none hover:text-foreground focus-visible:ring-1 focus-visible:ring-foreground/20 disabled:opacity-50"
+                    title="从所有服务获取模型列表"
+                  >
+                    <RefreshCw
+                      className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`}
+                    />
+                  </button>
+                </div>
                 <Command.List
                   className="mt-1 max-h-64 overflow-y-auto"
                   onWheel={(e) => {
@@ -224,8 +222,8 @@ export function GeneralSettings() {
             </PopoverPrimitive.Content>
           </PopoverPrimitive.Portal>
         </PopoverPrimitive.Root>
+          </div>
+        </div>
       </div>
-      </div>
-    </div>
-  );
-}
+    );
+  }
