@@ -61,6 +61,12 @@
 - Treat newly created ad hoc `*.test.*`, `*.spec.*`, fixture, and repro files as temporary unless they are deliberate source-controlled regression coverage. Remove temporary ones before the final response.
 - After browser-based tests finish, terminate any leftover backend, browser, driver, or test-related processes started for the run so they do not accumulate and slow down or freeze the machine.
 
+## Test Organization
+
+- New or migrated intentional tests must live under the repository-level `tests/` directory, grouped by layer such as `tests/web/`, `tests/agent-sidecar/`, and `tests/src-tauri/`.
+- Mirror the source path under that layer when it helps readability, but do not add new `*.test.*` or `*.spec.*` files beside source files.
+- Existing colocated tests may remain until they are intentionally migrated; avoid moving unrelated historical tests as part of a focused feature or bug fix.
+
 ## Documentation Sync
 
 - When updating repository rules or user-facing project documentation, keep the English and Chinese counterparts aligned unless the user explicitly asks for a one-language-only change.
