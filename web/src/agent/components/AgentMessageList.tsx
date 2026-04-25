@@ -65,24 +65,21 @@ const AgentMessageItem = memo(function AgentMessageItem({
     );
   }
 
-  let lastRunningToolCallId: string | null = null;
-  for (let index = message.timeline.length - 1; index >= 0; index -= 1) {
-    const item = message.timeline[index];
-    if (item.type === 'tool' && item.status === 'running') {
-      lastRunningToolCallId = item.toolCallId;
-      break;
-    }
-  }
+  const isWaitingForFirstContent =
+    generating &&
+    !message.text.trim() &&
+    !message.error &&
+    !message.timeline.some(hasVisibleTimelineItem);
 
   return (
     <article className="space-y-4 min-w-0 overflow-hidden">
+      {isWaitingForFirstContent ? <PendingAssistantStatus /> : null}
       {message.timeline.length > 0 ? (
         <div className="space-y-2 min-w-0">
           {message.timeline.map((item) => (
             <TimelineItem
               key={item.id}
               item={item}
-              autoExpandEnabled={item.type === 'tool' && item.toolCallId === lastRunningToolCallId}
             />
           ))}
         </div>
@@ -99,12 +96,35 @@ const AgentMessageItem = memo(function AgentMessageItem({
   );
 });
 
+function hasVisibleTimelineItem(item: AgentTimelineItem) {
+  if (item.type === 'tool') {
+    return true;
+  }
+
+  return item.status === 'streaming' || item.text.trim().length > 0;
+}
+
+function PendingAssistantStatus() {
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      className="flex w-fit max-w-full items-center gap-2 text-xs leading-5 text-mutedForeground/80"
+    >
+      <span className="thinking-title-shimmer">正在准备回复</span>
+      <span className="flex items-center gap-1" aria-hidden="true">
+        <span className="h-1 w-1 rounded-full bg-current opacity-35" />
+        <span className="h-1 w-1 rounded-full bg-current opacity-55" />
+        <span className="h-1 w-1 rounded-full bg-current opacity-75" />
+      </span>
+    </div>
+  );
+}
+
 function TimelineItem({
   item,
-  autoExpandEnabled,
 }: {
   item: AgentTimelineItem;
-  autoExpandEnabled: boolean;
 }) {
   if (item.type === 'thinking') {
     if (item.status !== 'streaming' && !item.text.trim()) {
@@ -121,7 +141,7 @@ function TimelineItem({
     );
   }
 
-  return <ToolCallCard event={item} autoExpandEnabled={autoExpandEnabled} />;
+  return <ToolCallCard event={item} />;
 }
 
 function CopyMessageButton({ text }: { text: string }) {

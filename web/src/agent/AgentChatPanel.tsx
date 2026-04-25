@@ -10,7 +10,7 @@ import type { AgentApprovalMode, AgentRuntimeStatus } from './client';
 import type { AgentSession } from './sessionStore';
 
 const CHAT_SIDE_PADDING = 'calc(1.5rem + 10px)';
-const CHAT_PANEL_MAX_WIDTH = '760px';
+const CHAT_PANEL_MAX_WIDTH = '900px';
 const BOTTOM_STICK_THRESHOLD_PX = 160;
 const SUPPRESSED_RUNTIME_REASON = '未指定主模型，请在设置中选择或输入模型名称。';
 const AUTO_SCROLL_MAX_FRAMES = 4;

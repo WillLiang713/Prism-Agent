@@ -297,13 +297,24 @@ function renderSingleSidedDiffRow(row: ParsedDiffRow) {
   );
 }
 
-export const CodeDiffView = memo(function CodeDiffView({ diff }: { diff: string }) {
+export const CodeDiffView = memo(function CodeDiffView({
+  diff,
+  className,
+}: {
+  diff: string;
+  className?: string;
+}) {
   const files = parseUnifiedDiff(diff);
   const renderedDiffLines = files.length === 0 ? parseRenderedDiffLines(diff) : [];
 
   if (files.length === 0 && renderedDiffLines.length === 0) {
     return (
-      <pre className="overflow-x-auto whitespace-pre-wrap break-all rounded-sm border border-border/60 bg-background/35 px-1.5 py-1.5 text-xs leading-5 text-foreground font-mono">
+      <pre
+        className={cn(
+          'overflow-x-auto whitespace-pre-wrap break-all rounded-sm border border-border/60 bg-background/35 px-1.5 py-1.5 text-xs leading-5 text-foreground font-mono',
+          className,
+        )}
+      >
         {diff}
       </pre>
     );
@@ -311,7 +322,7 @@ export const CodeDiffView = memo(function CodeDiffView({ diff }: { diff: string 
 
   if (files.length === 0) {
     return (
-      <div className="overflow-hidden rounded-sm border border-border/60 bg-background/35">
+      <div className={cn('overflow-hidden rounded-sm border border-border/60 bg-background/35', className)}>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[460px] border-collapse table-fixed">
             <colgroup>
@@ -397,7 +408,7 @@ export const CodeDiffView = memo(function CodeDiffView({ diff }: { diff: string 
   }
 
   return (
-    <div className="overflow-hidden rounded-sm border border-border/60 bg-background/35">
+    <div className={cn('overflow-hidden rounded-sm border border-border/60 bg-background/35', className)}>
       {files.map((file, fileIndex) => {
         const status = getDiffFileStatus(file);
 
