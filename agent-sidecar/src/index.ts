@@ -26,6 +26,7 @@ import { createBridge } from './bridge.js';
 import { createHttpServer } from './http.js';
 import {
   appendThinkingDelta as appendThinkingTimelineDelta,
+  appendTextDelta as appendTextTimelineDelta,
   closeOpenThinking,
   ensureToolTimelineItem,
   finalizeRunningTools,
@@ -462,7 +463,7 @@ function bindSessionEvents(runtime: RuntimeSessionRecord) {
           });
         }
         if (event.assistantMessageEvent.type === 'text_delta') {
-          assistantMessage.text += event.assistantMessageEvent.delta;
+          appendTextTimelineDelta(assistantMessage, event.assistantMessageEvent.delta);
           emit({
             type: 'delta',
             requestId,

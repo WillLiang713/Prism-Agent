@@ -23,6 +23,7 @@ const STREAMING_BUFFER_HOLD_IDLE_MS = 340;
 const STREAMING_BUFFER_DECAY_MS = 320;
 const STREAMING_MIN_BUFFER_CHARS = 24;
 const STREAMING_MAX_BUFFER_CHARS = 96;
+const GENERATION_IDLE_INDICATOR_DELAY_MS = 1400;
 
 export function AgentMessageList({
   messages,
@@ -55,21 +56,57 @@ const AgentMessageItem = memo(function AgentMessageItem({
   generating: boolean;
 }) {
   if (message.role === 'user') {
-    return (
-      <article className="group/user flex flex-col items-end gap-1">
-        <div className="w-fit max-w-[90%] rounded-[10px] border border-border bg-accent px-3 py-2 text-sm leading-6 text-accentForeground">
-          <div className="whitespace-pre-wrap break-words">{message.text}</div>
-        </div>
-        <CopyMessageButton text={message.text} />
-      </article>
-    );
+    return <UserMessageItem text={message.text} />;
   }
 
+  return <AssistantMessageItem message={message} generating={generating} />;
+});
+
+function UserMessageItem({ text }: { text: string }) {
+  return (
+    <article className="group/user flex flex-col items-end gap-1">
+      <div className="w-fit max-w-[90%] rounded-[10px] border border-border bg-accent px-3 py-2 text-sm leading-6 text-accentForeground">
+        <div className="whitespace-pre-wrap break-words">{text}</div>
+      </div>
+      <CopyMessageButton text={text} />
+    </article>
+  );
+}
+
+function AssistantMessageItem({
+  message,
+  generating,
+}: {
+  message: AgentMessage;
+  generating: boolean;
+}) {
   const isWaitingForFirstContent =
     generating &&
-    !message.text.trim() &&
     !message.error &&
     !message.timeline.some(hasVisibleTimelineItem);
+  const shouldTrackIdleStatus =
+    generating &&
+    !message.error &&
+    !isWaitingForFirstContent &&
+    !message.timeline.some(hasActiveThinkingItem) &&
+    message.timeline.some(hasVisibleTimelineItem);
+  const visibleActivitySignature = buildVisibleActivitySignature(message);
+  const activeStreamingTextItemId = generating ? getActiveStreamingTextItemId(message.timeline) : null;
+  const [showIdleStatus, setShowIdleStatus] = useState(false);
+
+  useEffect(() => {
+    if (!shouldTrackIdleStatus) {
+      setShowIdleStatus(false);
+      return;
+    }
+
+    setShowIdleStatus(false);
+    const timer = window.setTimeout(() => {
+      setShowIdleStatus(true);
+    }, GENERATION_IDLE_INDICATOR_DELAY_MS);
+
+    return () => window.clearTimeout(timer);
+  }, [shouldTrackIdleStatus, visibleActivitySignature]);
 
   return (
     <article className="space-y-4 min-w-0 overflow-hidden">
@@ -80,13 +117,12 @@ const AgentMessageItem = memo(function AgentMessageItem({
             <TimelineItem
               key={item.id}
               item={item}
+              isStreamingText={item.type === 'text' && item.id === activeStreamingTextItemId}
             />
           ))}
         </div>
       ) : null}
-      {message.text.trim() ? (
-        <MessageBody text={message.text} isStreaming={generating} />
-      ) : null}
+      {showIdleStatus ? <GenerationIdleStatus /> : null}
       {message.error ? (
         <div className="rounded-xl border border-border bg-card px-4 py-3 text-sm text-mutedForeground">
           {message.error}
@@ -94,14 +130,70 @@ const AgentMessageItem = memo(function AgentMessageItem({
       ) : null}
     </article>
   );
-});
+}
+
+function buildVisibleActivitySignature(message: AgentMessage) {
+  const timelineSignature = message.timeline
+    .map((item) => {
+      if (item.type === 'thinking') {
+        return [
+          item.type,
+          item.status,
+          item.text.length,
+          item.durationSec ?? '',
+        ].join(':');
+      }
+
+      if (item.type === 'text') {
+        return [
+          item.type,
+          item.text.length,
+        ].join(':');
+      }
+
+      return [
+        item.type,
+        item.toolCallId,
+        item.status,
+        item.output.length,
+        item.diff?.length ?? 0,
+        item.exitCode ?? '',
+        item.summary?.length ?? 0,
+      ].join(':');
+    })
+    .join('|');
+
+  return `${message.text.length}:${timelineSignature}`;
+}
 
 function hasVisibleTimelineItem(item: AgentTimelineItem) {
+  if (item.type === 'text') {
+    return item.text.trim().length > 0;
+  }
   if (item.type === 'tool') {
     return true;
   }
 
   return item.status === 'streaming' || item.text.trim().length > 0;
+}
+
+function hasActiveThinkingItem(item: AgentTimelineItem) {
+  return item.type === 'thinking' && item.status === 'streaming';
+}
+
+function getActiveStreamingTextItemId(timeline: AgentTimelineItem[]) {
+  const lastItem = timeline.at(-1);
+  return lastItem?.type === 'text' ? lastItem.id : null;
+}
+
+function LoadingDots() {
+  return (
+    <span className="flex items-center gap-1" aria-hidden="true">
+      <span className="h-1 w-1 rounded-full bg-current opacity-35" />
+      <span className="h-1 w-1 rounded-full bg-current opacity-55" />
+      <span className="h-1 w-1 rounded-full bg-current opacity-75" />
+    </span>
+  );
 }
 
 function PendingAssistantStatus() {
@@ -112,20 +204,38 @@ function PendingAssistantStatus() {
       className="flex w-fit max-w-full items-center gap-2 text-xs leading-5 text-mutedForeground/80"
     >
       <span className="thinking-title-shimmer">正在准备回复</span>
-      <span className="flex items-center gap-1" aria-hidden="true">
-        <span className="h-1 w-1 rounded-full bg-current opacity-35" />
-        <span className="h-1 w-1 rounded-full bg-current opacity-55" />
-        <span className="h-1 w-1 rounded-full bg-current opacity-75" />
-      </span>
+      <LoadingDots />
+    </div>
+  );
+}
+
+function GenerationIdleStatus() {
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      className="flex w-fit max-w-full items-center gap-2 text-xs leading-5 text-mutedForeground/72"
+    >
+      <span className="thinking-title-shimmer">继续处理</span>
+      <LoadingDots />
     </div>
   );
 }
 
 function TimelineItem({
   item,
+  isStreamingText,
 }: {
   item: AgentTimelineItem;
+  isStreamingText: boolean;
 }) {
+  if (item.type === 'text') {
+    if (!item.text.trim()) {
+      return null;
+    }
+    return <MessageBody text={item.text} isStreaming={isStreamingText} />;
+  }
+
   if (item.type === 'thinking') {
     if (item.status !== 'streaming' && !item.text.trim()) {
       return null;

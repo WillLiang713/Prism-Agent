@@ -3,6 +3,20 @@ import assert from 'node:assert/strict';
 
 import { createSessionFromBootstrap, useAgentSessionStore } from './sessionStore';
 
+const localStorageMock = new Map<string, string>();
+
+(globalThis as any).window = {
+  localStorage: {
+    getItem: (key: string) => localStorageMock.get(key) ?? null,
+    setItem: (key: string, value: string) => {
+      localStorageMock.set(key, value);
+    },
+    removeItem: (key: string) => {
+      localStorageMock.delete(key);
+    },
+  },
+};
+
 function resetStore() {
   useAgentSessionStore.setState({
     initialized: false,
@@ -54,21 +68,22 @@ function getAssistantMessage(sessionId: string) {
   return session.messages.find((message: any) => message.role === 'assistant');
 }
 
-test('createSessionFromBootstrap converts legacy thinking and tool events into timeline items', () => {
+test('createSessionFromBootstrap converts legacy thinking, tool events, and text into timeline items', () => {
   const session = createSessionFromBootstrap(createBootstrapWithLegacyFields() as any, 'C:/workspace') as any;
   const [message] = session.messages;
 
-  assert.equal(message.timeline.length, 2);
+  assert.equal(message.timeline.length, 3);
   assert.deepEqual(
     message.timeline.map((item: any) => item.type),
-    ['thinking', 'tool'],
+    ['thinking', 'tool', 'text'],
   );
   assert.equal(message.timeline[0].text, '第一段思考');
   assert.equal(message.timeline[0].status, 'done');
   assert.equal(message.timeline[1].name, 'bash');
+  assert.equal(message.timeline[2].text, '最终回答');
 });
 
-test('applyEvent creates separate thinking items around tool calls in timeline order', () => {
+test('applyEvent keeps text, thinking, and tool calls in arrival order', () => {
   resetStore();
   const session = createSessionFromBootstrap(
     {
@@ -86,6 +101,14 @@ test('applyEvent creates separate thinking items around tool calls in timeline o
   useAgentSessionStore.getState().upsertSession(session);
   useAgentSessionStore.getState().createPendingMessage('session-1', '帮我执行命令', 'request-1');
 
+  useAgentSessionStore.getState().applyEvent({
+    type: 'delta',
+    requestId: 'request-1',
+    sessionId: 'session-1',
+    itemId: 'assistant-request-1',
+    kind: 'text',
+    text: '先说明一下。',
+  });
   useAgentSessionStore.getState().applyEvent({
     type: 'thinking_start',
     requestId: 'request-1',
@@ -134,18 +157,38 @@ test('applyEvent creates separate thinking items around tool calls in timeline o
     itemId: 'assistant-request-1',
     text: '再总结一下',
   } as any);
+  useAgentSessionStore.getState().applyEvent({
+    type: 'thinking_end',
+    requestId: 'request-1',
+    sessionId: 'session-1',
+    itemId: 'assistant-request-1',
+    endedAt: 2600,
+    durationSec: 1,
+    status: 'done',
+  });
+  useAgentSessionStore.getState().applyEvent({
+    type: 'delta',
+    requestId: 'request-1',
+    sessionId: 'session-1',
+    itemId: 'assistant-request-1',
+    kind: 'text',
+    text: '最后回答。',
+  });
 
   const assistantMessage = getAssistantMessage('session-1');
 
   assert.deepEqual(
     assistantMessage.timeline.map((item: any) => item.type),
-    ['thinking', 'tool', 'thinking'],
+    ['text', 'thinking', 'tool', 'thinking', 'text'],
   );
-  assert.equal(assistantMessage.timeline[0].text, '先分析一下');
-  assert.equal(assistantMessage.timeline[0].status, 'done');
+  assert.equal(assistantMessage.timeline[0].text, '先说明一下。');
+  assert.equal(assistantMessage.timeline[1].text, '先分析一下');
   assert.equal(assistantMessage.timeline[1].status, 'done');
-  assert.equal(assistantMessage.timeline[2].status, 'streaming');
-  assert.equal(assistantMessage.timeline[2].text, '再总结一下');
+  assert.equal(assistantMessage.timeline[2].status, 'done');
+  assert.equal(assistantMessage.timeline[3].status, 'done');
+  assert.equal(assistantMessage.timeline[3].text, '再总结一下');
+  assert.equal(assistantMessage.timeline[4].text, '最后回答。');
+  assert.equal(assistantMessage.text, '先说明一下。最后回答。');
 });
 
 test('applyEvent closes an open thinking item as aborted when the request errors', () => {

@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 
 import {
   appendThinkingDelta,
+  appendTextDelta,
   closeOpenThinking,
   createAssistantSessionMessage,
   ensureToolTimelineItem,
@@ -61,4 +62,31 @@ test('finalizeRunningTools and closeOpenThinking settle aborted requests', () =>
   assert.equal(thinking?.durationSec, 1);
   assert.equal(message.timeline?.[1]?.type, 'tool');
   assert.equal(message.timeline?.[1]?.status, 'error');
+});
+
+test('text deltas are stored as timeline items around tool calls', () => {
+  const message = createAssistantSessionMessage('assistant-3', 100);
+
+  appendTextDelta(message, '先说一句。');
+  appendTextDelta(message, '继续。');
+  ensureToolTimelineItem(message, {
+    id: 'tool-3',
+    name: 'bash',
+    status: 'running',
+    args: { command: 'pwd' },
+    output: '',
+    ok: null,
+    summary: 'pwd',
+  });
+  appendTextDelta(message, '工具后回答。');
+
+  assert.deepEqual(
+    message.timeline?.map((item) => item.type),
+    ['text', 'tool', 'text'],
+  );
+  assert.equal(message.text, '先说一句。继续。工具后回答。');
+  assert.equal(message.timeline?.[0]?.type, 'text');
+  assert.equal(message.timeline?.[0]?.text, '先说一句。继续。');
+  assert.equal(message.timeline?.[2]?.type, 'text');
+  assert.equal(message.timeline?.[2]?.text, '工具后回答。');
 });

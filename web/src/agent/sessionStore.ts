@@ -6,6 +6,7 @@ import { createAgentSessionPersistStorage } from '../lib/storage';
 import type {
   AgentEvent,
   AgentSessionBootstrap,
+  AgentTextTimelineItem,
   AgentThreadMeta,
   AgentTimelineItem,
   AgentToolTimelineItem,
@@ -132,6 +133,14 @@ function createThinkingTimelineItem(options?: {
     startedAt,
     endedAt: options?.endedAt,
     durationSec: options?.durationSec,
+  };
+}
+
+function createTextTimelineItem(text: string): AgentTextTimelineItem {
+  return {
+    id: `text-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    type: 'text',
+    text,
   };
 }
 
@@ -281,6 +290,34 @@ function appendThinkingDelta(message: AgentMessage, text: string, startedAt = Da
   };
 }
 
+function appendTextDelta(message: AgentMessage, text: string) {
+  const nextText = message.text + text;
+  const lastIndex = message.timeline.length - 1;
+  const lastItem = lastIndex >= 0 ? message.timeline[lastIndex] : null;
+
+  if (lastItem?.type === 'text') {
+    const nextTimeline = [...message.timeline];
+    nextTimeline[lastIndex] = {
+      ...lastItem,
+      text: lastItem.text + text,
+    };
+    return {
+      ...message,
+      text: nextText,
+      timeline: nextTimeline,
+    };
+  }
+
+  return {
+    ...message,
+    text: nextText,
+    timeline: [
+      ...message.timeline,
+      createTextTimelineItem(text),
+    ],
+  };
+}
+
 function appendToolCall(
   message: AgentMessage,
   event: Extract<AgentEvent, { type: 'tool_call' }>,
@@ -384,6 +421,15 @@ function normalizeBootstrapTimeline(message: AgentSessionBootstrap['messages'][n
   if (message.timeline?.length) {
     const timeline: AgentTimelineItem[] = [];
     for (const item of message.timeline) {
+      if (item.type === 'text') {
+        const textItem = createTextTimelineItem(item.text);
+        textItem.id = item.id;
+        if (shouldKeepTimelineItem(textItem)) {
+          timeline.push(textItem);
+        }
+        continue;
+      }
+
       if (item.type === 'thinking') {
         const thinkingItem = createThinkingTimelineItem({
           id: item.id,
@@ -413,6 +459,14 @@ function normalizeBootstrapTimeline(message: AgentSessionBootstrap['messages'][n
         skillName: item.skillName,
       }));
     }
+    if (message.text.trim() && !timeline.some((item) => item.type === 'text')) {
+      timeline.push({
+        id: `${message.id}-text`,
+        type: 'text',
+        text: message.text,
+      });
+    }
+
     return timeline;
   }
 
@@ -450,11 +504,25 @@ function normalizeBootstrapTimeline(message: AgentSessionBootstrap['messages'][n
     );
   }
 
+  if (message.text.trim()) {
+    timeline.push({
+      id: `${message.id}-text`,
+      type: 'text',
+      text: message.text,
+    });
+  }
+
   return timeline;
 }
 
 function shouldKeepTimelineItem(item: AgentTimelineItem) {
-  return item.type !== 'thinking' || item.status === 'streaming' || item.text.trim().length > 0;
+  if (item.type === 'tool') {
+    return true;
+  }
+  if (item.type === 'text') {
+    return item.text.trim().length > 0;
+  }
+  return item.status === 'streaming' || item.text.trim().length > 0;
 }
 
 function normalizeBootstrapMessages(messages: AgentSessionBootstrap['messages']): AgentMessage[] {
@@ -656,7 +724,7 @@ export const useAgentSessionStore = create<AgentSessionState>()(
         updateAssistantMessage((message) =>
           event.kind === 'thinking'
             ? appendThinkingDelta(message, event.text)
-            : { ...message, text: message.text + event.text },
+            : appendTextDelta(message, event.text),
         );
       }
 
