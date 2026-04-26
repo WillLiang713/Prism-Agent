@@ -477,6 +477,7 @@ export function ToolCallCard({
     Boolean(event.diff && isPlainTextOutput && event.status === 'done' && event.ok !== false);
   const shouldRenderOutput = Boolean(event.output && !inlineOutput && !shouldSuppressRedundantDiffOutput);
   const shouldRenderPlainOutputWithDiff = Boolean(event.diff && shouldRenderOutput && isPlainTextOutput);
+  const isRunning = event.status === 'running';
   const normalizedSummary = normalizeComparableText(event.summary);
   const summaryRepeatsHeader =
     normalizedSummary.length === 0 ||
@@ -517,6 +518,7 @@ export function ToolCallCard({
     >
       <summary
         className="flex w-fit max-w-full list-none items-center gap-1.5 rounded-sm text-mutedForeground/80 hover:text-foreground focus-visible:outline-none focus-visible:text-foreground focus-visible:ring-1 focus-visible:ring-foreground/20"
+        aria-label={isRunning ? `正在调用工具 ${compactTitle}` : compactTitle}
         onClick={(summaryEvent) => {
           if (!hasExpandableContent) {
             summaryEvent.preventDefault();
@@ -529,6 +531,16 @@ export function ToolCallCard({
             isCommandLike ? 'font-mono text-[13px] leading-5' : 'text-sm'
           }`}
         >
+          {isRunning ? (
+            <span
+              role="status"
+              aria-live="polite"
+              className="thinking-title-shimmer mr-1.5 shrink-0 text-[11px] leading-5 text-mutedForeground/62"
+              data-shimmer-text="正在调用"
+            >
+              正在调用
+            </span>
+          ) : null}
           <span className="shrink-0">{header.title}</span>
           {displayDetail ? (
             <span className="ml-1.5 min-w-0 truncate text-mutedForeground/70" title={displayDetailTitle}>

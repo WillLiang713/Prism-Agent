@@ -7,6 +7,7 @@ import { normalizeAssistantMarkdown } from './assistantMarkdown';
 import { ToolCallCard } from './ToolCallCard';
 import { ThinkingBlock } from './ThinkingBlock';
 import { splitStreamingMarkdownForRender } from './streamingMarkdown';
+import { cn } from '../../lib/utils';
 import type { AgentMessage } from '../sessionStore';
 import type { AgentTimelineItem } from '../client';
 
@@ -24,6 +25,24 @@ const STREAMING_BUFFER_DECAY_MS = 320;
 const STREAMING_MIN_BUFFER_CHARS = 24;
 const STREAMING_MAX_BUFFER_CHARS = 96;
 const GENERATION_IDLE_INDICATOR_DELAY_MS = 1400;
+const PENDING_ASSISTANT_PHASES = [
+  {
+    id: 'sent',
+    minMs: 0,
+    label: '已发送',
+  },
+  {
+    id: 'queued',
+    minMs: 350,
+    label: '排队中',
+  },
+  {
+    id: 'thinking',
+    minMs: 1200,
+    label: '思考中',
+  },
+] as const;
+type PendingAssistantPhase = (typeof PENDING_ASSISTANT_PHASES)[number];
 
 export function AgentMessageList({
   messages,
@@ -89,6 +108,7 @@ function AssistantMessageItem({
     !message.error &&
     !isWaitingForFirstContent &&
     !message.timeline.some(hasActiveThinkingItem) &&
+    !message.timeline.some(hasRunningToolItem) &&
     message.timeline.some(hasVisibleTimelineItem);
   const visibleActivitySignature = buildVisibleActivitySignature(message);
   const activeStreamingTextItemId = generating ? getActiveStreamingTextItemId(message.timeline) : null;
@@ -110,7 +130,7 @@ function AssistantMessageItem({
 
   return (
     <article className="space-y-4 min-w-0 overflow-hidden">
-      {isWaitingForFirstContent ? <PendingAssistantStatus /> : null}
+      {isWaitingForFirstContent ? <PendingAssistantStatus startedAt={message.createdAt} /> : null}
       {message.timeline.length > 0 ? (
         <div className="space-y-2 min-w-0">
           {message.timeline.map((item) => (
@@ -181,32 +201,30 @@ function hasActiveThinkingItem(item: AgentTimelineItem) {
   return item.type === 'thinking' && item.status === 'streaming';
 }
 
+function hasRunningToolItem(item: AgentTimelineItem) {
+  return item.type === 'tool' && item.status === 'running';
+}
+
 function getActiveStreamingTextItemId(timeline: AgentTimelineItem[]) {
   const lastItem = timeline.at(-1);
   return lastItem?.type === 'text' ? lastItem.id : null;
 }
 
-function LoadingDots() {
-  return (
-    <span className="flex items-center gap-1" aria-hidden="true">
-      <span className="h-1 w-1 rounded-full bg-current opacity-35" />
-      <span className="h-1 w-1 rounded-full bg-current opacity-55" />
-      <span className="h-1 w-1 rounded-full bg-current opacity-75" />
-    </span>
-  );
-}
+function PendingAssistantStatus({ startedAt }: { startedAt: number }) {
+  const phase = usePendingAssistantPhase(startedAt);
 
-function PendingAssistantStatus() {
   return (
     <div
       role="status"
       aria-live="polite"
       className="flex w-fit max-w-full items-center gap-2 text-xs leading-5 text-mutedForeground/80"
     >
-      <span className="thinking-title-shimmer" data-shimmer-text="正在准备回复">
-        正在准备回复
+      <span
+        className={cn('min-w-0 truncate', phase.id !== 'sent' && 'thinking-title-shimmer')}
+        data-shimmer-text={phase.id !== 'sent' ? phase.label : undefined}
+      >
+        {phase.label}
       </span>
-      <LoadingDots />
     </div>
   );
 }
@@ -221,9 +239,54 @@ function GenerationIdleStatus() {
       <span className="thinking-title-shimmer" data-shimmer-text="继续处理">
         继续处理
       </span>
-      <LoadingDots />
     </div>
   );
+}
+
+function usePendingAssistantPhase(startedAt: number) {
+  const [phase, setPhase] = useState(() => resolvePendingAssistantPhase(startedAt));
+
+  useEffect(() => {
+    let timer: number | null = null;
+
+    const syncPhase = () => {
+      const nextPhase = resolvePendingAssistantPhase(startedAt);
+      setPhase((currentPhase) => (
+        currentPhase.id === nextPhase.id ? currentPhase : nextPhase
+      ));
+
+      const elapsedMs = Date.now() - startedAt;
+      const upcomingPhase = PENDING_ASSISTANT_PHASES.find((item) => item.minMs > elapsedMs);
+      if (upcomingPhase) {
+        timer = window.setTimeout(
+          syncPhase,
+          Math.max(80, upcomingPhase.minMs - elapsedMs),
+        );
+      }
+    };
+
+    syncPhase();
+    return () => {
+      if (timer !== null) {
+        window.clearTimeout(timer);
+      }
+    };
+  }, [startedAt]);
+
+  return phase;
+}
+
+function resolvePendingAssistantPhase(startedAt: number): PendingAssistantPhase {
+  const elapsedMs = Date.now() - startedAt;
+  let currentPhase: PendingAssistantPhase = PENDING_ASSISTANT_PHASES[0];
+
+  for (const phase of PENDING_ASSISTANT_PHASES) {
+    if (elapsedMs >= phase.minMs) {
+      currentPhase = phase;
+    }
+  }
+
+  return currentPhase;
 }
 
 function TimelineItem({

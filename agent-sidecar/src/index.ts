@@ -71,6 +71,13 @@ const DEFAULT_DYNAMIC_MODEL_COST = {
   cacheRead: 0,
   cacheWrite: 0,
 } as const;
+const DEEPSEEK_REASONING_EFFORT_MAP = {
+  minimal: 'high',
+  low: 'high',
+  medium: 'high',
+  high: 'high',
+  xhigh: 'max',
+} as const;
 
 type PendingApproval = {
   sessionId: string;
@@ -83,6 +90,19 @@ type RuntimeOptions = {
   host: string;
   port: number;
   token: string;
+};
+
+type RuntimeModelLike = {
+  id?: unknown;
+  provider?: unknown;
+  baseUrl?: unknown;
+  reasoning?: unknown;
+};
+
+type OpenAIChatPayload = Record<string, unknown> & {
+  messages?: unknown;
+  reasoning_effort?: unknown;
+  thinking?: unknown;
 };
 
 const authStorage = AuthStorage.create();
@@ -647,6 +667,15 @@ async function maybeGenerateThreadTitle(
 
 function createBridgeExtension(context: { sessionId: string; threadId: string }) {
   return (pi: any) => {
+    pi.on('before_provider_request', (event: { payload: unknown }) => {
+      const runtime = sessionRegistry.getRuntimeSession(context.sessionId);
+      return normalizeDeepSeekThinkingPayload(
+        event.payload,
+        runtime.session.model as RuntimeModelLike | undefined,
+        runtime.session.thinkingLevel,
+      );
+    });
+
     pi.on('tool_call', async (event: ToolCallEvent) => {
       const runtime = sessionRegistry.getRuntimeSession(context.sessionId);
       const requestId = runtime.currentRequestId;
@@ -789,6 +818,137 @@ function createBridgeExtension(context: { sessionId: string; threadId: string })
       persistSnapshot(runtime);
     });
   };
+}
+
+function normalizeDeepSeekThinkingPayload(
+  payload: unknown,
+  model: RuntimeModelLike | undefined,
+  thinkingLevel: unknown,
+) {
+  if (!isRecord(payload) || !Array.isArray(payload.messages)) {
+    return payload;
+  }
+  if (!isDeepSeekNativeChatModel(model)) {
+    return payload;
+  }
+
+  let nextPayload: OpenAIChatPayload = payload;
+  let payloadChanged = false;
+  const setPayloadField = (key: string, value: unknown) => {
+    if (!payloadChanged) {
+      nextPayload = { ...nextPayload };
+      payloadChanged = true;
+    }
+    nextPayload[key] = value;
+  };
+  const deletePayloadField = (key: string) => {
+    if (!(key in nextPayload)) {
+      return;
+    }
+    if (!payloadChanged) {
+      nextPayload = { ...nextPayload };
+      payloadChanged = true;
+    }
+    delete nextPayload[key];
+  };
+
+  const thinkingEnabled = model?.reasoning !== false && isThinkingLevel(thinkingLevel);
+  const thinkingType = thinkingEnabled ? 'enabled' : 'disabled';
+  if (!isRecord(nextPayload.thinking) || nextPayload.thinking.type !== thinkingType) {
+    setPayloadField('thinking', { type: thinkingType });
+  }
+
+  if (thinkingEnabled) {
+    const effort = mapDeepSeekReasoningEffort(thinkingLevel) ?? 'high';
+    if (nextPayload.reasoning_effort !== effort) {
+      setPayloadField('reasoning_effort', effort);
+    }
+  } else {
+    deletePayloadField('reasoning_effort');
+  }
+
+  let nextMessages = nextPayload.messages as unknown[];
+  const replaceMessage = (index: number, message: Record<string, unknown>) => {
+    if (nextMessages === nextPayload.messages) {
+      nextMessages = [...nextMessages];
+    }
+    nextMessages[index] = message;
+  };
+
+  for (let index = 0; index < nextMessages.length; index += 1) {
+    const message = nextMessages[index];
+    if (!isRecord(message) || message.role !== 'assistant') {
+      continue;
+    }
+
+    let nextMessage = message;
+    const setMessageField = (key: string, value: unknown) => {
+      if (nextMessage === message) {
+        nextMessage = { ...message };
+      }
+      nextMessage[key] = value;
+    };
+    const deleteMessageField = (key: string) => {
+      if (!(key in nextMessage)) {
+        return;
+      }
+      if (nextMessage === message) {
+        nextMessage = { ...message };
+      }
+      delete nextMessage[key];
+    };
+
+    if (thinkingEnabled) {
+      // DeepSeek requires tool-call assistant messages to carry reasoning_content back.
+      if (hasToolCalls(message.tool_calls)) {
+        if (!('reasoning_content' in message) || message.reasoning_content === null) {
+          setMessageField('reasoning_content', '');
+        }
+        if (message.content === null || message.content === undefined) {
+          setMessageField('content', '');
+        }
+      }
+    } else {
+      deleteMessageField('reasoning_content');
+    }
+
+    if (nextMessage !== message) {
+      replaceMessage(index, nextMessage);
+    }
+  }
+
+  if (nextMessages !== nextPayload.messages) {
+    setPayloadField('messages', nextMessages);
+  }
+
+  return payloadChanged ? nextPayload : payload;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+function isDeepSeekNativeChatModel(model: RuntimeModelLike | undefined) {
+  const baseUrl = typeof model?.baseUrl === 'string' ? model.baseUrl.toLowerCase() : '';
+  return baseUrl.includes('deepseek.com');
+}
+
+function isThinkingLevel(value: unknown): value is keyof typeof DEEPSEEK_REASONING_EFFORT_MAP {
+  return (
+    value === 'minimal' ||
+    value === 'low' ||
+    value === 'medium' ||
+    value === 'high' ||
+    value === 'xhigh'
+  );
+}
+
+function mapDeepSeekReasoningEffort(value: unknown) {
+  return isThinkingLevel(value) ? DEEPSEEK_REASONING_EFFORT_MAP[value] : undefined;
+}
+
+function hasToolCalls(value: unknown) {
+  return Array.isArray(value) && value.length > 0;
 }
 
 function collectSkills(loader: DefaultResourceLoader) {
