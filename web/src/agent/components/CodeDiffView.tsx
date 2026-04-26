@@ -2,13 +2,51 @@ import { Fragment, memo, type CSSProperties } from 'react';
 
 import { cn } from '../../lib/utils';
 import {
+  getCompactDiffFileLabel,
   getDiffFileLabel,
   getDiffFileStatus,
   parseRenderedDiffLines,
   parseUnifiedDiff,
+  type DiffChangeSummary,
+  type DiffOverview,
   type DiffRowKind,
   type ParsedDiffRow,
 } from './codeDiff';
+
+function DiffStatPills({ additions, deletions }: { additions: number; deletions: number }) {
+  if (additions === 0 && deletions === 0) {
+    return null;
+  }
+
+  return (
+    <div className="flex shrink-0 items-center gap-0.5 font-mono text-[10px] leading-5">
+      {additions > 0 ? (
+        <span
+          className="rounded-sm border px-1 py-px"
+          style={{
+            borderColor: 'hsl(var(--diff-add-border) / 0.62)',
+            backgroundColor: 'hsl(var(--diff-add-bg) / 0.46)',
+            color: 'hsl(var(--diff-add-fg) / 0.94)',
+          }}
+        >
+          +{additions}
+        </span>
+      ) : null}
+      {deletions > 0 ? (
+        <span
+          className="rounded-sm border px-1 py-px"
+          style={{
+            borderColor: 'hsl(var(--diff-remove-border) / 0.62)',
+            backgroundColor: 'hsl(var(--diff-remove-bg) / 0.46)',
+            color: 'hsl(var(--diff-remove-fg) / 0.94)',
+          }}
+        >
+          -{deletions}
+        </span>
+      ) : null}
+    </div>
+  );
+}
 
 function getFileStatusBadgeStyle(status: string): CSSProperties {
   if (status === 'new file') {
@@ -176,6 +214,77 @@ function getMarker(kind: DiffRowKind, side: 'left' | 'right') {
   return ' ';
 }
 
+function getChangeLabel(change: DiffChangeSummary) {
+  if (change.kind === 'added') {
+    return '新增';
+  }
+  if (change.kind === 'removed') {
+    return '删除';
+  }
+  return '修改';
+}
+
+function getChangeBadgeStyle(kind: DiffChangeSummary['kind']): CSSProperties {
+  if (kind === 'added') {
+    return {
+      borderColor: 'hsl(var(--diff-add-border) / 0.58)',
+      backgroundColor: 'hsl(var(--diff-add-bg) / 0.36)',
+      color: 'hsl(var(--diff-add-fg) / 0.94)',
+    };
+  }
+
+  if (kind === 'removed') {
+    return {
+      borderColor: 'hsl(var(--diff-remove-border) / 0.58)',
+      backgroundColor: 'hsl(var(--diff-remove-bg) / 0.36)',
+      color: 'hsl(var(--diff-remove-fg) / 0.94)',
+    };
+  }
+
+  return {
+    borderColor: 'hsl(var(--border) / 0.72)',
+    backgroundColor: 'hsl(var(--muted) / 0.36)',
+    color: 'hsl(var(--foreground) / 0.84)',
+  };
+}
+
+function formatChangeLineNumber(lineNumber: DiffChangeSummary['lineNumber']) {
+  return lineNumber === null || lineNumber === '' ? '变更' : `第 ${lineNumber} 行`;
+}
+
+function formatChangedText(change: DiffChangeSummary) {
+  const text = change.text || '空行';
+  if (change.kind !== 'modified') {
+    return text;
+  }
+
+  return `${text} -> ${change.nextText || '空行'}`;
+}
+
+function renderOverviewChange(change: DiffChangeSummary) {
+  return (
+    <div key={change.id} className="flex min-w-0 items-baseline gap-1.5 text-xs leading-5">
+      <span
+        className="shrink-0 rounded-sm border px-1 py-px text-[10px] leading-4"
+        style={getChangeBadgeStyle(change.kind)}
+      >
+        {getChangeLabel(change)}
+      </span>
+      <span className="shrink-0 text-mutedForeground/68">
+        {formatChangeLineNumber(change.lineNumber)}
+      </span>
+      {change.fileLabel ? (
+        <span className="min-w-0 max-w-28 truncate font-mono text-[11px] text-mutedForeground/64" title={change.fileLabel}>
+          {change.fileLabel}
+        </span>
+      ) : null}
+      <span className="min-w-0 truncate font-mono text-[11px] text-foreground/88" translate="no" title={formatChangedText(change)}>
+        {formatChangedText(change)}
+      </span>
+    </div>
+  );
+}
+
 function getDiffLineNumberProps(
   kind: DiffRowKind,
   side: 'left' | 'right',
@@ -297,6 +406,38 @@ function renderSingleSidedDiffRow(row: ParsedDiffRow) {
   );
 }
 
+export function CodeDiffSummary({
+  overview,
+  className,
+}: {
+  overview: DiffOverview;
+  className?: string;
+}) {
+  return (
+    <div
+      className={cn('rounded-sm border border-border/55 bg-background/30 px-2 py-1.5', className)}
+      title={overview.fullLabel}
+    >
+      <div className="flex min-w-0 items-center justify-between gap-2">
+        <div className="min-w-0 truncate font-mono text-[11px] leading-5 text-foreground/84" translate="no">
+          {overview.label}
+        </div>
+        <DiffStatPills additions={overview.additions} deletions={overview.deletions} />
+      </div>
+      {overview.changes.length > 0 ? (
+        <div className="mt-1 space-y-0.5">
+          {overview.changes.map(renderOverviewChange)}
+          {overview.hiddenChangeCount > 0 ? (
+            <div className="text-xs leading-5 text-mutedForeground/62">
+              还有 {overview.hiddenChangeCount} 处变更
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 export const CodeDiffView = memo(function CodeDiffView({
   diff,
   className,
@@ -411,6 +552,7 @@ export const CodeDiffView = memo(function CodeDiffView({
     <div className={cn('overflow-hidden rounded-sm border border-border/60 bg-background/35', className)}>
       {files.map((file, fileIndex) => {
         const status = getDiffFileStatus(file);
+        const fullLabel = getDiffFileLabel(file);
 
         return (
           <section
@@ -421,8 +563,9 @@ export const CodeDiffView = memo(function CodeDiffView({
               <div
                 className="min-w-0 truncate font-mono text-[11px] leading-5 text-foreground/88"
                 translate="no"
+                title={fullLabel}
               >
-                {getDiffFileLabel(file)}
+                {getCompactDiffFileLabel(file)}
               </div>
               <div className="flex shrink-0 items-center gap-0.5 font-mono text-[10px] leading-5">
                 {status ? (

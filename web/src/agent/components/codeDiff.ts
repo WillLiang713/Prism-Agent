@@ -31,10 +31,33 @@ export interface ParsedRenderedDiffLine {
   text: string;
 }
 
+export type DiffChangeSummaryKind = 'added' | 'removed' | 'modified';
+
+export interface DiffChangeSummary {
+  id: string;
+  kind: DiffChangeSummaryKind;
+  lineNumber: number | string | null;
+  text: string;
+  nextText?: string;
+  fileLabel?: string;
+}
+
+export interface DiffOverview {
+  label: string;
+  fullLabel: string;
+  fileCount: number;
+  additions: number;
+  deletions: number;
+  changes: DiffChangeSummary[];
+  hiddenChangeCount: number;
+}
+
 type PendingDiffLine = {
   lineNumber: number;
   text: string;
 };
+
+const DIFF_OVERVIEW_CHANGE_LIMIT = 4;
 
 function createParsedDiffFile(index: number): ParsedDiffFile {
   return {
@@ -53,6 +76,16 @@ function normalizeDiffPath(rawValue: string) {
     return null;
   }
   return value.replace(/^[ab]\//, '');
+}
+
+export function getCompactPathLabel(path: string) {
+  const normalized = path.replace(/\\/g, '/').replace(/\/+$/, '').trim();
+  if (!normalized) {
+    return 'diff';
+  }
+
+  const parts = normalized.split('/').filter(Boolean);
+  return parts.at(-1) ?? normalized;
 }
 
 function parseHunkHeader(line: string) {
@@ -241,6 +274,14 @@ export function getDiffFileLabel(file: ParsedDiffFile) {
   return file.newPath ?? file.oldPath ?? 'diff';
 }
 
+export function getCompactDiffFileLabel(file: ParsedDiffFile) {
+  if (file.oldPath && file.newPath && file.oldPath !== file.newPath) {
+    return `${getCompactPathLabel(file.oldPath)} -> ${getCompactPathLabel(file.newPath)}`;
+  }
+
+  return getCompactPathLabel(getDiffFileLabel(file));
+}
+
 export function getDiffFileStatus(file: ParsedDiffFile) {
   if (file.newPath && !file.oldPath) {
     return 'new file';
@@ -255,6 +296,139 @@ export function getDiffFileStatus(file: ParsedDiffFile) {
   }
 
   return null;
+}
+
+function getUnifiedDiffTotals(files: ParsedDiffFile[]) {
+  return files.reduce(
+    (totals, file) => ({
+      additions: totals.additions + file.additions,
+      deletions: totals.deletions + file.deletions,
+    }),
+    { additions: 0, deletions: 0 },
+  );
+}
+
+function createUnifiedDiffChange(
+  row: ParsedDiffRow,
+  fileLabel: string | undefined,
+): DiffChangeSummary | null {
+  if (row.kind === 'context') {
+    return null;
+  }
+
+  if (row.kind === 'added') {
+    return {
+      id: `${row.id}-summary`,
+      kind: 'added',
+      lineNumber: row.rightLineNumber,
+      text: row.rightText,
+      fileLabel,
+    };
+  }
+
+  if (row.kind === 'removed') {
+    return {
+      id: `${row.id}-summary`,
+      kind: 'removed',
+      lineNumber: row.leftLineNumber,
+      text: row.leftText,
+      fileLabel,
+    };
+  }
+
+  return {
+    id: `${row.id}-summary`,
+    kind: 'modified',
+    lineNumber: row.leftLineNumber ?? row.rightLineNumber,
+    text: row.leftText,
+    nextText: row.rightText,
+    fileLabel,
+  };
+}
+
+function getOverviewLabel(files: ParsedDiffFile[], fallbackLabel?: string | null) {
+  if (files.length === 0) {
+    return fallbackLabel ? getCompactPathLabel(fallbackLabel) : 'diff';
+  }
+
+  const firstLabel = getCompactDiffFileLabel(files[0]);
+  return files.length === 1 ? firstLabel : `${firstLabel} +${files.length - 1} 文件`;
+}
+
+function getOverviewFullLabel(files: ParsedDiffFile[], fallbackFullLabel?: string | null) {
+  if (files.length === 0) {
+    return fallbackFullLabel || 'diff';
+  }
+
+  return files.map(getDiffFileLabel).join(', ');
+}
+
+export function buildDiffOverview(
+  diffText: string,
+  fallbackLabel?: string | null,
+  fallbackFullLabel?: string | null,
+): DiffOverview | null {
+  const files = parseUnifiedDiff(diffText);
+
+  if (files.length > 0) {
+    const totals = getUnifiedDiffTotals(files);
+    const changes: DiffChangeSummary[] = [];
+    let changeCount = 0;
+
+    for (const file of files) {
+      const fileLabel = files.length > 1 ? getCompactDiffFileLabel(file) : undefined;
+      for (const hunk of file.hunks) {
+        for (const row of hunk.rows) {
+          const change = createUnifiedDiffChange(row, fileLabel);
+          if (!change) {
+            continue;
+          }
+
+          changeCount += 1;
+          if (changes.length < DIFF_OVERVIEW_CHANGE_LIMIT) {
+            changes.push(change);
+          }
+        }
+      }
+    }
+
+    return {
+      label: getOverviewLabel(files, fallbackLabel),
+      fullLabel: getOverviewFullLabel(files, fallbackFullLabel),
+      fileCount: files.length,
+      additions: totals.additions,
+      deletions: totals.deletions,
+      changes,
+      hiddenChangeCount: Math.max(0, changeCount - changes.length),
+    };
+  }
+
+  const renderedLines = parseRenderedDiffLines(diffText);
+  if (renderedLines.length === 0) {
+    return null;
+  }
+
+  const additions = renderedLines.filter((line) => line.kind === 'added').length;
+  const deletions = renderedLines.filter((line) => line.kind === 'removed').length;
+  const changedLines = renderedLines.filter(
+    (line): line is ParsedRenderedDiffLine & { kind: 'added' | 'removed' } =>
+      line.kind === 'added' || line.kind === 'removed',
+  );
+
+  return {
+    label: fallbackLabel ? getCompactPathLabel(fallbackLabel) : 'diff',
+    fullLabel: fallbackFullLabel || fallbackLabel || 'diff',
+    fileCount: fallbackLabel ? 1 : 0,
+    additions,
+    deletions,
+    changes: changedLines.slice(0, DIFF_OVERVIEW_CHANGE_LIMIT).map((line) => ({
+      id: `${line.id}-summary`,
+      kind: line.kind,
+      lineNumber: line.lineNumber || null,
+      text: line.text,
+    })),
+    hiddenChangeCount: Math.max(0, changedLines.length - DIFF_OVERVIEW_CHANGE_LIMIT),
+  };
 }
 
 export function parseRenderedDiffLines(diffText: string): ParsedRenderedDiffLine[] {
