@@ -5,7 +5,7 @@ import { cn } from '../../lib/utils';
 import { MarkdownContent } from './MarkdownContent';
 
 const THINKING_PANEL_CLASS =
-  'mt-1.5 min-w-0 rounded-sm border border-border/55 bg-background/30 px-2 py-1.5';
+  'mt-1.5 min-w-0 break-words text-left';
 const THINKING_MARKDOWN_CLASS =
   `${THINKING_PANEL_CLASS} text-sm leading-6 text-mutedForeground/95 [&_blockquote]:my-2 [&_h1]:mb-1.5 [&_h1]:mt-2 [&_h1]:text-sm [&_h1]:leading-6 [&_h2]:mb-1.5 [&_h2]:mt-2 [&_h2]:text-sm [&_h2]:leading-6 [&_h3]:mb-1.5 [&_h3]:mt-2 [&_h3]:text-sm [&_h3]:leading-6 [&_h4]:mb-1.5 [&_h4]:mt-2 [&_h4]:text-sm [&_h4]:leading-6 [&_ol]:my-2 [&_p]:my-2 [&_p]:leading-6 [&_pre]:my-2 [&_pre]:text-xs [&_pre]:text-foreground [&_ul]:my-2`;
 
@@ -51,7 +51,7 @@ export function ThinkingBlock({
 
   return (
     <details
-      className="group text-xs text-mutedForeground"
+      className="group text-left text-xs text-mutedForeground"
       onToggle={(event) => setIsOpen((event.currentTarget as HTMLDetailsElement).open)}
     >
       <summary className="flex w-fit max-w-full cursor-pointer list-none items-center gap-1.5 rounded-sm leading-5 text-mutedForeground/80 hover:text-foreground focus-visible:outline-none focus-visible:text-foreground focus-visible:ring-1 focus-visible:ring-foreground/20">
