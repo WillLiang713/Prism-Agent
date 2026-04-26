@@ -19,18 +19,24 @@ const DIFFS_UNSAFE_CSS = `
   box-shadow: none;
 }
 
+[data-diffs-header='default'] svg {
+  width: 12px;
+  height: 12px;
+}
+
 [data-header-content] {
   min-width: 0;
 }
 
 [data-header-content] [data-title],
 [data-header-content] [data-prev-name] {
+  font-size: 11.5px;
   font-weight: 650;
 }
 
 [data-diffs-header='default'] [data-metadata] {
-  font-size: 11px;
-  gap: 0.75ch;
+  font-size: 10.5px;
+  gap: 0.55ch;
 }
 
 [data-diffs-header='default'] [data-additions-count],
@@ -39,7 +45,7 @@ const DIFFS_UNSAFE_CSS = `
 }
 
 [data-diff-type='split'] {
-  min-width: 640px;
+  min-width: 560px;
 }
 
 [data-line],
@@ -73,11 +79,11 @@ const DIFFS_HOST_STYLE: DiffsHostStyle = {
   '--diffs-dark': 'hsl(var(--foreground))',
   '--diffs-font-family': 'var(--font-mono)',
   '--diffs-header-font-family': 'var(--font-body)',
-  '--diffs-font-size': '12.5px',
-  '--diffs-line-height': '20px',
+  '--diffs-font-size': '11.5px',
+  '--diffs-line-height': '18px',
   '--diffs-font-features': '"tnum" 1, "liga" 0, "calt" 0',
-  '--diffs-gap-inline': '8px',
-  '--diffs-gap-block': '7px',
+  '--diffs-gap-inline': '6px',
+  '--diffs-gap-block': '5px',
   '--diffs-tab-size': '2',
   '--diffs-fg-number-override': 'hsl(var(--muted-foreground) / 0.78)',
   '--diffs-addition-color-override': 'hsl(var(--diff-add-fg))',
@@ -110,11 +116,11 @@ const DIFFS_BASE_OPTIONS = {
 } satisfies NonNullable<FileDiffProps<undefined>['options']>;
 
 const DIFFS_METRICS = {
-  hunkLineCount: 50,
-  lineHeight: 20,
-  diffHeaderHeight: 44,
-  hunkSeparatorHeight: 32,
-  fileGap: 8,
+  hunkLineCount: 42,
+  lineHeight: 18,
+  diffHeaderHeight: 36,
+  hunkSeparatorHeight: 26,
+  fileGap: 6,
 } satisfies NonNullable<FileDiffProps<undefined>['metrics']>;
 
 function getAppThemeType(): AppThemeType {
@@ -198,7 +204,12 @@ const DiffsCodeDiffView = memo(function DiffsCodeDiffView({
   }
 
   return (
-    <div className={cn('overflow-hidden rounded-md border border-border/70 bg-card/85', className)}>
+    <div
+      className={cn(
+        'max-h-[min(46vh,360px)] max-w-[min(100%,820px)] overflow-auto rounded-sm border border-border/70 bg-card/85',
+        className,
+      )}
+    >
       {files.map((file, index) => (
         <FileDiff
           key={getFileKey(file, index)}
