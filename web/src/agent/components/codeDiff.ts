@@ -282,22 +282,6 @@ export function getCompactDiffFileLabel(file: ParsedDiffFile) {
   return getCompactPathLabel(getDiffFileLabel(file));
 }
 
-export function getDiffFileStatus(file: ParsedDiffFile) {
-  if (file.newPath && !file.oldPath) {
-    return 'new file';
-  }
-
-  if (file.oldPath && !file.newPath) {
-    return 'deleted file';
-  }
-
-  if (file.oldPath && file.newPath && file.oldPath !== file.newPath) {
-    return 'renamed';
-  }
-
-  return null;
-}
-
 function getUnifiedDiffTotals(files: ParsedDiffFile[]) {
   return files.reduce(
     (totals, file) => ({

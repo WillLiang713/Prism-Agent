@@ -2,7 +2,7 @@ import { ChevronDown } from 'lucide-react';
 import { type ReactNode, useEffect, useMemo, useState } from 'react';
 
 import { cn } from '../../lib/utils';
-import { CodeDiffSummary, CodeDiffView } from './CodeDiffView';
+import { CodeDiffView } from './CodeDiffView';
 import { buildDiffOverview, getCompactPathLabel, type DiffOverview } from './codeDiff';
 import { MarkdownContent } from './MarkdownContent';
 import type { AgentToolEvent } from '../sessionStore';
@@ -577,19 +577,7 @@ export function ToolCallCard({
           ) : null}
           {event.diff ? (
             <div className="min-w-0 space-y-1.5">
-              {diffOverview ? <CodeDiffSummary overview={diffOverview} /> : null}
-              <details className="group/diff min-w-0">
-                <summary className="flex w-fit max-w-full cursor-pointer list-none items-center gap-1.5 rounded-sm text-xs leading-5 text-mutedForeground/72 hover:text-foreground focus-visible:outline-none focus-visible:text-foreground focus-visible:ring-1 focus-visible:ring-foreground/20">
-                  <span>完整 diff</span>
-                  <ChevronDown
-                    aria-hidden="true"
-                    className="h-3.5 w-3.5 shrink-0 transition-transform duration-200 group-open/diff:rotate-180"
-                  />
-                </summary>
-                <div className="mt-1.5 min-w-0">
-                  <CodeDiffView diff={event.diff} />
-                </div>
-              </details>
+              <CodeDiffView diff={event.diff} fileLabel={displayDetailTitle ?? displayDetail ?? undefined} />
               {shouldRenderPlainOutputWithDiff ? (
                 <pre className="overflow-x-auto whitespace-pre-wrap break-all rounded-sm border border-border/60 bg-background/32 px-3 py-2 text-xs leading-6 text-foreground/88 font-mono">
                   {formattedOutput}
