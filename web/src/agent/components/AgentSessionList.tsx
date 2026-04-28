@@ -1,4 +1,4 @@
-import { MoreHorizontal, Plus, Folder, Trash2 } from 'lucide-react';
+import { MoreHorizontal, Plus, Folder, PencilLine, Trash2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { Button } from '@heroui/react/button';
 import { ListBox } from '@heroui/react/list-box';
@@ -112,9 +112,12 @@ export function AgentSessionList({
           variant="ghost"
           onPress={() => onCreate(currentWorkspaceRoot || undefined)}
           aria-label={createButtonLabel}
-          className="group h-10 min-h-10 w-full cursor-pointer justify-center rounded-full border border-border bg-transparent px-3 py-2 text-foreground/85 shadow-none transition-[background-color,border-color,color,box-shadow] hover:border-foreground/20 hover:bg-muted/60 hover:text-foreground focus-visible:border-foreground/20 focus-visible:bg-muted/60 focus-visible:ring-1 focus-visible:ring-foreground/20"
+          className="group h-8 min-h-8 w-full cursor-pointer justify-start gap-2 rounded-xl border border-transparent bg-transparent px-2.5 py-1.5 text-mutedForeground/90 shadow-none transition-[background-color,border-color,color,box-shadow] hover:border-border/55 hover:bg-muted/55 hover:text-foreground focus-visible:border-foreground/20 focus-visible:bg-muted/60 focus-visible:text-foreground focus-visible:ring-1 focus-visible:ring-foreground/20"
         >
-          <Plus className="h-4 w-4" aria-hidden="true" />
+          <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-lg bg-card/45 text-mutedForeground transition-[background-color,color] group-hover:bg-card group-hover:text-foreground">
+            <PencilLine className="h-3.5 w-3.5" aria-hidden="true" />
+          </span>
+          <span className="min-w-0 truncate text-[13px] font-medium leading-none">新会话</span>
         </Button>
       </div>
       <ScrollShadow className="flex-1 overflow-y-auto px-2" size={24}>

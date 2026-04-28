@@ -85,7 +85,7 @@ const AgentMessageItem = memo(function AgentMessageItem({
 function UserMessageItem({ text }: { text: string }) {
   return (
     <article className="group/user flex flex-col items-end gap-1">
-      <div className="w-fit max-w-[90%] rounded-[10px] border border-border bg-accent px-3 py-2 text-[13px] leading-[22px] text-accentForeground">
+      <div className="w-fit max-w-[90%] rounded-[10px] bg-accent px-3 py-1.5 text-[13px] leading-[22px] text-accentForeground">
         <div className="whitespace-pre-wrap break-words">{text}</div>
       </div>
       <CopyMessageButton text={text} />
