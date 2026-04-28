@@ -1,7 +1,7 @@
 import { Loader2, AlertCircle } from 'lucide-react';
 import { useEffect, useEffectEvent, useMemo, useRef } from 'react';
+import { ScrollShadow } from '@heroui/react/scroll-shadow';
 
-import { ScrollArea } from '../components/ui/scroll-area';
 import { ApprovalPrompt } from './components/ApprovalPrompt';
 import { AgentChatInput } from './components/AgentChatInput';
 import { AgentMessageList } from './components/AgentMessageList';
@@ -16,8 +16,7 @@ const SUPPRESSED_RUNTIME_REASON = '未指定主模型，请在设置中选择或
 const AUTO_SCROLL_MAX_FRAMES = 4;
 
 function getScrollViewport(root: HTMLDivElement | null) {
-  const viewport = root?.querySelector('[data-radix-scroll-area-viewport]');
-  return viewport instanceof HTMLDivElement ? viewport : null;
+  return root;
 }
 
 export function AgentChatPanel({
@@ -225,7 +224,7 @@ export function AgentChatPanel({
               </div>
             </div>
           ) : (
-            <ScrollArea ref={scrollRef} className="h-full">
+            <ScrollShadow ref={scrollRef} className="h-full overflow-y-auto" size={32}>
               <div className="flex min-h-full py-8" style={{ paddingInline: CHAT_SIDE_PADDING }}>
                 <div className="mx-auto flex min-h-full w-full" style={{ maxWidth: CHAT_PANEL_MAX_WIDTH }}>
                   <AgentMessageList
@@ -234,7 +233,7 @@ export function AgentChatPanel({
                   />
                 </div>
               </div>
-            </ScrollArea>
+            </ScrollShadow>
           )}
         </div>
 

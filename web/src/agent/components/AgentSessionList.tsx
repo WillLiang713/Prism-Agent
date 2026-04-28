@@ -1,10 +1,11 @@
 import { MoreHorizontal, Plus, Folder, Trash2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
-import { useAgentSessionStore } from '../sessionStore';
-import * as PopoverPrimitive from '@radix-ui/react-popover';
+import { Popover } from '@heroui/react/popover';
+import { ScrollShadow } from '@heroui/react/scroll-shadow';
+import { Tooltip } from '@heroui/react/tooltip';
 
-import { ScrollArea } from '../../components/ui/scroll-area';
-import { Tooltip, TooltipContent, TooltipTrigger } from '../../components/ui/tooltip';
+import { useAgentSessionStore } from '../sessionStore';
+
 import { cn } from '../../lib/utils';
 import type { AgentThreadMeta } from '../client';
 import type { AgentSession } from '../sessionStore';
@@ -55,6 +56,8 @@ export function AgentSessionList({
   onPickWorkspace: () => void;
 }) {
   const [regeneratingIds, setRegeneratingIds] = useState<Set<string>>(() => new Set());
+  const [openDirectoryMenu, setOpenDirectoryMenu] = useState<string | null>(null);
+  const [openThreadMenu, setOpenThreadMenu] = useState<string | null>(null);
 
   const handleRegenerate = async (threadId: string) => {
     setRegeneratingIds((prev) => {
@@ -94,7 +97,7 @@ export function AgentSessionList({
           <span className="truncate text-center">载入</span>
         </button>
       </div>
-      <ScrollArea className="flex-1 px-2">
+      <ScrollShadow className="flex-1 overflow-y-auto px-2" size={24}>
         <div className="space-y-4 pb-4">
           {groupedThreads.map((group) => (
             <div key={group.cwd} className="mb-4 last:mb-0">
@@ -118,42 +121,43 @@ export function AgentSessionList({
                     <Plus className="h-3 w-3" aria-hidden="true" />
                   </button>
 
-                  <PopoverPrimitive.Root>
-                    <PopoverPrimitive.Trigger asChild>
-                      <button
-                        type="button"
+                  <Popover
+                    isOpen={openDirectoryMenu === group.cwd}
+                    onOpenChange={(nextOpen) => setOpenDirectoryMenu(nextOpen ? group.cwd : null)}
+                  >
+                    <Popover.Trigger
+                      onClick={(e) => e.stopPropagation()}
+                      aria-label="目录操作"
+                      className={`cursor-pointer rounded-md p-1 text-mutedForeground/80 opacity-0 outline-none transition-[opacity,background-color,color,box-shadow] hover:bg-muted hover:text-foreground focus-visible:bg-muted focus-visible:text-foreground focus-visible:opacity-100 focus-visible:ring-1 focus-visible:ring-foreground/20 group-hover/dir:opacity-100 ${
+                        openDirectoryMenu === group.cwd ? 'opacity-100' : ''
+                      }`}
+                    >
+                      <MoreHorizontal className="h-3 w-3" aria-hidden="true" />
+                    </Popover.Trigger>
+                    <Popover.Content
+                      placement="bottom end"
+                      offset={4}
+                      className={sessionMenuContentClassName}
+                    >
+                      <Popover.Dialog
+                        className="outline-none"
                         onClick={(e) => e.stopPropagation()}
-                        aria-label="目录操作"
-                        className="cursor-pointer rounded-md p-1 text-mutedForeground/80 opacity-0 outline-none transition-[opacity,background-color,color,box-shadow] hover:bg-muted hover:text-foreground focus-visible:bg-muted focus-visible:text-foreground focus-visible:opacity-100 focus-visible:ring-1 focus-visible:ring-foreground/20 data-[state=open]:opacity-100 group-hover/dir:opacity-100"
                       >
-                        <MoreHorizontal className="h-3 w-3" aria-hidden="true" />
-                      </button>
-                    </PopoverPrimitive.Trigger>
-                    <PopoverPrimitive.Portal>
-                      <PopoverPrimitive.Content
-                        side="bottom"
-                        align="end"
-                        sideOffset={4}
-                        collisionPadding={12}
-                        onClick={(e) => e.stopPropagation()}
-                        className={sessionMenuContentClassName}
-                      >
-                        <PopoverPrimitive.Close asChild>
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              unpinDirectory(group.cwd);
-                            }}
-                            className={sessionMenuDangerItemClassName}
-                          >
-                            <Trash2 className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-                            <span>移除目录</span>
-                          </button>
-                        </PopoverPrimitive.Close>
-                      </PopoverPrimitive.Content>
-                    </PopoverPrimitive.Portal>
-                  </PopoverPrimitive.Root>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            unpinDirectory(group.cwd);
+                            setOpenDirectoryMenu(null);
+                          }}
+                          className={sessionMenuDangerItemClassName}
+                        >
+                          <Trash2 className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                          <span>移除目录</span>
+                        </button>
+                      </Popover.Dialog>
+                    </Popover.Content>
+                  </Popover>
                 </div>
               </div>
               <div className="space-y-0.5">
@@ -186,73 +190,75 @@ export function AgentSessionList({
                     >
                       <div className="min-w-0 flex flex-col gap-0.5">
                         <Tooltip>
-                          <TooltipTrigger asChild>
-                            <span
-                              className={`truncate text-sm font-medium leading-tight w-fit max-w-full ${
-                                isRegenerating ? 'thinking-title-shimmer' : ''
-                              }`}
-                            >
-                              {label}
-                            </span>
-                          </TooltipTrigger>
-                          <TooltipContent side="bottom" align="start" sideOffset={4}>
+                          <Tooltip.Trigger
+                            className={`w-fit max-w-full truncate text-sm font-medium leading-tight ${
+                              isRegenerating ? 'thinking-title-shimmer' : ''
+                            }`}
+                          >
+                            {label}
+                          </Tooltip.Trigger>
+                          <Tooltip.Content
+                            placement="bottom start"
+                            offset={4}
+                            className="z-50 max-w-xs rounded-md border border-border/60 bg-card px-2.5 py-1.5 text-xs text-cardForeground shadow-lg"
+                          >
                             <div className="font-medium">{label}</div>
                             <div className="mt-0.5 text-[12px] text-mutedForeground break-all">
                               {thread.cwd}
                             </div>
-                          </TooltipContent>
+                          </Tooltip.Content>
                         </Tooltip>
                       </div>
                       <div className="flex items-center gap-0.5 shrink-0">
-                        <PopoverPrimitive.Root>
-                          <PopoverPrimitive.Trigger asChild>
-                            <button
-                              type="button"
+                        <Popover
+                          isOpen={openThreadMenu === thread.threadId}
+                          onOpenChange={(nextOpen) => setOpenThreadMenu(nextOpen ? thread.threadId : null)}
+                        >
+                          <Popover.Trigger
+                            onClick={(e) => e.stopPropagation()}
+                            aria-label="更多操作"
+                            className={`cursor-pointer rounded-md p-1.5 text-mutedForeground/80 opacity-0 outline-none transition-[opacity,background-color,color,box-shadow] hover:bg-muted hover:text-foreground focus-visible:bg-muted focus-visible:text-foreground focus-visible:opacity-100 focus-visible:ring-1 focus-visible:ring-foreground/20 group-hover:opacity-100 ${
+                              openThreadMenu === thread.threadId ? 'opacity-100' : ''
+                            }`}
+                          >
+                            <MoreHorizontal className="h-3.5 w-3.5" aria-hidden="true" />
+                          </Popover.Trigger>
+                          <Popover.Content
+                            placement="bottom end"
+                            offset={4}
+                            className={sessionMenuContentClassName}
+                          >
+                            <Popover.Dialog
+                              className="outline-none"
                               onClick={(e) => e.stopPropagation()}
-                              aria-label="更多操作"
-                              className="cursor-pointer rounded-md p-1.5 text-mutedForeground/80 opacity-0 outline-none transition-[opacity,background-color,color,box-shadow] hover:bg-muted hover:text-foreground focus-visible:bg-muted focus-visible:text-foreground focus-visible:opacity-100 focus-visible:ring-1 focus-visible:ring-foreground/20 data-[state=open]:opacity-100 group-hover:opacity-100"
                             >
-                              <MoreHorizontal className="h-3.5 w-3.5" aria-hidden="true" />
-                            </button>
-                          </PopoverPrimitive.Trigger>
-                          <PopoverPrimitive.Portal>
-                            <PopoverPrimitive.Content
-                              side="bottom"
-                              align="end"
-                              sideOffset={4}
-                              collisionPadding={12}
-                              onClick={(e) => e.stopPropagation()}
-                              className={sessionMenuContentClassName}
-                            >
-                              <PopoverPrimitive.Close asChild>
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    if (regenerateDisabled) return;
-                                    void handleRegenerate(thread.threadId);
-                                  }}
-                                  disabled={regenerateDisabled}
-                                  className={sessionMenuGenerateItemClassName}
-                                >
-                                  <span>{isRegenerating ? '生成中…' : '生成标题'}</span>
-                                </button>
-                              </PopoverPrimitive.Close>
-                              <PopoverPrimitive.Close asChild>
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    onDelete(thread.threadId);
-                                  }}
-                                  className={sessionMenuDangerItemClassName}
-                                >
-                                  <span>删除任务</span>
-                                </button>
-                              </PopoverPrimitive.Close>
-                            </PopoverPrimitive.Content>
-                          </PopoverPrimitive.Portal>
-                        </PopoverPrimitive.Root>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (regenerateDisabled) return;
+                                  setOpenThreadMenu(null);
+                                  void handleRegenerate(thread.threadId);
+                                }}
+                                disabled={regenerateDisabled}
+                                className={sessionMenuGenerateItemClassName}
+                              >
+                                <span>{isRegenerating ? '生成中…' : '生成标题'}</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setOpenThreadMenu(null);
+                                  onDelete(thread.threadId);
+                                }}
+                                className={sessionMenuDangerItemClassName}
+                              >
+                                <span>删除任务</span>
+                              </button>
+                            </Popover.Dialog>
+                          </Popover.Content>
+                        </Popover>
                       </div>
                     </div>
                   );
@@ -271,7 +277,7 @@ export function AgentSessionList({
             </div>
           ) : null}
         </div>
-      </ScrollArea>
+      </ScrollShadow>
     </aside>
   );
 }

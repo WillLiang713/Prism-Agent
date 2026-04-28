@@ -1,7 +1,6 @@
 import { useEffect } from 'react';
 
 import { AgentAppLayout } from './agent/AgentAppLayout';
-import { TooltipProvider } from './components/ui/tooltip';
 import { useUIStore } from './store/uiStore';
 
 export default function App() {
@@ -11,9 +10,5 @@ export default function App() {
     document.documentElement.classList.toggle('dark', theme === 'dark');
   }, [theme]);
 
-  return (
-    <TooltipProvider delayDuration={300}>
-      <AgentAppLayout />
-    </TooltipProvider>
-  );
+  return <AgentAppLayout />;
 }

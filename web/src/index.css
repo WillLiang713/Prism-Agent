@@ -1,6 +1,31 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+@import "@heroui/styles";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-sans: var(--font-body);
+  --font-display: var(--font-display);
+  --font-mono: var(--font-mono);
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-card: hsl(var(--card));
+  --color-cardForeground: hsl(var(--card-foreground));
+  --color-muted: hsl(var(--muted));
+  --color-mutedForeground: hsl(var(--muted-foreground));
+  --color-border: hsl(var(--border));
+  --color-accent: hsl(var(--accent));
+  --color-accentForeground: hsl(var(--accent-foreground));
+  --color-primary: hsl(var(--primary));
+  --color-primaryForeground: hsl(var(--primary-foreground));
+  --color-success: hsl(var(--success));
+  --color-warning: hsl(var(--warning));
+  --color-danger: hsl(var(--danger));
+  --color-warm: hsl(var(--warning));
+  --shadow-panel: none;
+  --animate-fadeUp: fadeUp 240ms ease-out;
+  --animate-shimmer: shimmer 2.5s linear infinite;
+}
 
 :root {
   --background: 0 0% 100%;

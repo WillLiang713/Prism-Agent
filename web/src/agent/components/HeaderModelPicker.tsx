@@ -1,12 +1,21 @@
-import * as PopoverPrimitive from '@radix-ui/react-popover';
-import { Command } from 'cmdk';
+import { Button } from '@heroui/react/button';
+import { Input } from '@heroui/react/input';
+import { ListBox } from '@heroui/react/list-box';
+import { Popover } from '@heroui/react/popover';
+import { ScrollShadow } from '@heroui/react/scroll-shadow';
 import { ChevronDown, RefreshCw } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { agentListModels } from '../client';
 import { resolveSelectedService, useConfigStore } from '../../store/configStore';
 import { cn } from '../../lib/utils';
 import { composerControlIcons } from './composerControlIcons';
+
+const modelPickerTriggerClassName =
+  'no-drag grid !h-8 !min-h-8 !max-h-8 min-w-[120px] max-w-[240px] shrink-0 cursor-pointer grid-cols-[1rem_minmax(0,1fr)_1rem] items-center gap-2 overflow-hidden rounded-full border border-border bg-card px-3 !py-0 text-xs font-medium leading-none text-foreground shadow-none transition-[background-color,border-color,color,box-shadow] hover:bg-muted focus-visible:ring-1 focus-visible:ring-foreground/20';
+
+const modelPickerIconClassName =
+  'h-4 w-4 shrink-0 justify-self-center text-mutedForeground';
 
 export function HeaderModelPicker({ currentModel }: { currentModel: string }) {
   const ModelIcon = composerControlIcons.model;
@@ -22,6 +31,13 @@ export function HeaderModelPicker({ currentModel }: { currentModel: string }) {
   const [loading, setLoading] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const fetchedForServiceRef = useRef<string | null>(null);
+  const filteredModelOptions = useMemo(() => {
+    const keyword = search.trim().toLowerCase();
+    if (!keyword) {
+      return modelOptions;
+    }
+    return modelOptions.filter((option) => option.toLowerCase().includes(keyword));
+  }, [modelOptions, search]);
 
   useEffect(() => {
     setModelOptions([]);
@@ -78,72 +94,72 @@ export function HeaderModelPicker({ currentModel }: { currentModel: string }) {
   }
 
   return (
-    <PopoverPrimitive.Root open={open} onOpenChange={setOpen}>
-      <PopoverPrimitive.Trigger asChild>
-        <button
-          ref={triggerRef}
-          type="button"
-          className="no-drag relative inline-flex h-8 min-w-[120px] max-w-[240px] cursor-pointer items-center overflow-hidden rounded-full border border-border bg-card px-3 text-xs font-medium text-foreground outline-none transition-colors hover:bg-muted focus:outline-none focus-visible:ring-1 focus-visible:ring-foreground/20"
-        >
-          <ModelIcon aria-hidden="true" className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-mutedForeground" />
-          <span aria-hidden="true" className="invisible block max-w-[184px] truncate px-7">
-            {currentModel || '选择模型'}
-          </span>
-          <span className="pointer-events-none absolute left-1/2 top-1/2 max-w-[calc(100%-3.5rem)] -translate-x-1/2 -translate-y-1/2 truncate text-center">
-            {currentModel || '选择模型'}
-          </span>
-          <ChevronDown className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-mutedForeground" />
-        </button>
-      </PopoverPrimitive.Trigger>
-      <PopoverPrimitive.Portal>
-        <PopoverPrimitive.Content
-          align="center"
-          side="top"
-          sideOffset={6}
-          className="z-50 w-[248px] overflow-hidden rounded-xl border border-border bg-muted p-1 text-foreground shadow-[0_18px_40px_rgba(0,0,0,0.22)]"
-        >
-          <Command shouldFilter={true} className="flex flex-col">
-            <div className="flex items-center gap-1 px-1">
-              <Command.Input
-                value={search}
-                onValueChange={setSearch}
-                placeholder="搜索模型…"
-                className="h-8 w-full rounded-md bg-transparent px-2 text-sm text-foreground placeholder:text-mutedForeground outline-none"
-              />
-              <button
-                type="button"
-                onClick={() => void refreshList()}
-                disabled={loading}
-                title="获取模型列表"
-                aria-label="获取模型列表"
-                className="flex shrink-0 items-center justify-center rounded-md p-1.5 text-mutedForeground/80 hover:bg-card hover:text-foreground disabled:opacity-50"
-              >
-                <RefreshCw className={cn('h-3.5 w-3.5', loading && 'animate-spin')} />
-              </button>
-            </div>
-            <Command.List
-              className="mt-1 max-h-72 overflow-y-auto"
-              onWheel={(event) => {
-                event.currentTarget.scrollTop += event.deltaY;
-              }}
+    <Popover isOpen={open} onOpenChange={setOpen}>
+      <Button
+        ref={triggerRef}
+        type="button"
+        variant="secondary"
+        className={modelPickerTriggerClassName}
+      >
+        <ModelIcon aria-hidden="true" className={modelPickerIconClassName} />
+        <span className="min-w-0 truncate text-center">
+          {currentModel || '选择模型'}
+        </span>
+        <ChevronDown className={modelPickerIconClassName} aria-hidden="true" />
+      </Button>
+      <Popover.Content
+        placement="top"
+        offset={6}
+        className="z-50 w-[248px] overflow-hidden rounded-xl border border-border bg-muted p-1 text-foreground shadow-[0_18px_40px_rgba(0,0,0,0.22)]"
+      >
+        <Popover.Dialog className="flex flex-col outline-none">
+          <div className="flex items-center gap-1 px-1">
+            <Input
+              aria-label="搜索主模型"
+              value={search}
+              onChange={(event) => setSearch(event.currentTarget.value)}
+              placeholder="搜索模型…"
+              autoComplete="off"
+              spellCheck={false}
+              className="h-8 w-full rounded-md bg-transparent px-2 text-sm text-foreground placeholder:text-mutedForeground outline-none"
+            />
+            <button
+              type="button"
+              onClick={() => void refreshList()}
+              disabled={loading}
+              title="获取模型列表"
+              aria-label="获取模型列表"
+              className="flex shrink-0 items-center justify-center rounded-md p-1.5 text-mutedForeground/80 hover:bg-card hover:text-foreground disabled:opacity-50"
             >
-              <Command.Empty className="py-3 text-center text-xs text-mutedForeground">
+              <RefreshCw className={cn('h-3.5 w-3.5', loading && 'animate-spin')} aria-hidden="true" />
+            </button>
+          </div>
+          <ScrollShadow className="mt-1 max-h-72 overflow-y-auto" size={16}>
+            {filteredModelOptions.length === 0 ? (
+              <div className="py-3 text-center text-xs text-mutedForeground">
                 {loading ? '获取中…' : modelOptions.length === 0 ? '点击右上角获取模型列表' : '无匹配项'}
-              </Command.Empty>
-              {modelOptions.map((option) => (
-                <Command.Item
-                  key={option}
-                  value={option}
-                  onSelect={() => handlePick(option)}
-                  className="flex cursor-pointer select-none items-center justify-center rounded-md px-2 py-1.5 text-center text-sm text-foreground outline-none transition-colors data-[selected=true]:bg-card"
-                >
-                  <span className="block w-full truncate text-center font-mono font-normal lowercase">{option}</span>
-                </Command.Item>
-              ))}
-            </Command.List>
-          </Command>
-        </PopoverPrimitive.Content>
-      </PopoverPrimitive.Portal>
-    </PopoverPrimitive.Root>
+              </div>
+            ) : (
+              <ListBox
+                aria-label="主模型"
+                onAction={(key) => handlePick(String(key))}
+                className="p-1"
+              >
+                {filteredModelOptions.map((option) => (
+                  <ListBox.Item
+                    key={option}
+                    id={option}
+                    textValue={option}
+                    className="flex cursor-pointer select-none items-center justify-center rounded-md px-2 py-1.5 text-center text-sm text-foreground outline-none transition-colors hover:bg-card data-[focused]:bg-card"
+                  >
+                    <span className="block w-full truncate text-center font-mono font-normal lowercase">{option}</span>
+                  </ListBox.Item>
+                ))}
+              </ListBox>
+            )}
+          </ScrollShadow>
+        </Popover.Dialog>
+      </Popover.Content>
+    </Popover>
   );
 }

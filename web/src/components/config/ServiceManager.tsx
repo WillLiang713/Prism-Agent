@@ -1,15 +1,12 @@
-import { Eye, EyeOff, Plus, Trash2 } from 'lucide-react';
-import { useState } from 'react';
+import { Button } from '@heroui/react/button';
+import { Input } from '@heroui/react/input';
+import { ListBox } from '@heroui/react/list-box';
+import { ScrollShadow } from '@heroui/react/scroll-shadow';
+import { Select } from '@heroui/react/select';
+import { ChevronDown, Eye, EyeOff, Plus, Trash2 } from 'lucide-react';
+import { useState, type CSSProperties } from 'react';
+
 import { useConfigStore } from '../../store/configStore';
-import { Button } from '../ui/button';
-import { Input } from '../ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '../ui/select';
 
 const providerLabels = {
   openai_chat: 'OpenAI Chat',
@@ -18,7 +15,22 @@ const providerLabels = {
   gemini: 'Google Gemini',
 } as const;
 
-import { ScrollArea } from '../ui/scroll-area';
+const providerOptions = Object.entries(providerLabels).map(([value, label]) => ({
+  value,
+  label,
+}));
+
+const settingsInputClassName =
+  '!h-11 !min-h-11 !w-full !min-w-0 !rounded-full !border !border-border !bg-card !px-4 !py-0 !text-sm !text-foreground !shadow-none placeholder:!text-mutedForeground/35 hover:!bg-muted/35 focus:!border-foreground/25 focus:!bg-card focus-visible:!ring-1 focus-visible:!ring-foreground/20';
+
+const settingsSelectTriggerClassName =
+  'flex !h-11 !min-h-11 !w-full !min-w-0 cursor-pointer items-center !rounded-full !border !border-border !bg-card !px-4 !py-0 !pr-10 !text-sm !text-foreground !shadow-none outline-none transition-colors hover:!bg-muted/35 focus-visible:!border-foreground/25 focus-visible:!bg-card focus-visible:!ring-1 focus-visible:!ring-foreground/20';
+
+const settingsSelectValueClassName =
+  '!block !min-w-0 !flex-1 !truncate !text-left !text-sm !font-medium !text-foreground';
+
+const settingsSelectIndicatorClassName =
+  '!right-4 !size-4 !text-mutedForeground/65';
 
 export function ServiceManager() {
   const services = useConfigStore((state) => state.services);
@@ -66,39 +78,41 @@ export function ServiceManager() {
   }
 
   return (
-    <div className="grid items-stretch gap-6 md:grid-cols-[240px_minmax(0,1fr)]">
-      <div className="flex flex-col space-y-3">
+    <div className="grid min-w-0 items-stretch gap-6 md:grid-cols-[240px_minmax(0,1fr)]">
+      <div className="flex min-w-0 flex-col space-y-3">
         <Button
-          onClick={() => upsertService({ name: '新服务' })}
+          type="button"
+          onPress={() => upsertService({ name: '新服务' })}
           variant="ghost"
           className="h-10 w-full justify-start gap-2 rounded-full border border-border bg-transparent px-3 py-2 text-sm font-medium text-foreground/85 hover:border-foreground/20 hover:bg-muted/60 hover:text-foreground"
         >
-          <Plus className="h-4 w-4" />
+          <Plus className="h-4 w-4" aria-hidden="true" />
           <span className="font-medium">新建服务</span>
         </Button>
-        <ScrollArea className="min-h-0 flex-1">
+        <ScrollShadow className="min-h-0 flex-1 overflow-y-auto" size={20}>
           <div className="space-y-0.5">
             {services.map((service) => (
-              <div
-                key={service.id}
-                role="button"
-                tabIndex={0}
-                onClick={() => setServiceManagerSelectedId(service.id)}
-                className={`group relative flex w-full touch-manipulation flex-col items-start gap-1 rounded-lg px-3 py-2.5 text-left transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-foreground/20 ${
-                  service.id === selectedService.id
-                    ? 'bg-foreground/[0.08]'
-                    : 'hover:bg-foreground/[0.05]'
-                }`}
-              >
-                <div className="w-full truncate pr-6 text-sm font-medium text-foreground">
-                  {service.name || '未命名服务'}
-                </div>
-                <div className="truncate text-[11px] text-mutedForeground/70">
-                  {providerLabels[service.model.providerSelection]}
-                </div>
+              <div key={service.id} className="group relative min-w-0">
+                <button
+                  type="button"
+                  onClick={() => setServiceManagerSelectedId(service.id)}
+                  className={`flex w-full touch-manipulation flex-col items-start gap-1 rounded-lg px-3 py-2.5 pr-10 text-left transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-foreground/20 ${
+                    service.id === selectedService.id
+                      ? 'bg-foreground/[0.08]'
+                      : 'hover:bg-foreground/[0.05]'
+                  }`}
+                >
+                  <span className="w-full truncate text-sm font-medium text-foreground">
+                    {service.name || '未命名服务'}
+                  </span>
+                  <span className="w-full truncate text-[11px] text-mutedForeground/70">
+                    {providerLabels[service.model.providerSelection]}
+                  </span>
+                </button>
                 {services.length > 1 && (
                   <button
                     type="button"
+                    aria-label={`删除服务 ${service.name || '未命名服务'}`}
                     onClick={(e) => {
                       e.stopPropagation();
                       removeService(service.id);
@@ -106,22 +120,25 @@ export function ServiceManager() {
                     className="absolute right-2 top-1/2 flex -translate-y-1/2 items-center justify-center rounded-md p-1.5 text-mutedForeground opacity-0 transition-opacity hover:bg-danger/10 hover:text-danger group-hover:opacity-100 focus-visible:opacity-100"
                     title="删除服务"
                   >
-                    <Trash2 className="h-3.5 w-3.5" />
+                    <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
                   </button>
                 )}
               </div>
             ))}
           </div>
-        </ScrollArea>
+        </ScrollShadow>
       </div>
 
-      <div className="space-y-5 border-t border-border/50 pt-6 md:border-l md:border-t-0 md:pl-6 md:pt-0">
-
-        <div className="grid gap-2 text-xs">
-          <span className="px-4 text-mutedForeground">名称</span>
+      <div className="min-w-0 space-y-5 border-t border-border/50 pt-6 md:border-l md:border-t-0 md:pl-6 md:pt-0">
+        <div className="grid min-w-0 gap-2 text-xs">
+          <label htmlFor="service-name" className="px-4 text-mutedForeground">名称</label>
           <Input
-            className="bg-card border border-border"
-            placeholder="输入服务名称"
+            id="service-name"
+            name="service-name"
+            autoComplete="off"
+            fullWidth
+            className={settingsInputClassName}
+            placeholder="输入服务名称…"
             value={selectedService.name}
             onChange={(event) =>
               upsertService({
@@ -131,61 +148,91 @@ export function ServiceManager() {
             }
           />
         </div>
-        <div className="grid gap-4 md:grid-cols-2">
-          <div className="grid gap-2 text-xs">
-            <span className="px-4 text-mutedForeground">类型</span>
+        <div className="grid min-w-0 gap-4 md:grid-cols-2">
+          <div className="grid min-w-0 gap-2 text-xs">
+            <label id="service-provider-label" className="px-4 text-mutedForeground">类型</label>
             <Select
-              value={selectedService.model.providerSelection}
-              onValueChange={(value) =>
-                handleProviderSelectionChange(
-                  value as typeof selectedService.model.providerSelection,
-                )
-              }
+              aria-labelledby="service-provider-label"
+              fullWidth
+              selectedKey={selectedService.model.providerSelection}
+              onSelectionChange={(key) => {
+                if (key) {
+                  handleProviderSelectionChange(
+                    String(key) as typeof selectedService.model.providerSelection,
+                  );
+                }
+              }}
             >
-              <SelectTrigger className="bg-card border border-border">
-                <SelectValue placeholder="选择服务类型" />
-              </SelectTrigger>
-              <SelectContent className="border-0">
-                <SelectItem value="openai_chat">OpenAI Chat</SelectItem>
-                <SelectItem value="openai_responses">OpenAI Responses</SelectItem>
-                <SelectItem value="anthropic">Anthropic Messages</SelectItem>
-                <SelectItem value="gemini">Google Gemini</SelectItem>
-              </SelectContent>
+              <Select.Trigger className={settingsSelectTriggerClassName}>
+                <Select.Value className={settingsSelectValueClassName}>
+                  {providerLabels[selectedService.model.providerSelection]}
+                </Select.Value>
+                <Select.Indicator className={settingsSelectIndicatorClassName}>
+                  <ChevronDown className="h-4 w-4" aria-hidden="true" />
+                </Select.Indicator>
+              </Select.Trigger>
+              <Select.Popover className="z-50 min-w-[var(--trigger-width)] overflow-hidden rounded-xl border border-border bg-muted p-1 text-foreground shadow-[0_18px_40px_rgba(0,0,0,0.22)]">
+                <ListBox aria-label="服务类型" className="max-h-72 overflow-y-auto p-1">
+                  {providerOptions.map((option) => (
+                    <ListBox.Item
+                      key={option.value}
+                      id={option.value}
+                      textValue={option.label}
+                      className="flex w-full cursor-pointer select-none items-center justify-start rounded-full px-3 py-2 text-left text-sm text-foreground outline-none transition-colors hover:bg-card data-[focused]:bg-card"
+                    >
+                      <span className="block w-full truncate text-left">{option.label}</span>
+                      <ListBox.ItemIndicator />
+                    </ListBox.Item>
+                  ))}
+                </ListBox>
+              </Select.Popover>
             </Select>
           </div>
-          <div className="grid gap-2 text-xs">
-            <span className="px-4 text-mutedForeground">地址</span>
+          <div className="grid min-w-0 gap-2 text-xs">
+            <label htmlFor="service-api-url" className="px-4 text-mutedForeground">地址</label>
             <Input
-              className="bg-card border border-border"
-              placeholder="输入 API 地址，如 https://api.openai.com"
+              id="service-api-url"
+              name="service-api-url"
+              autoComplete="off"
+              fullWidth
+              className={settingsInputClassName}
+              placeholder="输入 API 地址，例如 https://api.openai.com…"
               value={selectedService.model.apiUrl}
               onChange={(event) => handleServiceChange('apiUrl', event.currentTarget.value)}
             />
           </div>
-          <div className="grid gap-2 text-xs">
-            <span className="px-4 text-mutedForeground">Key</span>
-            <div className="relative">
-            <Input
-              className="bg-card border border-border pr-10"
-              type="text"
-              placeholder="输入 API 密钥"
-              style={showApiKey ? undefined : { WebkitTextSecurity: 'disc' } as React.CSSProperties}
-              value={selectedService.model.apiKey}
-              onChange={(event) => handleServiceChange('apiKey', event.currentTarget.value)}
-            />
+          <div className="grid min-w-0 gap-2 text-xs">
+            <label htmlFor="service-api-key" className="px-4 text-mutedForeground">Key</label>
+            <div className="relative min-w-0">
+              <Input
+                id="service-api-key"
+                name="service-api-key"
+                autoComplete="off"
+                spellCheck={false}
+                fullWidth
+                className={`${settingsInputClassName} !pr-10`}
+                type="text"
+                placeholder="输入 API 密钥…"
+                style={showApiKey ? undefined : ({ WebkitTextSecurity: 'disc' } as CSSProperties)}
+                value={selectedService.model.apiKey}
+                onChange={(event) => handleServiceChange('apiKey', event.currentTarget.value)}
+              />
               <button
                 type="button"
+                aria-label={showApiKey ? '隐藏密钥' : '显示密钥'}
                 onClick={() => setShowApiKey((v) => !v)}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-mutedForeground/60 transition-colors hover:text-foreground"
                 title={showApiKey ? '隐藏密钥' : '显示密钥'}
               >
-                {showApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                {showApiKey ? (
+                  <EyeOff className="h-4 w-4" aria-hidden="true" />
+                ) : (
+                  <Eye className="h-4 w-4" aria-hidden="true" />
+                )}
               </button>
             </div>
           </div>
         </div>
-        
-
       </div>
     </div>
   );

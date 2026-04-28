@@ -1,7 +1,7 @@
 import { AgentSkillsSnapshot } from '../sessionStore';
 import { useMemo } from 'react';
-import { Tooltip, TooltipContent, TooltipTrigger } from '../../components/ui/tooltip';
-import { ScrollArea, ScrollBar } from '../../components/ui/scroll-area';
+import { ScrollShadow } from '@heroui/react/scroll-shadow';
+import { Tooltip } from '@heroui/react/tooltip';
 
 export function SkillsDisplay({ skills }: { skills: AgentSkillsSnapshot }) {
   // 建立技能与诊断的相关性
@@ -59,22 +59,27 @@ export function SkillsDisplay({ skills }: { skills: AgentSkillsSnapshot }) {
             WebkitMaskImage: 'linear-gradient(to right, black calc(100% - 24px), transparent)'
           }}
         >
-          <ScrollArea className="w-full whitespace-nowrap group">
+          <ScrollShadow
+            orientation="horizontal"
+            className="w-full overflow-x-auto whitespace-nowrap"
+            size={24}
+          >
             <div className="flex w-max gap-2 pb-2 px-1">
               {skillsWithMetadata.map((skill) => (
                 <Tooltip key={skill.id}>
-                  <TooltipTrigger asChild>
-                    <span
-                      className={`cursor-default select-none rounded-md border px-2.5 py-0.5 text-[11px] font-medium transition-all ${
-                        skill.hasIssue
-                          ? 'border-warm/50 bg-warm/5 text-warm'
-                          : 'border-border/40 bg-muted/20 text-mutedForeground hover:border-border/60 hover:text-mutedForeground/90'
-                      }`}
-                    >
-                      {skill.name}
-                    </span>
-                  </TooltipTrigger>
-                  <TooltipContent side="top" className="flex flex-col gap-1 p-2">
+                  <Tooltip.Trigger
+                    className={`cursor-default select-none rounded-md border px-2.5 py-0.5 text-[11px] font-medium transition-[border-color,background-color,color] ${
+                      skill.hasIssue
+                        ? 'border-warm/50 bg-warm/5 text-warm'
+                        : 'border-border/40 bg-muted/20 text-mutedForeground hover:border-border/60 hover:text-mutedForeground/90'
+                    }`}
+                  >
+                    {skill.name}
+                  </Tooltip.Trigger>
+                  <Tooltip.Content
+                    placement="top"
+                    className="z-50 flex max-w-xs flex-col gap-1 rounded-md border border-border/60 bg-card p-2 text-xs text-cardForeground shadow-lg"
+                  >
                     <div className="text-[12px] font-semibold text-foreground/90">{skill.name}</div>
                     <div className="text-[11px] text-mutedForeground/80">{skill.description}</div>
                     <div className="text-[10px] text-mutedForeground/50 font-mono mt-1 opacity-80">
@@ -89,17 +94,16 @@ export function SkillsDisplay({ skills }: { skills: AgentSkillsSnapshot }) {
                         ))}
                       </div>
                     )}
-                  </TooltipContent>
+                  </Tooltip.Content>
                 </Tooltip>
               ))}
             </div>
-            <ScrollBar orientation="horizontal" className="opacity-0 group-hover:opacity-100 transition-opacity" />
-          </ScrollArea>
+          </ScrollShadow>
         </div>
 
         {/* 通用诊断区域 - 垂直滚动限高 */}
         {orphanDiagnostics.length > 0 && (
-          <ScrollArea className="max-h-[100px] w-full rounded-md border border-border/30 bg-muted/5 mx-1">
+          <ScrollShadow className="max-h-[100px] w-full overflow-y-auto rounded-md border border-border/30 bg-muted/5 mx-1" size={18}>
             <div className="flex flex-col gap-1 p-2 text-[11px] leading-relaxed text-mutedForeground/70">
               {orphanDiagnostics.map((diag, idx) => (
                 <div key={idx} className="flex gap-2">
@@ -107,8 +111,7 @@ export function SkillsDisplay({ skills }: { skills: AgentSkillsSnapshot }) {
                 </div>
               ))}
             </div>
-            <ScrollBar orientation="vertical" />
-          </ScrollArea>
+          </ScrollShadow>
         )}
       </div>
     </div>

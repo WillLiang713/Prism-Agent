@@ -1,9 +1,9 @@
 import { MoonStar, Settings, SunMedium } from 'lucide-react';
 import { useState } from 'react';
 import { open } from '@tauri-apps/plugin-dialog';
+import { Button } from '@heroui/react/button';
 
 import { SettingsDialog } from '../components/config/SettingsDialog';
-import { Button } from '../components/ui/button';
 import { useUIStore } from '../store/uiStore';
 import { AgentChatPanel } from './AgentChatPanel';
 import { AgentSessionList } from './components/AgentSessionList';
@@ -103,11 +103,29 @@ export function AgentAppLayout() {
             <div data-tauri-drag-region />
             <div className="flex items-center justify-end gap-1" data-tauri-drag-region>
               <div className="flex items-center gap-1 no-drag mr-2">
-                <Button size="icon" variant="ghost" onClick={toggleTheme} className={headerIconButtonClass}>
-                  {theme === 'dark' ? <SunMedium className="h-4 w-4" /> : <MoonStar className="h-4 w-4" />}
+                <Button
+                  aria-label={theme === 'dark' ? '切换到浅色模式' : '切换到深色模式'}
+                  isIconOnly
+                  size="sm"
+                  variant="ghost"
+                  onPress={toggleTheme}
+                  className={headerIconButtonClass}
+                >
+                  {theme === 'dark' ? (
+                    <SunMedium className="h-4 w-4" aria-hidden="true" />
+                  ) : (
+                    <MoonStar className="h-4 w-4" aria-hidden="true" />
+                  )}
                 </Button>
-                <Button size="icon" variant="ghost" onClick={() => setSettingsOpen(true)} className={headerIconButtonClass}>
-                  <Settings className="h-4 w-4" />
+                <Button
+                  aria-label="打开设置"
+                  isIconOnly
+                  size="sm"
+                  variant="ghost"
+                  onPress={() => setSettingsOpen(true)}
+                  className={headerIconButtonClass}
+                >
+                  <Settings className="h-4 w-4" aria-hidden="true" />
                 </Button>
               </div>
               {isDesktop && <WindowControls />}

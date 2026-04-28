@@ -1,4 +1,5 @@
-import { Button } from '../../components/ui/button';
+import { Button } from '@heroui/react/button';
+
 import type { AgentApproval } from '../sessionStore';
 
 export function ApprovalPrompt({
@@ -35,7 +36,7 @@ export function ApprovalPrompt({
           type="button"
           size="sm"
           variant="secondary"
-          onClick={() => onDecision('deny')}
+          onPress={() => onDecision('deny')}
           className="focus-visible:ring-2 focus-visible:ring-foreground/20 focus-visible:ring-offset-2 focus-visible:ring-offset-muted"
         >
           拒绝
@@ -44,7 +45,7 @@ export function ApprovalPrompt({
           type="button"
           size="sm"
           variant="primary"
-          onClick={() => onDecision('allow')}
+          onPress={() => onDecision('allow')}
           className="focus-visible:ring-2 focus-visible:ring-foreground/20 focus-visible:ring-offset-2 focus-visible:ring-offset-muted"
         >
           允许一次
