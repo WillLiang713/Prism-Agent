@@ -38,8 +38,20 @@ const composerTextControlClassName = cn(
 const composerControlIconClassName =
   'h-4 w-4 shrink-0 justify-self-center text-mutedForeground';
 
-const composerMenuItemClassName =
-  'flex w-full cursor-pointer select-none items-center justify-center rounded-full px-3 py-2 text-center text-[13px] leading-5 text-foreground outline-none transition-colors hover:bg-card data-[focused]:bg-card';
+const composerMenuItemStateClassName =
+  'transition-colors hover:!bg-foreground/[0.06] focus-visible:!bg-foreground/[0.06] data-[hovered=true]:!bg-foreground/[0.06] data-[focused]:!bg-foreground/[0.06] data-[focus-visible=true]:!bg-foreground/[0.06] data-[selected=true]:!bg-foreground/[0.08] aria-[selected=true]:!bg-foreground/[0.08]';
+
+const composerMenuItemClassName = cn(
+  'flex w-full cursor-pointer select-none items-center justify-center rounded-lg px-3 py-2 text-center text-[13px] leading-5 text-foreground outline-none',
+  composerMenuItemStateClassName,
+);
+
+const composerPopoverContentClassName =
+  'z-50 overflow-hidden !rounded-xl border border-border !bg-muted !p-1 text-foreground !shadow-[0_18px_40px_rgba(0,0,0,0.22)]';
+
+const composerPopoverDialogClassName = '!p-0 outline-none';
+
+const composerSelectListBoxClassName = '!p-0';
 
 export function AgentChatInput({
   inputDisabled,
@@ -236,9 +248,9 @@ export function AgentChatInput({
             <Popover.Content
               placement="top start"
               offset={6}
-              className="z-50 min-w-[220px] max-w-[320px] overflow-hidden rounded-xl border border-border bg-muted p-1 text-foreground shadow-[0_18px_40px_rgba(0,0,0,0.22)]"
+              className={cn(composerPopoverContentClassName, '!min-w-[220px] max-w-[320px]')}
             >
-              <Popover.Dialog className="outline-none">
+              <Popover.Dialog className={composerPopoverDialogClassName}>
                 {pinnedDirectories.length === 0 ? (
                   <div className="px-3 py-2 text-[11px] text-mutedForeground">
                     暂无可切换目录
@@ -255,7 +267,10 @@ export function AgentChatInput({
                           setWorkspaceOpen(false);
                         }}
                         title={path}
-                        className="flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-[13px] leading-5 text-foreground outline-none transition-colors hover:bg-card focus-visible:bg-card"
+                        className={cn(
+                          'flex w-full cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-[13px] leading-5 text-foreground outline-none',
+                          composerMenuItemStateClassName,
+                        )}
                       >
                         <FolderOpen className="h-3.5 w-3.5 shrink-0 text-mutedForeground" aria-hidden="true" />
                         <span className="min-w-0 flex-1 truncate text-left">{name}</span>
@@ -288,9 +303,9 @@ export function AgentChatInput({
             </Select.Trigger>
             <Select.Popover
               placement="top"
-              className="z-50 min-w-[5.5rem] overflow-hidden rounded-xl border border-border bg-muted p-1 text-foreground shadow-[0_18px_40px_rgba(0,0,0,0.22)]"
+              className={cn(composerPopoverContentClassName, '!min-w-[5.5rem]')}
             >
-              <ListBox aria-label="执行模式" className="p-1">
+              <ListBox aria-label="执行模式" className={composerSelectListBoxClassName}>
                 <ListBox.Item
                   id="auto"
                   textValue="自动"
@@ -334,9 +349,9 @@ export function AgentChatInput({
             </Select.Trigger>
             <Select.Popover
               placement="top"
-              className="z-50 min-w-[5.5rem] overflow-hidden rounded-xl border border-border bg-muted p-1 text-foreground shadow-[0_18px_40px_rgba(0,0,0,0.22)]"
+              className={cn(composerPopoverContentClassName, '!min-w-[5.5rem]')}
             >
-              <ListBox aria-label="思考模式" className="p-1">
+              <ListBox aria-label="思考模式" className={composerSelectListBoxClassName}>
                 {reasoningOptions.map((option) => (
                   <ListBox.Item
                     key={option.value}

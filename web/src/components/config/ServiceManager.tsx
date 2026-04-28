@@ -7,6 +7,7 @@ import { ChevronDown, Eye, EyeOff, Plus, Trash2 } from 'lucide-react';
 import { useState, type CSSProperties } from 'react';
 
 import { useConfigStore } from '../../store/configStore';
+import { cn } from '../../lib/utils';
 
 const providerLabels = {
   openai_chat: 'OpenAI Chat',
@@ -31,6 +32,19 @@ const settingsSelectValueClassName =
 
 const settingsSelectIndicatorClassName =
   '!right-4 !size-4 !text-mutedForeground/65';
+
+const settingsSelectPopoverClassName =
+  'z-50 !min-w-[var(--trigger-width)] overflow-hidden !rounded-xl border border-border !bg-muted !p-1 text-foreground !shadow-[0_18px_40px_rgba(0,0,0,0.22)]';
+
+const settingsSelectListBoxClassName = 'max-h-72 overflow-y-auto !p-0';
+
+const settingsSelectItemStateClassName =
+  'transition-colors hover:!bg-foreground/[0.06] focus-visible:!bg-foreground/[0.06] data-[hovered=true]:!bg-foreground/[0.06] data-[focused]:!bg-foreground/[0.06] data-[focus-visible=true]:!bg-foreground/[0.06] data-[selected=true]:!bg-foreground/[0.08] aria-[selected=true]:!bg-foreground/[0.08]';
+
+const settingsSelectItemClassName = cn(
+  'flex w-full cursor-pointer select-none items-center justify-start rounded-lg px-3 py-2 text-left text-sm text-foreground outline-none',
+  settingsSelectItemStateClassName,
+);
 
 export function ServiceManager() {
   const services = useConfigStore((state) => state.services);
@@ -172,14 +186,14 @@ export function ServiceManager() {
                   <ChevronDown className="h-4 w-4" aria-hidden="true" />
                 </Select.Indicator>
               </Select.Trigger>
-              <Select.Popover className="z-50 min-w-[var(--trigger-width)] overflow-hidden rounded-xl border border-border bg-muted p-1 text-foreground shadow-[0_18px_40px_rgba(0,0,0,0.22)]">
-                <ListBox aria-label="服务类型" className="max-h-72 overflow-y-auto p-1">
+              <Select.Popover className={settingsSelectPopoverClassName}>
+                <ListBox aria-label="服务类型" className={settingsSelectListBoxClassName}>
                   {providerOptions.map((option) => (
                     <ListBox.Item
                       key={option.value}
                       id={option.value}
                       textValue={option.label}
-                      className="flex w-full cursor-pointer select-none items-center justify-start rounded-full px-3 py-2 text-left text-sm text-foreground outline-none transition-colors hover:bg-card data-[focused]:bg-card"
+                      className={settingsSelectItemClassName}
                     >
                       <span className="block w-full truncate text-left">{option.label}</span>
                       <ListBox.ItemIndicator />

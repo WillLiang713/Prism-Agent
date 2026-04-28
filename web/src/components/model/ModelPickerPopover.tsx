@@ -52,13 +52,18 @@ const defaultTriggerIconClassName =
   'block h-4 w-4 shrink-0 justify-self-center text-mutedForeground';
 
 const defaultContentClassName =
-  'z-50 w-[var(--trigger-width)] max-w-[calc(100vw-1.5rem)] overflow-hidden rounded-xl border border-border bg-muted p-1 text-foreground shadow-[0_18px_40px_rgba(0,0,0,0.22)]';
+  'z-50 w-[var(--trigger-width)] max-w-[calc(100vw-1.5rem)] overflow-hidden !rounded-xl border border-border !bg-muted !p-1 text-foreground !shadow-[0_18px_40px_rgba(0,0,0,0.22)]';
 
 const defaultInputClassName =
   'h-8 min-w-0 flex-1 rounded-md bg-transparent px-2 text-sm text-foreground placeholder:text-mutedForeground outline-none';
 
-const defaultItemClassName =
-  'flex cursor-pointer select-none items-center justify-center rounded-md px-2 py-1.5 text-center text-sm text-foreground outline-none transition-colors hover:bg-card data-[focused]:bg-card';
+const defaultItemStateClassName =
+  'transition-colors hover:!bg-foreground/[0.06] focus-visible:!bg-foreground/[0.06] data-[hovered=true]:!bg-foreground/[0.06] data-[focused]:!bg-foreground/[0.06] data-[focus-visible=true]:!bg-foreground/[0.06] data-[selected=true]:!bg-foreground/[0.08] aria-[selected=true]:!bg-foreground/[0.08]';
+
+const defaultItemClassName = cn(
+  'flex cursor-pointer select-none items-center justify-center rounded-lg px-2 py-1.5 text-center text-sm text-foreground outline-none',
+  defaultItemStateClassName,
+);
 
 export function ModelPickerPopover({
   open,
@@ -141,7 +146,7 @@ export function ModelPickerPopover({
         offset={offset}
         className={cn(defaultContentClassName, contentClassName)}
       >
-        <Popover.Dialog className="flex flex-col outline-none">
+        <Popover.Dialog className="flex flex-col !p-0 outline-none">
           <div className="flex items-center gap-1 px-1">
             <Input
               aria-label={searchAriaLabel}

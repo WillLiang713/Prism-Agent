@@ -12,20 +12,34 @@ import type { AgentSession } from '../sessionStore';
 import { buildSessionGroups } from './sessionGroups';
 
 const sessionMenuContentClassName =
-  'z-50 min-w-24 w-max overflow-hidden rounded-xl border border-border bg-muted p-1 text-foreground shadow-[0_18px_40px_rgba(0,0,0,0.22)]';
+  'z-50 min-w-24 w-max overflow-hidden !rounded-xl border border-border !bg-muted !p-1 text-foreground !shadow-[0_18px_40px_rgba(0,0,0,0.22)]';
 
-const sessionMenuItemClassName =
-  'flex h-8 w-full cursor-pointer select-none items-center justify-start gap-2 whitespace-nowrap rounded-lg px-2.5 text-sm text-foreground outline-none transition-colors hover:bg-card focus-visible:bg-card disabled:cursor-not-allowed disabled:text-mutedForeground/45 disabled:hover:bg-transparent';
+const sessionMenuItemStateClassName =
+  'transition-colors hover:!bg-foreground/[0.06] focus-visible:!bg-foreground/[0.06] data-[hovered=true]:!bg-foreground/[0.06] data-[focused]:!bg-foreground/[0.06] data-[focus-visible=true]:!bg-foreground/[0.06] data-[selected=true]:!bg-foreground/[0.08] aria-[selected=true]:!bg-foreground/[0.08] disabled:hover:!bg-transparent disabled:focus-visible:!bg-transparent';
 
-const sessionMenuDangerItemClassName = cn(
+const sessionMenuItemClassName = cn(
+  'flex h-8 w-full cursor-pointer select-none items-center justify-start gap-2 whitespace-nowrap rounded-lg px-2.5 text-sm text-foreground outline-none disabled:cursor-not-allowed disabled:text-mutedForeground/45',
+  sessionMenuItemStateClassName,
+);
+
+const sessionMenuDangerToneClassName =
+  'hover:!text-danger focus-visible:!text-danger data-[hovered=true]:!text-danger data-[focused]:!text-danger data-[focus-visible=true]:!text-danger disabled:!text-mutedForeground/45';
+
+const sessionMenuDangerItemClassName = cn(sessionMenuItemClassName, sessionMenuDangerToneClassName);
+
+const sessionThreadMenuItemClassName = cn(
   sessionMenuItemClassName,
-  'hover:bg-danger/10 hover:text-danger focus-visible:bg-danger/10 focus-visible:text-danger',
+  'justify-center gap-0 px-3 text-center',
+);
+
+const sessionThreadMenuDangerItemClassName = cn(
+  sessionThreadMenuItemClassName,
+  sessionMenuDangerToneClassName,
 );
 
 const sessionMenuGenerateItemClassName = cn(
-  sessionMenuItemClassName,
+  sessionThreadMenuItemClassName,
   'relative bg-transparent before:absolute before:left-1 before:top-1/2 before:h-4 before:w-0.5 before:-translate-y-1/2 before:rounded-full before:bg-foreground/18',
-  'hover:bg-card focus-visible:bg-card',
   'dark:before:bg-foreground/24',
   'disabled:before:bg-transparent',
 );
@@ -146,7 +160,7 @@ export function AgentSessionList({
                       className={sessionMenuContentClassName}
                     >
                       <Popover.Dialog
-                        className="outline-none"
+                        className="!p-0 outline-none"
                         onClick={(e) => e.stopPropagation()}
                       >
                         <button
@@ -236,7 +250,7 @@ export function AgentSessionList({
                             className={sessionMenuContentClassName}
                           >
                             <Popover.Dialog
-                              className="outline-none"
+                              className="!p-0 outline-none"
                               onClick={(e) => e.stopPropagation()}
                             >
                               <button
@@ -250,7 +264,9 @@ export function AgentSessionList({
                                 disabled={regenerateDisabled}
                                 className={sessionMenuGenerateItemClassName}
                               >
-                                <span>{isRegenerating ? '生成中…' : '生成标题'}</span>
+                                <span className="block w-full text-center">
+                                  {isRegenerating ? '生成中…' : '生成标题'}
+                                </span>
                               </button>
                               <button
                                 type="button"
@@ -259,9 +275,9 @@ export function AgentSessionList({
                                   setOpenThreadMenu(null);
                                   onDelete(thread.threadId);
                                 }}
-                                className={sessionMenuDangerItemClassName}
+                                className={sessionThreadMenuDangerItemClassName}
                               >
-                                <span>删除任务</span>
+                                <span className="block w-full text-center">删除任务</span>
                               </button>
                             </Popover.Dialog>
                           </Popover.Content>
