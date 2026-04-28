@@ -30,6 +30,11 @@ const composerIconButtonClassName = cn(
   'w-8 p-0',
 );
 
+const composerSendButtonClassName = cn(
+  composerControlBaseClassName,
+  'ml-0.5 !h-7 !min-h-7 !max-h-7 w-7 border-foreground bg-foreground p-0 text-background shadow-[0_0_0_1px_hsl(var(--foreground)/0.16),0_8px_22px_hsl(var(--foreground)/0.16)] hover:border-foreground/90 hover:bg-foreground/90 hover:shadow-[0_0_0_1px_hsl(var(--foreground)/0.18),0_10px_26px_hsl(var(--foreground)/0.20)] disabled:border-border disabled:bg-muted disabled:text-mutedForeground disabled:shadow-none',
+);
+
 const composerTextControlClassName = cn(
   composerControlBaseClassName,
   'grid grid-cols-[1rem_minmax(2rem,1fr)_1rem] items-center gap-1.5 px-3',
@@ -37,6 +42,12 @@ const composerTextControlClassName = cn(
 
 const composerControlIconClassName =
   'h-4 w-4 shrink-0 justify-self-center text-mutedForeground';
+
+const composerControlChevronClassName =
+  'h-3.5 w-3.5 shrink-0 justify-self-center text-mutedForeground';
+
+const composerControlIndicatorClassName =
+  'flex h-4 w-4 shrink-0 items-center justify-center justify-self-center text-mutedForeground [&>svg]:block [&>svg]:h-3.5 [&>svg]:w-3.5';
 
 const composerMenuItemStateClassName =
   'transition-colors hover:!bg-foreground/[0.06] focus-visible:!bg-foreground/[0.06] data-[hovered=true]:!bg-foreground/[0.06] data-[focused]:!bg-foreground/[0.06] data-[focus-visible=true]:!bg-foreground/[0.06] data-[selected=true]:!bg-foreground/[0.08] aria-[selected=true]:!bg-foreground/[0.08]';
@@ -54,7 +65,7 @@ const composerPopoverDialogClassName = '!p-0 outline-none';
 const composerSelectListBoxClassName = '!p-0';
 
 const composerTextareaClassName =
-  'min-h-[48px] w-full cursor-text resize-none border-0 bg-transparent px-3 py-1.5 !text-[13px] !leading-[18px] shadow-none placeholder:!text-[13px] placeholder:!leading-[18px] focus-visible:ring-0';
+  'min-h-[48px] w-full cursor-text resize-none border-0 bg-transparent px-3 py-1.5 !text-[13px] !leading-[18px] shadow-none placeholder:!text-[13px] placeholder:!leading-[18px] placeholder:!text-mutedForeground/58 focus-visible:ring-0';
 
 export function AgentChatInput({
   inputDisabled,
@@ -247,7 +258,7 @@ export function AgentChatInput({
             >
               <FolderOpen className={composerControlIconClassName} aria-hidden="true" />
               <span className="min-w-0 truncate text-center !text-[12px] font-medium leading-none">{workspaceName}</span>
-              <ChevronDown className={composerControlIconClassName} aria-hidden="true" />
+              <ChevronDown className={composerControlChevronClassName} aria-hidden="true" />
             </Button>
             <Popover.Content
               placement="top start"
@@ -321,8 +332,8 @@ export function AgentChatInput({
             >
               <Play aria-hidden="true" className={composerControlIconClassName} />
               <Select.Value className="min-w-0 truncate whitespace-nowrap text-center !text-[12px] font-medium leading-none" />
-              <Select.Indicator className="justify-self-center text-mutedForeground">
-                <ChevronDown className="h-4 w-4" aria-hidden="true" />
+              <Select.Indicator className={composerControlIndicatorClassName}>
+                <ChevronDown aria-hidden="true" />
               </Select.Indicator>
             </Select.Trigger>
             <Select.Popover
@@ -367,8 +378,8 @@ export function AgentChatInput({
             >
               <ReasoningIcon aria-hidden="true" className={composerControlIconClassName} />
               <Select.Value className="min-w-0 truncate whitespace-nowrap text-center !text-[12px] font-medium leading-none" />
-              <Select.Indicator className="justify-self-center text-mutedForeground">
-                <ChevronDown className="h-4 w-4" aria-hidden="true" />
+              <Select.Indicator className={composerControlIndicatorClassName}>
+                <ChevronDown aria-hidden="true" />
               </Select.Indicator>
             </Select.Trigger>
             <Select.Popover
@@ -410,9 +421,9 @@ export function AgentChatInput({
               size="sm"
               isIconOnly
               isDisabled={submitDisabled}
-              className={cn(composerIconButtonClassName, 'ml-0.5')}
+              className={composerSendButtonClassName}
             >
-              <ArrowUp className="h-3.5 w-3.5" aria-hidden="true" />
+              <ArrowUp className="h-3 w-3" aria-hidden="true" />
             </Button>
           )}
         </div>

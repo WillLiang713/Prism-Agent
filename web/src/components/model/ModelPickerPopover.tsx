@@ -42,6 +42,7 @@ interface ModelPickerPopoverProps {
   offset?: ComponentProps<typeof Popover.Content>['offset'];
   triggerClassName?: string;
   triggerIconClassName?: string;
+  triggerChevronClassName?: string;
   triggerValueClassName?: string;
   contentClassName?: string;
   inputClassName?: string;
@@ -58,6 +59,9 @@ const defaultTriggerIconSlotClassName =
 
 const defaultTriggerIconClassName =
   'block h-4 w-4 shrink-0 justify-self-center text-mutedForeground';
+
+const defaultTriggerChevronClassName =
+  'block h-3.5 w-3.5 shrink-0 justify-self-center text-mutedForeground';
 
 const defaultContentClassName =
   'z-50 w-[var(--trigger-width)] max-w-[calc(100vw-1.5rem)] overflow-hidden !rounded-xl border border-border !bg-muted !p-1 text-foreground !shadow-[0_18px_40px_rgba(0,0,0,0.22)]';
@@ -93,6 +97,7 @@ export function ModelPickerPopover({
   offset = 6,
   triggerClassName,
   triggerIconClassName,
+  triggerChevronClassName,
   triggerValueClassName,
   contentClassName,
   inputClassName,
@@ -179,7 +184,7 @@ export function ModelPickerPopover({
           {value || placeholder}
         </span>
         <ChevronDown
-          className={cn(defaultTriggerIconClassName, triggerIconClassName)}
+          className={cn(defaultTriggerChevronClassName, triggerChevronClassName)}
           aria-hidden="true"
         />
       </Button>

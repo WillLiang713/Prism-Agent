@@ -11,6 +11,9 @@ const modelPickerTriggerClassName =
 const modelPickerIconClassName =
   'h-4 w-4 shrink-0 justify-self-center text-mutedForeground';
 
+const modelPickerChevronClassName =
+  'h-3.5 w-3.5 shrink-0 justify-self-center text-mutedForeground';
+
 export function HeaderModelPicker({ currentModel }: { currentModel: string }) {
   const ModelIcon = composerControlIcons.model;
   const services = useConfigStore((state) => state.services);
@@ -109,6 +112,7 @@ export function HeaderModelPicker({ currentModel }: { currentModel: string }) {
       offset={6}
       triggerClassName={modelPickerTriggerClassName}
       triggerIconClassName={modelPickerIconClassName}
+      triggerChevronClassName={modelPickerChevronClassName}
       triggerValueClassName="!text-[12px] leading-none"
       inputClassName="text-[13px] leading-5"
       itemClassName="text-[13px] leading-5"
