@@ -1,11 +1,17 @@
 import { useState } from 'react';
 
 import { Modal } from '@heroui/react/modal';
+import { Tabs } from '@heroui/react/tabs';
 import { ScrollShadow } from '@heroui/react/scroll-shadow';
 import { X } from 'lucide-react';
 
 import { ServiceManager } from './ServiceManager';
 import { GeneralSettings } from './GeneralSettings';
+
+const settingsTabsListClassName =
+  '*:h-9 *:px-4 *:text-sm *:font-medium *:text-mutedForeground/45 *:!opacity-100 *:transition-colors *:data-[focus-visible=true]:text-foreground *:data-[selected=true]:font-semibold *:data-[selected=true]:!text-foreground';
+
+const settingsTabIndicatorClassName = '!bg-foreground/35 dark:!bg-foreground/45';
 
 export function SettingsDialog({
   open,
@@ -36,47 +42,38 @@ export function SettingsDialog({
               </Modal.CloseTrigger>
             </Modal.Header>
 
-            <div className="mt-4 flex gap-2">
-              <button
-                type="button"
-                onClick={() => setActiveTab('services')}
-                className={`cursor-pointer rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
-                  activeTab === 'services'
-                    ? 'bg-foreground/[0.08] text-foreground'
-                    : 'text-mutedForeground hover:bg-foreground/[0.05] hover:text-foreground'
-                }`}
-              >
-                服务
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveTab('general')}
-                className={`cursor-pointer rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
-                  activeTab === 'general'
-                    ? 'bg-foreground/[0.08] text-foreground'
-                    : 'text-mutedForeground hover:bg-foreground/[0.05] hover:text-foreground'
-                }`}
-              >
-                常规
-              </button>
-            </div>
+            <Tabs 
+              variant="secondary" 
+              className="mt-4 flex min-h-0 flex-1 flex-col"
+              selectedKey={activeTab}
+              onSelectionChange={(key) => setActiveTab(key as 'services' | 'general')}
+            >
+              <Tabs.ListContainer>
+                <Tabs.List aria-label="设置选项" className={settingsTabsListClassName}>
+                  <Tabs.Tab id="services">
+                    服务
+                    <Tabs.Indicator className={settingsTabIndicatorClassName} />
+                  </Tabs.Tab>
+                  <Tabs.Tab id="general">
+                    常规
+                    <Tabs.Indicator className={settingsTabIndicatorClassName} />
+                  </Tabs.Tab>
+                </Tabs.List>
+              </Tabs.ListContainer>
 
-            <Modal.Body className="mt-6 flex min-h-0 min-w-0 flex-1 overflow-hidden p-0">
-              <ScrollShadow className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto" size={24}>
-                <div className="flex min-w-0 flex-col space-y-10 px-2 pb-10">
-                  {activeTab === 'services' && (
-                    <div className="min-w-0 flex-1">
+              <Modal.Body className="mt-6 flex min-h-0 min-w-0 flex-1 overflow-hidden p-0">
+                <ScrollShadow className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto" size={24}>
+                  <div className="flex min-w-0 flex-col space-y-10 px-2 pb-10">
+                    <Tabs.Panel id="services" className="min-w-0 flex-1 p-0">
                       <ServiceManager />
-                    </div>
-                  )}
-                  {activeTab === 'general' && (
-                    <div className="min-w-0 flex-1">
+                    </Tabs.Panel>
+                    <Tabs.Panel id="general" className="min-w-0 flex-1 p-0">
                       <GeneralSettings />
-                    </div>
-                  )}
-                </div>
-              </ScrollShadow>
-            </Modal.Body>
+                    </Tabs.Panel>
+                  </div>
+                </ScrollShadow>
+              </Modal.Body>
+            </Tabs>
           </Modal.Dialog>
         </Modal.Container>
       </Modal.Backdrop>

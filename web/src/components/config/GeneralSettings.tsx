@@ -169,7 +169,6 @@ export function GeneralSettings() {
           triggerClassName={modelPickerTriggerClassName}
           triggerIconClassName={modelPickerIconClassName}
           triggerValueClassName={modelPickerValueClassName}
-          contentClassName="w-[min(24rem,calc(100vw-1.5rem))]"
         />
       </div>
     </div>

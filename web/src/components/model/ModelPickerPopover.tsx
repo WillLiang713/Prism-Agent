@@ -4,7 +4,15 @@ import { ListBox } from '@heroui/react/list-box';
 import { Popover } from '@heroui/react/popover';
 import { ScrollShadow } from '@heroui/react/scroll-shadow';
 import { ChevronDown, RefreshCw } from 'lucide-react';
-import { useMemo, type ComponentProps, type ReactNode } from 'react';
+import {
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ComponentProps,
+  type CSSProperties,
+  type ReactNode,
+} from 'react';
 
 import { cn } from '../../lib/utils';
 
@@ -92,6 +100,8 @@ export function ModelPickerPopover({
   emptyLabel = '点击右上角获取模型列表',
   noMatchLabel = '无匹配项',
 }: ModelPickerPopoverProps) {
+  const triggerRef = useRef<HTMLButtonElement | null>(null);
+  const [triggerWidth, setTriggerWidth] = useState<string | null>(null);
   const normalizedSearch = search.trim().toLowerCase();
   const visibleGroups = useMemo(
     () =>
@@ -111,10 +121,42 @@ export function ModelPickerPopover({
   );
   const showGroupLabels = groups.length > 1 || groups.some((group) => group.label);
   const emptyText = loading ? '获取中…' : modelCount === 0 ? emptyLabel : noMatchLabel;
+  const contentStyle =
+    triggerWidth === null
+      ? undefined
+      : ({ '--trigger-width': triggerWidth } as CSSProperties);
+
+  useLayoutEffect(() => {
+    const trigger = triggerRef.current;
+
+    if (!trigger) return;
+
+    const updateWidth = () => {
+      const nextWidth = `${trigger.offsetWidth}px`;
+      setTriggerWidth((currentWidth) =>
+        currentWidth === nextWidth ? currentWidth : nextWidth,
+      );
+    };
+
+    updateWidth();
+
+    if (typeof ResizeObserver === 'undefined') {
+      if (typeof window === 'undefined') return;
+
+      window.addEventListener('resize', updateWidth);
+      return () => window.removeEventListener('resize', updateWidth);
+    }
+
+    const resizeObserver = new ResizeObserver(updateWidth);
+    resizeObserver.observe(trigger);
+
+    return () => resizeObserver.disconnect();
+  }, []);
 
   return (
     <Popover isOpen={open} onOpenChange={onOpenChange}>
       <Button
+        ref={triggerRef}
         type="button"
         variant="secondary"
         aria-label={triggerAriaLabel}
@@ -145,6 +187,7 @@ export function ModelPickerPopover({
         placement={placement}
         offset={offset}
         className={cn(defaultContentClassName, contentClassName)}
+        style={contentStyle}
       >
         <Popover.Dialog className="flex flex-col !p-0 outline-none">
           <div className="flex items-center gap-1 px-1">
