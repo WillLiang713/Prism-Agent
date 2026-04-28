@@ -1,4 +1,4 @@
-import { Loader2, AlertCircle } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
 import { useEffect, useEffectEvent, useMemo, useRef } from 'react';
 import { ScrollShadow } from '@heroui/react/scroll-shadow';
 
@@ -10,7 +10,7 @@ import type { AgentApprovalMode, AgentRuntimeStatus } from './client';
 import type { AgentSession } from './sessionStore';
 
 const CHAT_SIDE_PADDING = 'calc(1.5rem + 10px)';
-const CHAT_PANEL_MAX_WIDTH = '760px';
+const CHAT_PANEL_MAX_WIDTH = '900px';
 const BOTTOM_STICK_THRESHOLD_PX = 160;
 const SUPPRESSED_RUNTIME_REASON = '未指定主模型，请在设置中选择或输入模型名称。';
 const AUTO_SCROLL_MAX_FRAMES = 4;
@@ -62,7 +62,7 @@ export function AgentChatPanel({
   const runtimeStatusMessage = agentConfigValidating
     ? agentRuntimeStatus.ready
       ? ''
-      : '正在检查模型配置…'
+      : '正在检查模型配置'
     : agentRuntimeStatus.reason === SUPPRESSED_RUNTIME_REASON
       ? ''
       : agentRuntimeStatus.reason;
@@ -183,8 +183,14 @@ export function AgentChatPanel({
         
         <div className="flex-1 overflow-hidden">
           {!initialized ? (
-            <div className="flex h-full flex-col items-center justify-center p-8 text-center">
-              <Loader2 className="h-8 w-8 animate-spin text-mutedForeground" />
+            <div
+              role="status"
+              aria-live="polite"
+              className="flex h-full flex-col items-center justify-center p-8 text-center text-sm leading-6 text-mutedForeground"
+            >
+              <span className="thinking-title-shimmer" data-shimmer-text="正在连接后端">
+                正在连接后端
+              </span>
             </div>
           ) : isWelcomeState ? (
             <div className="flex h-full items-center justify-center" style={{ paddingInline: CHAT_SIDE_PADDING }}>

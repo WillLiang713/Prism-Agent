@@ -38,7 +38,7 @@ const markdownComponents: Components = {
     <div className="my-4 overflow-x-auto rounded-xl border border-border/70 bg-background/35">
       <table
         {...props}
-        className={cn('min-w-full border-collapse text-left text-sm leading-6', className)}
+        className={cn('min-w-full border-collapse text-left text-[13px] leading-[22px]', className)}
       >
         {children}
       </table>

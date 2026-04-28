@@ -29,14 +29,17 @@
 
 ## UI Design Compliance
 
-- All UI work must strictly follow the rules defined in `DESIGN.md`.
-- All frontend work must also strictly follow the rules in `web-design-guidelines`; treat them as mandatory requirements, not optional suggestions.
+- All frontend work must strictly follow the rules in `web-design-guidelines`; treat them as mandatory requirements, not optional suggestions.
+- When designing, implementing, or reviewing UI, use existing local UI patterns and nearby components as the primary source of truth for visual style, layout, spacing, and interaction details.
 - Use `frontend-design` for production-grade implementation inside the repository, especially when translating an approved direction into React components, pages, or shippable UI code.
 - For React frontend implementation, review, refactoring, and performance optimization work, use `vercel-react-best-practices` as the default performance guidance.
 - Apply `vercel-react-best-practices` especially when touching component structure, rendering behavior, state subscriptions, async data flow, or bundle-size-sensitive frontend code.
-- When designing, implementing, or reviewing UI, treat `DESIGN.md` as the primary source of truth for visual style, layout, components, spacing, and interaction details.
-- For frontend design, implementation, review, and refactoring, `DESIGN.md` and `web-design-guidelines` must both be satisfied together.
-- If an existing UI implementation conflicts with `DESIGN.md`, prioritize aligning the result with `DESIGN.md` unless the user explicitly requests an exception.
+- For frontend design, implementation, review, and refactoring, satisfy `web-design-guidelines` and preserve consistency with the existing application unless the user explicitly requests a different direction.
+- The `web/` frontend uses HeroUI React v3 through `@heroui/react` and `@heroui/styles`. When adding or changing HeroUI components, use the `heroui-react` skill and fetch the relevant component docs before implementation.
+- Follow HeroUI v3 patterns in `web/`: no `HeroUIProvider`, compound component APIs where documented, `onPress` for HeroUI interactive components, Tailwind CSS v4 compatibility, and `@import "tailwindcss";` before `@import "@heroui/styles";`.
+- Prefer the existing direct HeroUI component import style already used in `web/`, such as `@heroui/react/button`, unless local code or fetched HeroUI v3 docs point to a better pattern.
+- Use `heroui-migration` only when migrating HeroUI v2 code or resolving v2-to-v3 API/styling differences. Do not apply HeroUI v2 patterns to new `web/` code.
+- Use `heroui-native` only for explicit React Native/mobile work. Do not add Native-only dependencies or patterns to the Tauri desktop/web frontend.
 
 ## Difficult Bug Investigation
 
@@ -61,7 +64,13 @@
 - Treat newly created ad hoc `*.test.*`, `*.spec.*`, fixture, and repro files as temporary unless they are deliberate source-controlled regression coverage. Remove temporary ones before the final response.
 - After browser-based tests finish, terminate any leftover backend, browser, driver, or test-related processes started for the run so they do not accumulate and slow down or freeze the machine.
 
+## Test Organization
+
+- New or migrated intentional tests must live under the repository-level `tests/` directory, grouped by layer such as `tests/web/`, `tests/agent-sidecar/`, and `tests/src-tauri/`.
+- Mirror the source path under that layer when it helps readability, but do not add new `*.test.*` or `*.spec.*` files beside source files.
+- Existing colocated tests may remain until they are intentionally migrated; avoid moving unrelated historical tests as part of a focused feature or bug fix.
+
 ## Documentation Sync
 
 - When updating repository rules or user-facing project documentation, keep the English and Chinese counterparts aligned unless the user explicitly asks for a one-language-only change.
-- For paired files such as `AGENTS.md` / `docs/AGENTS.zh-CN.md`, `README.md` / `docs/README.zh-CN.md`, and `DESIGN.md` / `docs/DESIGN.zh-CN.md`, aim for semantic parity rather than line-by-line literal translation.
+- For paired files such as `AGENTS.md` / `docs/AGENTS.zh-CN.md` and `README.md` / `docs/README.zh-CN.md`, aim for semantic parity rather than line-by-line literal translation.

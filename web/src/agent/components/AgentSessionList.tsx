@@ -39,21 +39,21 @@ export function AgentSessionList({
   threadList,
   activeSessionId,
   activeThreadId,
+  currentWorkspaceRoot,
   onCreate,
   onResume,
   onDelete,
   onRegenerateTitle,
-  onPickWorkspace,
 }: {
   sessions: AgentSession[];
   threadList: AgentThreadMeta[];
   activeSessionId: string | null;
   activeThreadId: string | null;
+  currentWorkspaceRoot?: string;
   onCreate: (workspaceRoot?: string) => void;
   onResume: (threadId: string, cwd: string) => void;
   onDelete: (threadId: string) => void;
   onRegenerateTitle: (threadId: string) => Promise<unknown>;
-  onPickWorkspace: () => void;
 }) {
   const [regeneratingIds, setRegeneratingIds] = useState<Set<string>>(() => new Set());
   const [openDirectoryMenu, setOpenDirectoryMenu] = useState<string | null>(null);
@@ -85,23 +85,29 @@ export function AgentSessionList({
     () => buildSessionGroups(threadList, pinnedDirectories),
     [threadList, pinnedDirectories],
   );
+  const currentWorkspaceName = currentWorkspaceRoot?.split(/[\\/]/).filter(Boolean).pop();
+  const createButtonLabel = currentWorkspaceName
+    ? `在 ${currentWorkspaceName} 中新建会话`
+    : '新建会话';
 
   return (
     <aside className="flex h-full w-[260px] shrink-0 flex-col bg-background">
       <div className="px-3 pt-3 pb-2">
         <button
           type="button"
-          onClick={onPickWorkspace}
-          className="group flex w-full cursor-pointer items-center justify-center rounded-full border border-border bg-transparent px-3 py-2 text-sm font-medium text-foreground/85 transition-colors hover:border-foreground/20 hover:bg-muted/60 hover:text-foreground"
+          onClick={() => onCreate(currentWorkspaceRoot || undefined)}
+          aria-label={createButtonLabel}
+          title={currentWorkspaceRoot ? `新建会话：${currentWorkspaceRoot}` : '新建会话'}
+          className="group flex h-10 w-full cursor-pointer items-center justify-center rounded-full border border-border bg-transparent px-3 py-2 text-foreground/85 outline-none transition-[background-color,border-color,color,box-shadow] hover:border-foreground/20 hover:bg-muted/60 hover:text-foreground focus-visible:border-foreground/20 focus-visible:bg-muted/60 focus-visible:ring-1 focus-visible:ring-foreground/20"
         >
-          <span className="truncate text-center">载入</span>
+          <Plus className="h-4 w-4" aria-hidden="true" />
         </button>
       </div>
       <ScrollShadow className="flex-1 overflow-y-auto px-2" size={24}>
-        <div className="space-y-4 pb-4">
+        <div className="space-y-3 pb-4">
           {groupedThreads.map((group) => (
-            <div key={group.cwd} className="mb-4 last:mb-0">
-              <div className="group/dir px-3 pt-2 pb-1.5 flex items-center justify-between text-[12px] font-semibold text-mutedForeground/70">
+            <div key={group.cwd} className="rounded-2xl border border-border/45 bg-card/45 p-1">
+              <div className="group/dir flex h-8 items-center justify-between rounded-xl px-2.5 text-[12px] font-semibold text-mutedForeground/75">
                 <div className="flex items-center gap-2 min-w-0">
                   <Folder className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
                   <span className="truncate" title={group.cwd}>
@@ -160,7 +166,7 @@ export function AgentSessionList({
                   </Popover>
                 </div>
               </div>
-              <div className="space-y-0.5">
+              <div className="space-y-1">
                 {group.threads.map((thread) => {
                   const loadedSession = sessions.find((session) => session.threadId === thread.threadId);
                   const active =
@@ -184,8 +190,8 @@ export function AgentSessionList({
                           onResume(thread.threadId, thread.cwd);
                         }
                       }}
-                      className={`group grid w-full grid-cols-[1fr_auto] items-center gap-1 rounded-lg px-3 py-2 transition-colors cursor-pointer ${
-                        active ? 'bg-foreground/[0.08]' : 'hover:bg-muted/60'
+                      className={`group grid w-full cursor-pointer grid-cols-[1fr_auto] items-center gap-1 rounded-xl px-2.5 py-2 pl-8 transition-colors ${
+                        active ? 'bg-muted text-foreground' : 'text-foreground/90 hover:bg-muted/60 hover:text-foreground'
                       }`}
                     >
                       <div className="min-w-0 flex flex-col gap-0.5">
@@ -194,6 +200,7 @@ export function AgentSessionList({
                             className={`w-fit max-w-full truncate text-sm font-medium leading-tight ${
                               isRegenerating ? 'thinking-title-shimmer' : ''
                             }`}
+                            data-shimmer-text={isRegenerating ? label : undefined}
                           >
                             {label}
                           </Tooltip.Trigger>
@@ -273,7 +280,7 @@ export function AgentSessionList({
           ))}
           {groupedThreads.length === 0 ? (
             <div className="px-5 py-8 text-center text-xs text-mutedForeground/50">
-              暂无目录，点击上方「载入」开始
+              暂无会话，点击上方「新建」开始
             </div>
           ) : null}
         </div>

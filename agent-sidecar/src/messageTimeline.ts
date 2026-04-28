@@ -1,6 +1,7 @@
 import type {
   AgentSessionMessage,
   AgentSessionToolEvent,
+  AgentTextTimelineItem,
   AgentToolTimelineItem,
   AgentTimelineItem,
 } from './types.js';
@@ -43,6 +44,25 @@ export function appendThinkingDelta(
     return;
   }
   current.text += text;
+}
+
+export function appendTextDelta(message: AgentSessionMessage, text: string) {
+  message.text += text;
+
+  const timeline = ensureTimeline(message);
+  const lastItem = timeline.at(-1);
+  if (lastItem?.type === 'text') {
+    lastItem.text += text;
+    return lastItem;
+  }
+
+  const created: AgentTextTimelineItem = {
+    id: `text-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    type: 'text',
+    text,
+  };
+  timeline.push(created);
+  return created;
 }
 
 export function closeOpenThinking(

@@ -29,14 +29,17 @@
 
 ## UI 设计规范遵循
 
-- 所有 UI 相关工作都必须严格遵循 `DESIGN.md` 中定义的规则。
-- 所有前端相关工作也必须严格遵循 `web-design-guidelines` 中的规则；这些规则属于强制要求，不是可选建议。
+- 所有前端相关工作都必须严格遵循 `web-design-guidelines` 中的规则；这些规则属于强制要求，不是可选建议。
+- 在设计、实现或审查 UI 时，应以现有本地 UI 模式和相邻组件作为视觉风格、布局、间距和交互细节的首要依据。
 - `frontend-design` 主要负责仓库内的生产级前端实现，尤其适合把已经确认的设计方向落成 React 组件、页面和可交付 UI 代码。
 - 对于 React 前端实现、代码审查、重构和性能优化相关工作，默认应将 `vercel-react-best-practices` 作为性能层面的主要参考。
 - 尤其是在修改组件结构、渲染行为、状态订阅、异步数据链路或对 bundle 体积敏感的前端代码时，应优先应用 `vercel-react-best-practices`。
-- 在设计、实现或审查 UI 时，应将 `DESIGN.md` 视为视觉风格、布局、组件、间距和交互细节的首要依据。
-- 对于前端设计、实现、审查和重构，必须同时满足 `DESIGN.md` 与 `web-design-guidelines` 两套要求。
-- 如果现有 UI 实现与 `DESIGN.md` 冲突，除非用户明确要求例外，否则应优先使结果与 `DESIGN.md` 保持一致。
+- 对于前端设计、实现、审查和重构，必须满足 `web-design-guidelines`，并保持与现有应用一致，除非用户明确要求采用不同方向。
+- `web/` 前端通过 `@heroui/react` 和 `@heroui/styles` 使用 HeroUI React v3。新增或修改 HeroUI 组件时，应使用 `heroui-react` skill，并在实现前获取相关组件文档。
+- 在 `web/` 中应遵循 HeroUI v3 模式：不使用 `HeroUIProvider`、按文档使用复合组件 API、HeroUI 交互组件使用 `onPress`、保持 Tailwind CSS v4 兼容，并确保 `@import "tailwindcss";` 位于 `@import "@heroui/styles";` 之前。
+- 优先沿用 `web/` 里已有的 HeroUI 直接组件导入方式，例如 `@heroui/react/button`；除非本地代码或获取到的 HeroUI v3 文档指向更合适的模式。
+- 只有在迁移 HeroUI v2 代码，或处理 v2 到 v3 的 API / 样式差异时，才使用 `heroui-migration`。不要把 HeroUI v2 模式用于新的 `web/` 代码。
+- `heroui-native` 只用于用户明确要求的 React Native / 移动端工作。不要把 Native 专用依赖或模式加入 Tauri 桌面/web 前端。
 
 ## 复杂问题排查
 
@@ -61,7 +64,13 @@
 - 新建的临时 `*.test.*`、`*.spec.*`、fixture 和复现文件默认都视为临时产物，除非它们是有意纳入版本控制的回归测试；临时文件必须在最终回复前删除。
 - 浏览器测试结束后，清理本次启动但未退出的后端、浏览器、驱动或相关测试进程，避免残余进程累积导致电脑变卡甚至卡死。
 
+## 测试组织
+
+- 新增或迁移的正式测试必须统一放在仓库根目录的 `tests/` 下，并按层级分组，例如 `tests/web/`、`tests/agent-sidecar/` 和 `tests/src-tauri/`。
+- 需要提升可读性时，可以在对应层级下镜像源码路径；但不要再把新的 `*.test.*` 或 `*.spec.*` 文件放到源码文件旁边。
+- 已经存在的就近测试可以保留到明确迁移时再处理；做聚焦功能或 bug 修复时，避免顺手搬动无关历史测试。
+
 ## 文档同步
 
 - 修改仓库规则或面向用户的项目文档时，除非用户明确要求只改单语版本，否则应同步保持中英文版本一致。
-- 对于 `AGENTS.md` / `docs/AGENTS.zh-CN.md`、`README.md` / `docs/README.zh-CN.md`、`DESIGN.md` / `docs/DESIGN.zh-CN.md` 这类成对文件，应追求语义一致，而不是逐行直译。
+- 对于 `AGENTS.md` / `docs/AGENTS.zh-CN.md`、`README.md` / `docs/README.zh-CN.md` 这类成对文件，应追求语义一致，而不是逐行直译。

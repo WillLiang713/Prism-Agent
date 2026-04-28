@@ -38,6 +38,12 @@ export interface AgentThinkingTimelineItem {
   durationSec?: number;
 }
 
+export interface AgentTextTimelineItem {
+  id: string;
+  type: 'text';
+  text: string;
+}
+
 export interface AgentToolTimelineItem {
   id: string;
   type: 'tool';
@@ -53,7 +59,7 @@ export interface AgentToolTimelineItem {
   skillName?: string | null;
 }
 
-export type AgentTimelineItem = AgentThinkingTimelineItem | AgentToolTimelineItem;
+export type AgentTimelineItem = AgentTextTimelineItem | AgentThinkingTimelineItem | AgentToolTimelineItem;
 
 export interface AgentSessionMessage {
   id: string;

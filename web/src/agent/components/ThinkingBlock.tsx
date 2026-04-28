@@ -4,8 +4,10 @@ import { useEffect, useMemo, useState } from 'react';
 import { cn } from '../../lib/utils';
 import { MarkdownContent } from './MarkdownContent';
 
+const THINKING_PANEL_CLASS =
+  'mt-1.5 min-w-0 break-words text-left';
 const THINKING_MARKDOWN_CLASS =
-  'mt-2 border-l border-border/70 pl-3 text-sm leading-6 text-mutedForeground/95 [&_blockquote]:my-2 [&_h1]:mb-1.5 [&_h1]:mt-2 [&_h1]:text-sm [&_h1]:leading-6 [&_h2]:mb-1.5 [&_h2]:mt-2 [&_h2]:text-sm [&_h2]:leading-6 [&_h3]:mb-1.5 [&_h3]:mt-2 [&_h3]:text-sm [&_h3]:leading-6 [&_h4]:mb-1.5 [&_h4]:mt-2 [&_h4]:text-sm [&_h4]:leading-6 [&_ol]:my-2 [&_p]:my-2 [&_p]:leading-6 [&_pre]:my-2 [&_pre]:text-xs [&_pre]:text-foreground [&_ul]:my-2';
+  `${THINKING_PANEL_CLASS} text-[13px] leading-[22px] text-mutedForeground/95 [&_blockquote]:my-2 [&_h1]:mb-1.5 [&_h1]:mt-2 [&_h1]:text-[13px] [&_h1]:leading-[22px] [&_h2]:mb-1.5 [&_h2]:mt-2 [&_h2]:text-[13px] [&_h2]:leading-[22px] [&_h3]:mb-1.5 [&_h3]:mt-2 [&_h3]:text-[13px] [&_h3]:leading-[22px] [&_h4]:mb-1.5 [&_h4]:mt-2 [&_h4]:text-[13px] [&_h4]:leading-[22px] [&_ol]:my-2 [&_p]:my-2 [&_p]:leading-[22px] [&_pre]:my-2 [&_pre]:text-xs [&_pre]:text-foreground [&_ul]:my-2`;
 
 export function ThinkingBlock({
   text,
@@ -49,17 +51,25 @@ export function ThinkingBlock({
 
   return (
     <details
-      className="group text-xs text-mutedForeground"
+      className="group text-left text-xs text-mutedForeground"
       onToggle={(event) => setIsOpen((event.currentTarget as HTMLDetailsElement).open)}
     >
-      <summary className="flex w-fit cursor-pointer list-none items-center gap-1.5 leading-5 text-mutedForeground/80 hover:text-foreground">
-        <span className={cn(status === 'streaming' && 'thinking-title-shimmer')}>{label}</span>
-        <ChevronDown className="h-3.5 w-3.5 shrink-0 text-mutedForeground/70 opacity-0 transition-all duration-200 group-hover:opacity-85 group-focus-within:opacity-85 group-open:rotate-180 group-open:opacity-100" />
+      <summary className="flex w-fit max-w-full cursor-pointer list-none items-center gap-1.5 rounded-sm leading-5 text-mutedForeground/80 hover:text-foreground focus-visible:outline-none focus-visible:text-foreground focus-visible:ring-1 focus-visible:ring-foreground/20">
+        <span
+          className={cn(status === 'streaming' && 'thinking-title-shimmer')}
+          data-shimmer-text={status === 'streaming' ? label : undefined}
+        >
+          {label}
+        </span>
+        <ChevronDown
+          aria-hidden="true"
+          className="h-3.5 w-3.5 shrink-0 text-mutedForeground/70 opacity-0 transition-[opacity,transform] duration-200 group-hover:opacity-85 group-focus-within:opacity-85 group-open:rotate-180 group-open:opacity-100"
+        />
       </summary>
       {isOpen ? (
         text.trim() ? (
           status === 'streaming' ? (
-            <div className="mt-2 whitespace-pre-wrap break-words border-l border-border/70 pl-3 text-sm leading-6 text-mutedForeground/95">
+            <div className={cn(THINKING_PANEL_CLASS, 'whitespace-pre-wrap break-words text-[13px] leading-[22px] text-mutedForeground/95')}>
               {text}
             </div>
           ) : (

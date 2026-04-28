@@ -13,6 +13,7 @@
     "@fontsource-variable/jetbrains-mono": "^5.2.8",
     "@heroui/react": "3.0.3",
     "@heroui/styles": "3.0.3",
+    "@pierre/diffs": "^1.1.19",
     "@tailwindcss/vite": "4.2.4",
     "@tauri-apps/api": "^2.10.1",
     "@tauri-apps/plugin-dialog": "^2.7.0",

@@ -1,488 +1,168 @@
-import { Fragment, memo, type CSSProperties } from 'react';
+import { Component, lazy, memo, Suspense, type ReactNode } from 'react';
 
 import { cn } from '../../lib/utils';
-import {
-  getDiffFileLabel,
-  getDiffFileStatus,
-  parseRenderedDiffLines,
-  parseUnifiedDiff,
-  type DiffRowKind,
-  type ParsedDiffRow,
-} from './codeDiff';
+import { parseRenderedDiffLines, type ParsedRenderedDiffLine } from './codeDiff';
 
-function getFileStatusBadgeStyle(status: string): CSSProperties {
-  if (status === 'new file') {
-    return {
-      borderColor: 'hsl(var(--diff-add-border) / 0.7)',
-      backgroundColor: 'hsl(var(--diff-add-bg) / 0.58)',
-      color: 'hsl(var(--diff-add-fg) / 0.92)',
-    };
+const DiffsCodeDiffView = lazy(() => import('./DiffsCodeDiffView'));
+
+class DiffRenderErrorBoundary extends Component<
+  { children: ReactNode; fallback: ReactNode; resetKey: string },
+  { hasError: boolean }
+> {
+  state = { hasError: false };
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
   }
 
-  if (status === 'deleted file') {
-    return {
-      borderColor: 'hsl(var(--diff-remove-border) / 0.7)',
-      backgroundColor: 'hsl(var(--diff-remove-bg) / 0.58)',
-      color: 'hsl(var(--diff-remove-fg) / 0.92)',
-    };
+  componentDidCatch(error: unknown) {
+    console.warn('Failed to render diff with @pierre/diffs.', error);
   }
 
-  return {
-    borderColor: 'hsl(var(--border) / 0.75)',
-    backgroundColor: 'hsl(var(--muted) / 0.4)',
-    color: 'hsl(var(--muted-foreground) / 0.9)',
-  };
+  componentDidUpdate(previousProps: { resetKey: string }) {
+    if (this.state.hasError && previousProps.resetKey !== this.props.resetKey) {
+      this.setState({ hasError: false });
+    }
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return <>{this.props.fallback}</>;
+    }
+
+    return this.props.children;
+  }
 }
 
-function getLineNumberCellClass(kind: DiffRowKind, side: 'left' | 'right') {
-  if (kind === 'removed' && side === 'left') {
-    return 'bg-[hsl(var(--diff-remove-bg))] text-[hsl(var(--diff-remove-fg)/0.78)]';
-  }
-
-  if (kind === 'added' && side === 'right') {
-    return 'bg-[hsl(var(--diff-add-bg))] text-[hsl(var(--diff-add-fg)/0.78)]';
-  }
-
-  if (kind === 'modified') {
-    return side === 'left'
-      ? 'bg-[hsl(var(--diff-remove-bg))] text-[hsl(var(--diff-remove-fg)/0.78)]'
-      : 'bg-[hsl(var(--diff-add-bg))] text-[hsl(var(--diff-add-fg)/0.78)]';
-  }
-
-  return 'bg-background/35 text-mutedForeground/72';
-}
-
-function getCodeTextClass(kind: DiffRowKind, side: 'left' | 'right') {
-  if (kind === 'removed' && side === 'left') {
-    return 'text-[hsl(var(--diff-remove-fg))]';
-  }
-
-  if (kind === 'added' && side === 'right') {
-    return 'text-[hsl(var(--diff-add-fg))]';
-  }
-
-  if (kind === 'modified') {
-    return side === 'left' ? 'text-[hsl(var(--diff-remove-fg))]' : 'text-[hsl(var(--diff-add-fg))]';
-  }
-
-  if (kind === 'removed' || kind === 'added') {
-    return 'text-mutedForeground/32';
-  }
-
-  return 'text-foreground/88';
-}
-
-function getLineNumberCellStyle(kind: DiffRowKind, side: 'left' | 'right'): CSSProperties | undefined {
-  if (kind === 'removed' && side === 'left') {
-    return {
-      backgroundColor: 'hsl(var(--diff-remove-bg) / 0.78)',
-      color: 'hsl(var(--diff-remove-fg) / 0.92)',
-    };
-  }
-
-  if (kind === 'added' && side === 'right') {
-    return {
-      backgroundColor: 'hsl(var(--diff-add-bg) / 0.78)',
-      color: 'hsl(var(--diff-add-fg) / 0.92)',
-    };
-  }
-
-  if (kind === 'modified') {
-    return side === 'left'
-      ? {
-          backgroundColor: 'hsl(var(--diff-remove-bg) / 0.8)',
-          color: 'hsl(var(--diff-remove-fg) / 0.94)',
-        }
-      : {
-          backgroundColor: 'hsl(var(--diff-add-bg) / 0.8)',
-          color: 'hsl(var(--diff-add-fg) / 0.94)',
-        };
-  }
-
-  return undefined;
-}
-
-function getCodeContentStyle(kind: DiffRowKind, side: 'left' | 'right'): CSSProperties | undefined {
-  if (kind === 'removed' && side === 'left') {
-    return {
-      backgroundColor: 'hsl(var(--diff-remove-bg) / 0.92)',
-      color: 'hsl(var(--diff-remove-fg))',
-      boxShadow: 'inset 2px 0 0 hsl(var(--diff-remove-border))',
-    };
-  }
-
-  if (kind === 'added' && side === 'right') {
-    return {
-      backgroundColor: 'hsl(var(--diff-add-bg) / 0.92)',
-      color: 'hsl(var(--diff-add-fg))',
-      boxShadow: 'inset 2px 0 0 hsl(var(--diff-add-border))',
-    };
-  }
-
-  if (kind === 'modified') {
-    return side === 'left'
-      ? {
-          backgroundColor: 'hsl(var(--diff-remove-bg) / 0.92)',
-          color: 'hsl(var(--diff-remove-fg))',
-          boxShadow: 'inset 2px 0 0 hsl(var(--diff-remove-border))',
-        }
-      : {
-          backgroundColor: 'hsl(var(--diff-add-bg) / 0.92)',
-          color: 'hsl(var(--diff-add-fg))',
-          boxShadow: 'inset 2px 0 0 hsl(var(--diff-add-border))',
-        };
-  }
-
-  if (kind === 'removed' || kind === 'added') {
-    return {
-      backgroundColor: 'hsl(var(--muted) / 0.24)',
-    };
-  }
-
-  return {
-    backgroundColor: 'hsl(var(--background) / 0.15)',
-  };
-}
-
-function getMarkerStyle(kind: DiffRowKind, side: 'left' | 'right'): CSSProperties | undefined {
-  if ((kind === 'removed' || kind === 'modified') && side === 'left') {
-    return {
-      color: 'hsl(var(--diff-remove-fg))',
-      fontWeight: 700,
-      opacity: 1,
-    };
-  }
-
-  if ((kind === 'added' || kind === 'modified') && side === 'right') {
-    return {
-      color: 'hsl(var(--diff-add-fg))',
-      fontWeight: 700,
-      opacity: 1,
-    };
-  }
-
-  return undefined;
-}
-
-function getMarker(kind: DiffRowKind, side: 'left' | 'right') {
-  if ((kind === 'removed' || kind === 'modified') && side === 'left') {
-    return '-';
-  }
-
-  if ((kind === 'added' || kind === 'modified') && side === 'right') {
-    return '+';
-  }
-
-  return ' ';
-}
-
-function getDiffLineNumberProps(
-  kind: DiffRowKind,
-  side: 'left' | 'right',
-  lineNumber: number | null,
-) {
-  return {
-    className: cn(
-      'w-9 px-1 py-0.5 text-right align-top font-mono text-[10.5px] leading-5',
-      getLineNumberCellClass(kind, side),
-    ),
-    style: getLineNumberCellStyle(kind, side),
-    lineNumber: lineNumber ?? '',
-  };
-}
-
-function getSplitDividerStyle(side: 'left' | 'right'): CSSProperties | undefined {
-  if (side !== 'right') {
-    return undefined;
-  }
-
-  return {
-    boxShadow: 'inset 1px 0 0 hsl(var(--border) / 0.4)',
-  };
-}
-
-function getSingleSidedRowShellStyle(kind: 'added' | 'removed'): CSSProperties {
-  return {
-    backgroundColor:
-      kind === 'added' ? 'hsl(var(--diff-add-bg) / 0.18)' : 'hsl(var(--diff-remove-bg) / 0.18)',
-    boxShadow:
-      kind === 'added'
-        ? 'inset 0 1px 0 hsl(var(--diff-add-border) / 0.22), inset 0 -1px 0 hsl(var(--diff-add-border) / 0.22)'
-        : 'inset 0 1px 0 hsl(var(--diff-remove-border) / 0.22), inset 0 -1px 0 hsl(var(--diff-remove-border) / 0.22)',
-  };
-}
-
-function renderDiffCodeContent(
-  kind: DiffRowKind,
-  side: 'left' | 'right',
-  text: string,
-) {
+function PlainDiffFallback({
+  diff,
+  className,
+}: {
+  diff: string;
+  className?: string;
+}) {
   return (
-    <div
-      className="inline-flex min-w-full w-max items-start gap-0.5 px-1.5 py-0.5"
-      style={getCodeContentStyle(kind, side)}
-      translate="no"
+    <pre
+      className={cn(
+        'overflow-x-auto whitespace-pre-wrap break-all rounded-sm border border-border/60 bg-background/35 px-1.5 py-1.5 font-mono text-xs leading-5 text-foreground',
+        className,
+      )}
     >
-      <span
-        className="w-2 shrink-0 select-none text-center opacity-80"
-        style={getMarkerStyle(kind, side)}
-      >
-        {getMarker(kind, side)}
-      </span>
-      <span className="whitespace-pre text-inherit">{text || ' '}</span>
-    </div>
+      {diff}
+    </pre>
   );
 }
 
-function renderDiffRowCell(
-  row: ParsedDiffRow,
-  side: 'left' | 'right',
-  key: string,
+function sanitizeRenderedDiffFileLabel(fileLabel?: string) {
+  const normalized = fileLabel?.replace(/\r\n/g, '\n').split('\n')[0]?.trim();
+  return normalized || 'diff';
+}
+
+function getRenderedLineNumber(line: ParsedRenderedDiffLine) {
+  const value = Number.parseInt(line.lineNumber, 10);
+  return Number.isFinite(value) && value > 0 ? value : null;
+}
+
+function formatUnifiedHunkHeader(
+  startLineNumber: number,
+  oldLineCount: number,
+  newLineCount: number,
 ) {
-  const isLeft = side === 'left';
-  const lineNumber = isLeft ? row.leftLineNumber : row.rightLineNumber;
-  const text = isLeft ? row.leftText : row.rightText;
-  const lineNumberProps = getDiffLineNumberProps(row.kind, side, lineNumber);
-
-  return (
-    <>
-      <td
-        key={`${key}-line`}
-        className={lineNumberProps.className}
-        style={{
-          ...lineNumberProps.style,
-          ...getSplitDividerStyle(side),
-        }}
-      >
-        {lineNumberProps.lineNumber}
-      </td>
-      <td
-        key={`${key}-code`}
-        className={cn(
-          'p-0 align-top font-mono text-xs leading-5',
-          getCodeTextClass(row.kind, side),
-        )}
-      >
-        {renderDiffCodeContent(row.kind, side, text)}
-      </td>
-    </>
-  );
+  return `@@ -${startLineNumber},${oldLineCount} +${startLineNumber},${newLineCount} @@`;
 }
 
-function renderSingleSidedDiffRow(row: ParsedDiffRow) {
-  const kind = row.kind === 'removed' ? 'removed' : 'added';
-  const side = kind === 'removed' ? 'left' : 'right';
-  const lineNumber = side === 'left' ? row.leftLineNumber : row.rightLineNumber;
-  const text = side === 'left' ? row.leftText : row.rightText;
-  const lineNumberProps = getDiffLineNumberProps(kind, side, lineNumber);
+function createRenderedDiffPatch(lines: ParsedRenderedDiffLine[], fileLabel?: string) {
+  const hunks: string[] = [];
+  let currentHunkLines: string[] = [];
+  let currentStartLineNumber: number | null = null;
+  let currentOldLineCount = 0;
+  let currentNewLineCount = 0;
 
-  return (
-    <tr key={row.id}>
-      <td colSpan={4} className="p-0 align-top">
-        <div className="inline-flex min-w-full w-max" style={getSingleSidedRowShellStyle(kind)}>
-          <div className={cn(lineNumberProps.className, 'shrink-0')} style={lineNumberProps.style}>
-            {lineNumberProps.lineNumber}
-          </div>
-          <div
-            className={cn(
-              'min-w-0 flex-1 p-0 align-top font-mono text-xs leading-5',
-              getCodeTextClass(kind, side),
-            )}
-          >
-            {renderDiffCodeContent(kind, side, text)}
-          </div>
-        </div>
-      </td>
-    </tr>
-  );
+  const closeCurrentHunk = () => {
+    if (currentHunkLines.length === 0 || currentStartLineNumber === null) {
+      currentHunkLines = [];
+      currentStartLineNumber = null;
+      currentOldLineCount = 0;
+      currentNewLineCount = 0;
+      return;
+    }
+
+    hunks.push(
+      [
+        formatUnifiedHunkHeader(currentStartLineNumber, currentOldLineCount, currentNewLineCount),
+        ...currentHunkLines,
+      ].join('\n'),
+    );
+    currentHunkLines = [];
+    currentStartLineNumber = null;
+    currentOldLineCount = 0;
+    currentNewLineCount = 0;
+  };
+
+  for (const line of lines) {
+    if (line.kind === 'ellipsis') {
+      closeCurrentHunk();
+      continue;
+    }
+
+    const lineNumber = getRenderedLineNumber(line);
+    if (currentStartLineNumber === null && lineNumber !== null) {
+      currentStartLineNumber = lineNumber;
+    }
+
+    if (line.kind === 'added') {
+      currentNewLineCount += 1;
+      currentHunkLines.push(`+${line.text}`);
+      continue;
+    }
+
+    if (line.kind === 'removed') {
+      currentOldLineCount += 1;
+      currentHunkLines.push(`-${line.text}`);
+      continue;
+    }
+
+    currentOldLineCount += 1;
+    currentNewLineCount += 1;
+    currentHunkLines.push(` ${line.text}`);
+  }
+
+  closeCurrentHunk();
+
+  if (hunks.length === 0) {
+    return null;
+  }
+
+  const path = sanitizeRenderedDiffFileLabel(fileLabel);
+  return [`--- a/${path}`, `+++ b/${path}`, ...hunks].join('\n');
 }
 
-export const CodeDiffView = memo(function CodeDiffView({ diff }: { diff: string }) {
-  const files = parseUnifiedDiff(diff);
-  const renderedDiffLines = files.length === 0 ? parseRenderedDiffLines(diff) : [];
-
-  if (files.length === 0 && renderedDiffLines.length === 0) {
-    return (
-      <pre className="overflow-x-auto whitespace-pre-wrap break-all rounded-sm border border-border/60 bg-background/35 px-1.5 py-1.5 text-xs leading-5 text-foreground font-mono">
-        {diff}
-      </pre>
-    );
+function getRendererDiff(diff: string, fileLabel?: string) {
+  const renderedDiffLines = parseRenderedDiffLines(diff);
+  if (renderedDiffLines.length === 0) {
+    return diff;
   }
 
-  if (files.length === 0) {
-    return (
-      <div className="overflow-hidden rounded-sm border border-border/60 bg-background/35">
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[460px] border-collapse table-fixed">
-            <colgroup>
-              <col className="w-9" />
-              <col />
-            </colgroup>
-            <tbody>
-              {renderedDiffLines.map((line) => {
-                const isAdded = line.kind === 'added';
-                const isRemoved = line.kind === 'removed';
-                const isEllipsis = line.kind === 'ellipsis';
+  return createRenderedDiffPatch(renderedDiffLines, fileLabel) ?? diff;
+}
 
-                return (
-                  <tr key={line.id}>
-                    <td
-                      className="px-1 py-0.5 text-right align-top font-mono text-[10.5px] leading-5"
-                      style={
-                        isAdded
-                          ? {
-                              backgroundColor: 'hsl(var(--diff-add-bg) / 0.78)',
-                              color: 'hsl(var(--diff-add-fg) / 0.92)',
-                            }
-                          : isRemoved
-                            ? {
-                                backgroundColor: 'hsl(var(--diff-remove-bg) / 0.78)',
-                                color: 'hsl(var(--diff-remove-fg) / 0.92)',
-                              }
-                            : undefined
-                      }
-                    >
-                      {line.lineNumber}
-                    </td>
-                    <td
-                      className={cn(
-                        'p-0 align-top font-mono text-xs leading-5',
-                        isAdded
-                          ? 'text-[hsl(var(--diff-add-fg))]'
-                          : isRemoved
-                            ? 'text-[hsl(var(--diff-remove-fg))]'
-                            : 'text-foreground/86',
-                      )}
-                    >
-                      <div
-                        className="inline-flex min-w-full w-max items-start gap-0.5 px-1.5 py-0.5"
-                        style={
-                          isAdded
-                            ? {
-                                backgroundColor: 'hsl(var(--diff-add-bg) / 0.92)',
-                                boxShadow: 'inset 2px 0 0 hsl(var(--diff-add-border))',
-                              }
-                            : isRemoved
-                              ? {
-                                  backgroundColor: 'hsl(var(--diff-remove-bg) / 0.92)',
-                                  boxShadow: 'inset 2px 0 0 hsl(var(--diff-remove-border))',
-                                }
-                              : undefined
-                        }
-                        translate="no"
-                      >
-                        <span
-                          className="w-2 shrink-0 select-none text-center"
-                          style={
-                            isAdded
-                              ? { color: 'hsl(var(--diff-add-fg))', fontWeight: 700 }
-                              : isRemoved
-                                ? { color: 'hsl(var(--diff-remove-fg))', fontWeight: 700 }
-                                : { opacity: isEllipsis ? 0.5 : 0.72 }
-                          }
-                        >
-                          {isAdded ? '+' : isRemoved ? '-' : ' '}
-                        </span>
-                        <span className="whitespace-pre text-inherit">{line.text || ' '}</span>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    );
-  }
+export const CodeDiffView = memo(function CodeDiffView({
+  diff,
+  className,
+  fileLabel,
+}: {
+  diff: string;
+  className?: string;
+  fileLabel?: string;
+}) {
+  const rendererDiff = getRendererDiff(diff, fileLabel);
+  const fallback = <PlainDiffFallback diff={diff} className={className} />;
 
   return (
-    <div className="overflow-hidden rounded-sm border border-border/60 bg-background/35">
-      {files.map((file, fileIndex) => {
-        const status = getDiffFileStatus(file);
-
-        return (
-          <section
-            key={file.id}
-            className={cn(fileIndex > 0 && 'pt-1')}
-          >
-            <div className="flex items-center justify-between gap-1 bg-muted/18 px-1.5 py-0.5">
-              <div
-                className="min-w-0 truncate font-mono text-[11px] leading-5 text-foreground/88"
-                translate="no"
-              >
-                {getDiffFileLabel(file)}
-              </div>
-              <div className="flex shrink-0 items-center gap-0.5 font-mono text-[10px] leading-5">
-                {status ? (
-                  <span
-                    className="rounded-sm border px-1 py-px"
-                    style={getFileStatusBadgeStyle(status)}
-                  >
-                    {status}
-                  </span>
-                ) : null}
-                <span
-                  className="rounded-sm border px-1 py-px"
-                  style={{
-                    borderColor: 'hsl(var(--diff-add-border) / 0.72)',
-                    backgroundColor: 'hsl(var(--diff-add-bg) / 0.72)',
-                    color: 'hsl(var(--diff-add-fg))',
-                  }}
-                >
-                  +{file.additions}
-                </span>
-                <span
-                  className="rounded-sm border px-1 py-px"
-                  style={{
-                    borderColor: 'hsl(var(--diff-remove-border) / 0.72)',
-                    backgroundColor: 'hsl(var(--diff-remove-bg) / 0.72)',
-                    color: 'hsl(var(--diff-remove-fg))',
-                  }}
-                >
-                  -{file.deletions}
-                </span>
-              </div>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[580px] border-collapse table-fixed">
-                <caption className="sr-only">Code diff</caption>
-                <colgroup>
-                  <col className="w-9" />
-                  <col />
-                  <col className="w-9" />
-                  <col />
-                </colgroup>
-                <tbody>
-                  {file.hunks.map((hunk) => (
-                    <Fragment key={hunk.id}>
-                      <tr className="bg-muted/12">
-                        <td
-                          colSpan={4}
-                          className="px-1.5 py-0.5 font-mono text-[10px] leading-5 text-mutedForeground/62"
-                          translate="no"
-                        >
-                          {hunk.header}
-                        </td>
-                      </tr>
-                      {hunk.rows.map((row) =>
-                        row.kind === 'added' || row.kind === 'removed' ? (
-                          renderSingleSidedDiffRow(row)
-                        ) : (
-                          <tr key={row.id}>
-                            {renderDiffRowCell(row, 'left', `${row.id}-left`)}
-                            {renderDiffRowCell(row, 'right', `${row.id}-right`)}
-                          </tr>
-                        ),
-                      )}
-                    </Fragment>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </section>
-        );
-      })}
-    </div>
+    <DiffRenderErrorBoundary fallback={fallback} resetKey={rendererDiff}>
+      <Suspense fallback={fallback}>
+        <DiffsCodeDiffView diff={rendererDiff} className={className} fallback={fallback} />
+      </Suspense>
+    </DiffRenderErrorBoundary>
   );
 });

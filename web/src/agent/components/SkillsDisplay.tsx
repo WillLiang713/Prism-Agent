@@ -74,7 +74,7 @@ export function SkillsDisplay({ skills }: { skills: AgentSkillsSnapshot }) {
                         : 'border-border/40 bg-muted/20 text-mutedForeground hover:border-border/60 hover:text-mutedForeground/90'
                     }`}
                   >
-                    {skill.name}
+                    <span className="block max-w-[180px] truncate">{skill.name}</span>
                   </Tooltip.Trigger>
                   <Tooltip.Content
                     placement="top"

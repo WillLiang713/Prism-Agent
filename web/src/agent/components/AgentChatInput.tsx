@@ -23,7 +23,7 @@ import { composerControlIcons } from './composerControlIcons';
 import { HeaderModelPicker } from './HeaderModelPicker';
 
 const composerControlBaseClassName =
-  '!h-8 !min-h-8 !max-h-8 shrink-0 rounded-full border border-border bg-card !py-0 text-xs font-medium leading-none text-foreground shadow-none transition-[background-color,border-color,color,box-shadow] hover:bg-muted focus-visible:ring-1 focus-visible:ring-foreground/20';
+  '!h-8 !min-h-8 !max-h-8 shrink-0 rounded-full border border-border bg-card !py-0 !text-[12px] font-medium leading-none text-foreground shadow-none transition-[background-color,border-color,color,box-shadow] hover:bg-muted focus-visible:ring-1 focus-visible:ring-foreground/20';
 
 const composerIconButtonClassName = cn(
   composerControlBaseClassName,
@@ -37,6 +37,9 @@ const composerTextControlClassName = cn(
 
 const composerControlIconClassName =
   'h-4 w-4 shrink-0 justify-self-center text-mutedForeground';
+
+const composerMenuItemClassName =
+  'flex w-full cursor-pointer select-none items-center justify-center rounded-full px-3 py-2 text-center text-[13px] leading-5 text-foreground outline-none transition-colors hover:bg-card data-[focused]:bg-card';
 
 export function AgentChatInput({
   inputDisabled,
@@ -181,13 +184,16 @@ export function AgentChatInput({
       ) : null}
 
       <TextArea
+        aria-label="消息内容"
+        name="agent-message"
+        autoComplete="off"
         value={text}
         onChange={(event) => setText(event.currentTarget.value)}
         onKeyDown={handleTextareaKeyDown}
         rows={1}
         disabled={inputDisabled || isStreaming}
         placeholder="把问题发给我，我来处理…"
-        className="min-h-[48px] resize-none border-0 bg-transparent px-3 py-1.5 text-sm leading-6 shadow-none focus-visible:ring-0"
+        className="min-h-[48px] resize-none border-0 bg-transparent px-3 py-1.5 text-[13px] leading-[22px] shadow-none focus-visible:ring-0"
       />
 
       <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
@@ -195,6 +201,8 @@ export function AgentChatInput({
           <input
             ref={fileInputRef}
             type="file"
+            name="message-images"
+            aria-label="上传图片"
             accept="image/*"
             multiple
             className="hidden"
@@ -222,7 +230,7 @@ export function AgentChatInput({
               className={cn(composerTextControlClassName, 'min-w-[112px] max-w-[180px]')}
             >
               <FolderOpen className={composerControlIconClassName} aria-hidden="true" />
-              <span className="min-w-0 truncate text-center font-medium">{workspaceName}</span>
+              <span className="min-w-0 truncate text-center !text-[12px] font-medium leading-none">{workspaceName}</span>
               <ChevronDown className={composerControlIconClassName} aria-hidden="true" />
             </Button>
             <Popover.Content
@@ -232,8 +240,8 @@ export function AgentChatInput({
             >
               <Popover.Dialog className="outline-none">
                 {pinnedDirectories.length === 0 ? (
-                  <div className="px-3 py-2 text-xs text-mutedForeground">
-                    暂无目录，请在侧边栏添加
+                  <div className="px-3 py-2 text-[11px] text-mutedForeground">
+                    暂无可切换目录
                   </div>
                 ) : (
                   pinnedDirectories.map((path) => {
@@ -247,7 +255,7 @@ export function AgentChatInput({
                           setWorkspaceOpen(false);
                         }}
                         title={path}
-                        className="flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm text-foreground outline-none transition-colors hover:bg-card focus-visible:bg-card"
+                        className="flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-[13px] leading-5 text-foreground outline-none transition-colors hover:bg-card focus-visible:bg-card"
                       >
                         <FolderOpen className="h-3.5 w-3.5 shrink-0 text-mutedForeground" aria-hidden="true" />
                         <span className="min-w-0 flex-1 truncate text-left">{name}</span>
@@ -273,7 +281,7 @@ export function AgentChatInput({
               className={cn(composerTextControlClassName, 'w-[108px] cursor-pointer')}
             >
               <Play aria-hidden="true" className={composerControlIconClassName} />
-              <Select.Value className="min-w-0 truncate whitespace-nowrap text-center font-medium" />
+              <Select.Value className="min-w-0 truncate whitespace-nowrap text-center !text-[12px] font-medium leading-none" />
               <Select.Indicator className="justify-self-center text-mutedForeground">
                 <ChevronDown className="h-4 w-4" aria-hidden="true" />
               </Select.Indicator>
@@ -286,14 +294,14 @@ export function AgentChatInput({
                 <ListBox.Item
                   id="auto"
                   textValue="自动"
-                  className="flex w-full cursor-pointer select-none items-center justify-center rounded-full px-3 py-2 text-center text-sm text-foreground outline-none transition-colors hover:bg-card data-[focused]:bg-card"
+                  className={composerMenuItemClassName}
                 >
                   自动
                 </ListBox.Item>
                 <ListBox.Item
                   id="manual"
                   textValue="手动"
-                  className="flex w-full cursor-pointer select-none items-center justify-center rounded-full px-3 py-2 text-center text-sm text-foreground outline-none transition-colors hover:bg-card data-[focused]:bg-card"
+                  className={composerMenuItemClassName}
                 >
                   手动
                 </ListBox.Item>
@@ -319,7 +327,7 @@ export function AgentChatInput({
               className={cn(composerTextControlClassName, 'w-[108px] cursor-pointer')}
             >
               <ReasoningIcon aria-hidden="true" className={composerControlIconClassName} />
-              <Select.Value className="min-w-0 truncate whitespace-nowrap text-center font-medium" />
+              <Select.Value className="min-w-0 truncate whitespace-nowrap text-center !text-[12px] font-medium leading-none" />
               <Select.Indicator className="justify-self-center text-mutedForeground">
                 <ChevronDown className="h-4 w-4" aria-hidden="true" />
               </Select.Indicator>
@@ -334,7 +342,7 @@ export function AgentChatInput({
                     key={option.value}
                     id={option.value}
                     textValue={option.label}
-                    className="flex w-full cursor-pointer select-none items-center justify-center rounded-full px-3 py-2 text-center text-sm text-foreground outline-none transition-colors hover:bg-card data-[focused]:bg-card"
+                    className={composerMenuItemClassName}
                   >
                     {option.label}
                   </ListBox.Item>

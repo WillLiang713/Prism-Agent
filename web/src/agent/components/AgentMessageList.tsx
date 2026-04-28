@@ -7,6 +7,7 @@ import { normalizeAssistantMarkdown } from './assistantMarkdown';
 import { ToolCallCard } from './ToolCallCard';
 import { ThinkingBlock } from './ThinkingBlock';
 import { splitStreamingMarkdownForRender } from './streamingMarkdown';
+import { cn } from '../../lib/utils';
 import type { AgentMessage } from '../sessionStore';
 import type { AgentTimelineItem } from '../client';
 
@@ -23,6 +24,25 @@ const STREAMING_BUFFER_HOLD_IDLE_MS = 340;
 const STREAMING_BUFFER_DECAY_MS = 320;
 const STREAMING_MIN_BUFFER_CHARS = 24;
 const STREAMING_MAX_BUFFER_CHARS = 96;
+const GENERATION_IDLE_INDICATOR_DELAY_MS = 1400;
+const PENDING_ASSISTANT_PHASES = [
+  {
+    id: 'sent',
+    minMs: 0,
+    label: '已发送',
+  },
+  {
+    id: 'queued',
+    minMs: 350,
+    label: '排队中',
+  },
+  {
+    id: 'thinking',
+    minMs: 1200,
+    label: '思考中',
+  },
+] as const;
+type PendingAssistantPhase = (typeof PENDING_ASSISTANT_PHASES)[number];
 
 export function AgentMessageList({
   messages,
@@ -55,57 +75,234 @@ const AgentMessageItem = memo(function AgentMessageItem({
   generating: boolean;
 }) {
   if (message.role === 'user') {
-    return (
-      <article className="group/user flex flex-col items-end gap-1">
-        <div className="w-fit max-w-[90%] rounded-[10px] border border-border bg-accent px-3 py-2 text-sm leading-6 text-accentForeground">
-          <div className="whitespace-pre-wrap break-words">{message.text}</div>
-        </div>
-        <CopyMessageButton text={message.text} />
-      </article>
-    );
+    return <UserMessageItem text={message.text} />;
   }
 
-  let lastRunningToolCallId: string | null = null;
-  for (let index = message.timeline.length - 1; index >= 0; index -= 1) {
-    const item = message.timeline[index];
-    if (item.type === 'tool' && item.status === 'running') {
-      lastRunningToolCallId = item.toolCallId;
-      break;
+  return <AssistantMessageItem message={message} generating={generating} />;
+});
+
+function UserMessageItem({ text }: { text: string }) {
+  return (
+    <article className="group/user flex flex-col items-end gap-1">
+      <div className="w-fit max-w-[90%] rounded-[10px] border border-border bg-accent px-3 py-2 text-[13px] leading-[22px] text-accentForeground">
+        <div className="whitespace-pre-wrap break-words">{text}</div>
+      </div>
+      <CopyMessageButton text={text} />
+    </article>
+  );
+}
+
+function AssistantMessageItem({
+  message,
+  generating,
+}: {
+  message: AgentMessage;
+  generating: boolean;
+}) {
+  const isWaitingForFirstContent =
+    generating &&
+    !message.error &&
+    !message.timeline.some(hasVisibleTimelineItem);
+  const shouldTrackIdleStatus =
+    generating &&
+    !message.error &&
+    !isWaitingForFirstContent &&
+    !message.timeline.some(hasActiveThinkingItem) &&
+    !message.timeline.some(hasRunningToolItem) &&
+    message.timeline.some(hasVisibleTimelineItem);
+  const visibleActivitySignature = buildVisibleActivitySignature(message);
+  const activeStreamingTextItemId = generating ? getActiveStreamingTextItemId(message.timeline) : null;
+  const [showIdleStatus, setShowIdleStatus] = useState(false);
+
+  useEffect(() => {
+    if (!shouldTrackIdleStatus) {
+      setShowIdleStatus(false);
+      return;
     }
-  }
+
+    setShowIdleStatus(false);
+    const timer = window.setTimeout(() => {
+      setShowIdleStatus(true);
+    }, GENERATION_IDLE_INDICATOR_DELAY_MS);
+
+    return () => window.clearTimeout(timer);
+  }, [shouldTrackIdleStatus, visibleActivitySignature]);
 
   return (
     <article className="space-y-4 min-w-0 overflow-hidden">
+      {isWaitingForFirstContent ? <PendingAssistantStatus startedAt={message.createdAt} /> : null}
       {message.timeline.length > 0 ? (
         <div className="space-y-2 min-w-0">
           {message.timeline.map((item) => (
             <TimelineItem
               key={item.id}
               item={item}
-              autoExpandEnabled={item.type === 'tool' && item.toolCallId === lastRunningToolCallId}
+              isStreamingText={item.type === 'text' && item.id === activeStreamingTextItemId}
             />
           ))}
         </div>
       ) : null}
-      {message.text.trim() ? (
-        <MessageBody text={message.text} isStreaming={generating} />
-      ) : null}
+      {showIdleStatus ? <GenerationIdleStatus /> : null}
       {message.error ? (
-        <div className="rounded-xl border border-border bg-card px-4 py-3 text-sm text-mutedForeground">
+        <div className="rounded-xl border border-border bg-card px-4 py-3 text-[13px] leading-[22px] text-mutedForeground">
           {message.error}
         </div>
       ) : null}
     </article>
   );
-});
+}
+
+function buildVisibleActivitySignature(message: AgentMessage) {
+  const timelineSignature = message.timeline
+    .map((item) => {
+      if (item.type === 'thinking') {
+        return [
+          item.type,
+          item.status,
+          item.text.length,
+          item.durationSec ?? '',
+        ].join(':');
+      }
+
+      if (item.type === 'text') {
+        return [
+          item.type,
+          item.text.length,
+        ].join(':');
+      }
+
+      return [
+        item.type,
+        item.toolCallId,
+        item.status,
+        item.output.length,
+        item.diff?.length ?? 0,
+        item.exitCode ?? '',
+        item.summary?.length ?? 0,
+      ].join(':');
+    })
+    .join('|');
+
+  return `${message.text.length}:${timelineSignature}`;
+}
+
+function hasVisibleTimelineItem(item: AgentTimelineItem) {
+  if (item.type === 'text') {
+    return item.text.trim().length > 0;
+  }
+  if (item.type === 'tool') {
+    return true;
+  }
+
+  return item.status === 'streaming' || item.text.trim().length > 0;
+}
+
+function hasActiveThinkingItem(item: AgentTimelineItem) {
+  return item.type === 'thinking' && item.status === 'streaming';
+}
+
+function hasRunningToolItem(item: AgentTimelineItem) {
+  return item.type === 'tool' && item.status === 'running';
+}
+
+function getActiveStreamingTextItemId(timeline: AgentTimelineItem[]) {
+  const lastItem = timeline.at(-1);
+  return lastItem?.type === 'text' ? lastItem.id : null;
+}
+
+function PendingAssistantStatus({ startedAt }: { startedAt: number }) {
+  const phase = usePendingAssistantPhase(startedAt);
+
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      className="flex w-fit max-w-full items-center gap-2 text-xs leading-5 text-mutedForeground/80"
+    >
+      <span
+        className={cn('min-w-0 truncate', phase.id !== 'sent' && 'thinking-title-shimmer')}
+        data-shimmer-text={phase.id !== 'sent' ? phase.label : undefined}
+      >
+        {phase.label}
+      </span>
+    </div>
+  );
+}
+
+function GenerationIdleStatus() {
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      className="flex w-fit max-w-full items-center gap-2 text-xs leading-5 text-mutedForeground/72"
+    >
+      <span className="thinking-title-shimmer" data-shimmer-text="继续处理">
+        继续处理
+      </span>
+    </div>
+  );
+}
+
+function usePendingAssistantPhase(startedAt: number) {
+  const [phase, setPhase] = useState(() => resolvePendingAssistantPhase(startedAt));
+
+  useEffect(() => {
+    let timer: number | null = null;
+
+    const syncPhase = () => {
+      const nextPhase = resolvePendingAssistantPhase(startedAt);
+      setPhase((currentPhase) => (
+        currentPhase.id === nextPhase.id ? currentPhase : nextPhase
+      ));
+
+      const elapsedMs = Date.now() - startedAt;
+      const upcomingPhase = PENDING_ASSISTANT_PHASES.find((item) => item.minMs > elapsedMs);
+      if (upcomingPhase) {
+        timer = window.setTimeout(
+          syncPhase,
+          Math.max(80, upcomingPhase.minMs - elapsedMs),
+        );
+      }
+    };
+
+    syncPhase();
+    return () => {
+      if (timer !== null) {
+        window.clearTimeout(timer);
+      }
+    };
+  }, [startedAt]);
+
+  return phase;
+}
+
+function resolvePendingAssistantPhase(startedAt: number): PendingAssistantPhase {
+  const elapsedMs = Date.now() - startedAt;
+  let currentPhase: PendingAssistantPhase = PENDING_ASSISTANT_PHASES[0];
+
+  for (const phase of PENDING_ASSISTANT_PHASES) {
+    if (elapsedMs >= phase.minMs) {
+      currentPhase = phase;
+    }
+  }
+
+  return currentPhase;
+}
 
 function TimelineItem({
   item,
-  autoExpandEnabled,
+  isStreamingText,
 }: {
   item: AgentTimelineItem;
-  autoExpandEnabled: boolean;
+  isStreamingText: boolean;
 }) {
+  if (item.type === 'text') {
+    if (!item.text.trim()) {
+      return null;
+    }
+    return <MessageBody text={item.text} isStreaming={isStreamingText} />;
+  }
+
   if (item.type === 'thinking') {
     if (item.status !== 'streaming' && !item.text.trim()) {
       return null;
@@ -121,7 +318,7 @@ function TimelineItem({
     );
   }
 
-  return <ToolCallCard event={item} autoExpandEnabled={autoExpandEnabled} />;
+  return <ToolCallCard event={item} />;
 }
 
 function CopyMessageButton({ text }: { text: string }) {

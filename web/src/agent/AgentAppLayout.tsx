@@ -1,6 +1,5 @@
 import { MoonStar, Settings, SunMedium } from 'lucide-react';
 import { useState } from 'react';
-import { open } from '@tauri-apps/plugin-dialog';
 import { Button } from '@heroui/react/button';
 
 import { SettingsDialog } from '../components/config/SettingsDialog';
@@ -8,10 +7,8 @@ import { useUIStore } from '../store/uiStore';
 import { AgentChatPanel } from './AgentChatPanel';
 import { AgentSessionList } from './components/AgentSessionList';
 import { useAgentChat } from './useAgentChat';
-import { useAgentSessionStore } from './sessionStore';
 import { WindowControls } from '../components/layout/WindowControls';
 import { isDesktopRuntime } from '../lib/runtime';
-import { resolveWorkspaceSelection } from './workspaceSelection';
 
 export function AgentAppLayout() {
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -38,39 +35,9 @@ export function AgentAppLayout() {
   } = useAgentChat();
 
   const isDesktop = isDesktopRuntime();
-  const pinDirectory = useAgentSessionStore((state) => state.pinDirectory);
+  const selectedWorkspaceRoot = activeSession?.workspaceRoot || '';
   const headerIconButtonClass =
     'h-8 w-8 rounded-full border border-transparent text-foreground hover:bg-muted hover:text-foreground';
-
-  const handleWorkspaceSelection = async (selectedWorkspace: string) => {
-    const selection = resolveWorkspaceSelection(selectedWorkspace, threadList);
-
-    if (selection.mode === 'resume') {
-      await resumeThread(selection.threadId, selection.cwd);
-      return;
-    }
-
-    await startNewSession(selection.cwd);
-  };
-
-  const handlePinWorkspace = async () => {
-    if (!isDesktop) {
-      const selected = window.prompt('输入要载入到列表的目录路径');
-      if (selected?.trim()) {
-        pinDirectory(selected.trim());
-      }
-      return;
-    }
-
-    const selected = await open({
-      directory: true,
-      multiple: false,
-      title: '选择要载入的目录',
-    });
-    if (typeof selected === 'string') {
-      pinDirectory(selected);
-    }
-  };
 
   return (
     <>
@@ -80,8 +47,9 @@ export function AgentAppLayout() {
           threadList={threadList}
           activeSessionId={activeSession?.sessionId || null}
           activeThreadId={activeSession?.threadId || null}
+          currentWorkspaceRoot={selectedWorkspaceRoot}
           onCreate={(workspaceRoot) => {
-            void startNewSession(workspaceRoot);
+            void startNewSession(workspaceRoot || selectedWorkspaceRoot);
           }}
           onResume={(threadId, cwd) => {
             void resumeThread(threadId, cwd);
@@ -90,9 +58,6 @@ export function AgentAppLayout() {
             void archiveThread(threadId);
           }}
           onRegenerateTitle={(threadId) => regenerateThreadTitle(threadId)}
-          onPickWorkspace={() => {
-            void handlePinWorkspace();
-          }}
         />
         <section className="flex min-w-0 flex-1 flex-col">
           <header
@@ -142,7 +107,7 @@ export function AgentAppLayout() {
               agentConfigValidating={agentConfigValidating}
               onApprovalModeChange={setApprovalMode}
               onSelectWorkspace={(cwd) => {
-                void handleWorkspaceSelection(cwd);
+                void startNewSession(cwd);
               }}
               onSendMessage={(payload) => {
                 void sendMessage(payload);
