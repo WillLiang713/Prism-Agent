@@ -1,5 +1,7 @@
 import { MoreHorizontal, Plus, Folder, Trash2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
+import { Button } from '@heroui/react/button';
+import { ListBox } from '@heroui/react/list-box';
 import { Popover } from '@heroui/react/popover';
 import { ScrollShadow } from '@heroui/react/scroll-shadow';
 import { Tooltip } from '@heroui/react/tooltip';
@@ -39,9 +41,7 @@ const sessionThreadMenuDangerItemClassName = cn(
 
 const sessionMenuGenerateItemClassName = cn(
   sessionThreadMenuItemClassName,
-  'relative bg-transparent before:absolute before:left-1 before:top-1/2 before:h-4 before:w-0.5 before:-translate-y-1/2 before:rounded-full before:bg-foreground/18',
-  'dark:before:bg-foreground/24',
-  'disabled:before:bg-transparent',
+  'bg-transparent',
 );
 
 function previewLabel(thread: AgentThreadMeta) {
@@ -107,15 +107,15 @@ export function AgentSessionList({
   return (
     <aside className="flex h-full w-[260px] shrink-0 flex-col bg-background">
       <div className="px-3 pt-3 pb-2">
-        <button
+        <Button
           type="button"
-          onClick={() => onCreate(currentWorkspaceRoot || undefined)}
+          variant="ghost"
+          onPress={() => onCreate(currentWorkspaceRoot || undefined)}
           aria-label={createButtonLabel}
-          title={currentWorkspaceRoot ? `新建会话：${currentWorkspaceRoot}` : '新建会话'}
-          className="group flex h-10 w-full cursor-pointer items-center justify-center rounded-full border border-border bg-transparent px-3 py-2 text-foreground/85 outline-none transition-[background-color,border-color,color,box-shadow] hover:border-foreground/20 hover:bg-muted/60 hover:text-foreground focus-visible:border-foreground/20 focus-visible:bg-muted/60 focus-visible:ring-1 focus-visible:ring-foreground/20"
+          className="group h-10 min-h-10 w-full cursor-pointer justify-center rounded-full border border-border bg-transparent px-3 py-2 text-foreground/85 shadow-none transition-[background-color,border-color,color,box-shadow] hover:border-foreground/20 hover:bg-muted/60 hover:text-foreground focus-visible:border-foreground/20 focus-visible:bg-muted/60 focus-visible:ring-1 focus-visible:ring-foreground/20"
         >
           <Plus className="h-4 w-4" aria-hidden="true" />
-        </button>
+        </Button>
       </div>
       <ScrollShadow className="flex-1 overflow-y-auto px-2" size={24}>
         <div className="space-y-3 pb-4">
@@ -129,17 +129,19 @@ export function AgentSessionList({
                   </span>
                 </div>
                 <div className="flex items-center gap-0.5 shrink-0">
-                  <button
+                  <Button
                     type="button"
+                    variant="ghost"
+                    size="sm"
+                    isIconOnly
                     aria-label={`在 ${group.basename} 中新建任务`}
-                    onClick={(e) => {
-                      e.stopPropagation();
+                    onPress={() => {
                       onCreate(group.cwd);
                     }}
-                    className="cursor-pointer rounded-md p-1 text-mutedForeground/80 opacity-0 outline-none transition-[opacity,background-color,color,box-shadow] hover:bg-muted hover:text-foreground focus-visible:bg-muted focus-visible:text-foreground focus-visible:opacity-100 focus-visible:ring-1 focus-visible:ring-foreground/20 group-hover/dir:opacity-100"
+                    className="h-6 min-h-6 w-6 min-w-6 cursor-pointer rounded-md bg-transparent p-0 text-mutedForeground/80 opacity-0 shadow-none transition-[opacity,background-color,color,box-shadow] hover:bg-muted hover:text-foreground focus-visible:bg-muted focus-visible:text-foreground focus-visible:opacity-100 focus-visible:ring-1 focus-visible:ring-foreground/20 group-hover/dir:opacity-100"
                   >
                     <Plus className="h-3 w-3" aria-hidden="true" />
-                  </button>
+                  </Button>
 
                   <Popover
                     isOpen={openDirectoryMenu === group.cwd}
@@ -163,18 +165,24 @@ export function AgentSessionList({
                         className="!p-0 outline-none"
                         onClick={(e) => e.stopPropagation()}
                       >
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
+                        <ListBox
+                          aria-label="目录操作"
+                          className="!p-0"
+                          onAction={(key) => {
+                            if (key !== 'unpin-directory') return;
                             unpinDirectory(group.cwd);
                             setOpenDirectoryMenu(null);
                           }}
-                          className={sessionMenuDangerItemClassName}
                         >
-                          <Trash2 className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-                          <span>移除目录</span>
-                        </button>
+                          <ListBox.Item
+                            id="unpin-directory"
+                            textValue="移除目录"
+                            className={sessionMenuDangerItemClassName}
+                          >
+                            <Trash2 className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                            <span>移除目录</span>
+                          </ListBox.Item>
+                        </ListBox>
                       </Popover.Dialog>
                     </Popover.Content>
                   </Popover>
@@ -196,41 +204,39 @@ export function AgentSessionList({
                   return (
                     <div
                       key={thread.threadId}
-                      role="button"
-                      tabIndex={0}
-                      onClick={() => onResume(thread.threadId, thread.cwd)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          onResume(thread.threadId, thread.cwd);
-                        }
-                      }}
-                      className={`group grid w-full cursor-pointer grid-cols-[1fr_auto] items-center gap-1 rounded-xl px-2.5 py-2 pl-8 transition-colors ${
+                      className={`group grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-1 rounded-xl transition-colors ${
                         active ? 'bg-muted text-foreground' : 'text-foreground/90 hover:bg-muted/60 hover:text-foreground'
                       }`}
                     >
-                      <div className="min-w-0 flex flex-col gap-0.5">
-                        <Tooltip>
-                          <Tooltip.Trigger
-                            className={`w-fit max-w-full truncate text-sm font-medium leading-tight ${
-                              isRegenerating ? 'thinking-title-shimmer' : ''
-                            }`}
-                            data-shimmer-text={isRegenerating ? label : undefined}
-                          >
-                            {label}
-                          </Tooltip.Trigger>
-                          <Tooltip.Content
-                            placement="bottom start"
-                            offset={4}
-                            className="z-50 max-w-xs rounded-md border border-border/60 bg-card px-2.5 py-1.5 text-xs text-cardForeground shadow-lg"
-                          >
-                            <div className="font-medium">{label}</div>
-                            <div className="mt-0.5 text-[12px] text-mutedForeground break-all">
-                              {thread.cwd}
-                            </div>
-                          </Tooltip.Content>
-                        </Tooltip>
-                      </div>
-                      <div className="flex items-center gap-0.5 shrink-0">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        fullWidth
+                        onPress={() => onResume(thread.threadId, thread.cwd)}
+                        aria-label={`打开任务：${label}`}
+                        className="h-auto min-h-0 w-full min-w-0 justify-start rounded-xl bg-transparent px-2.5 py-2 pl-8 text-left text-inherit shadow-none hover:bg-transparent focus-visible:ring-1 focus-visible:ring-foreground/20"
+                      >
+                        <span className="flex min-w-0 flex-col gap-0.5">
+                          <Tooltip delay={900} closeDelay={100} trigger="hover">
+                            <Tooltip.Trigger
+                              className={`block w-fit max-w-full truncate text-sm font-medium leading-tight ${
+                                isRegenerating ? 'thinking-title-shimmer' : ''
+                              }`}
+                              data-shimmer-text={isRegenerating ? label : undefined}
+                            >
+                              {label}
+                            </Tooltip.Trigger>
+                            <Tooltip.Content
+                              placement="bottom start"
+                              offset={6}
+                              className="z-50 max-w-[min(28rem,calc(100vw-2rem))] rounded-xl border border-border/60 bg-muted px-3 py-2 text-sm font-medium leading-snug text-foreground shadow-[0_18px_40px_rgba(0,0,0,0.20)]"
+                            >
+                              <span className="block whitespace-normal break-words">{label}</span>
+                            </Tooltip.Content>
+                          </Tooltip>
+                        </span>
+                      </Button>
+                      <div className="flex items-center gap-0.5 shrink-0 pr-2.5">
                         <Popover
                           isOpen={openThreadMenu === thread.threadId}
                           onOpenChange={(nextOpen) => setOpenThreadMenu(nextOpen ? thread.threadId : null)}
@@ -253,32 +259,40 @@ export function AgentSessionList({
                               className="!p-0 outline-none"
                               onClick={(e) => e.stopPropagation()}
                             >
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  if (regenerateDisabled) return;
-                                  setOpenThreadMenu(null);
-                                  void handleRegenerate(thread.threadId);
+                              <ListBox
+                                aria-label="任务操作"
+                                className="!p-0"
+                                disabledKeys={regenerateDisabled ? ['regenerate-title'] : []}
+                                onAction={(key) => {
+                                  if (key === 'regenerate-title') {
+                                    if (regenerateDisabled) return;
+                                    setOpenThreadMenu(null);
+                                    void handleRegenerate(thread.threadId);
+                                    return;
+                                  }
+                                  if (key === 'delete-thread') {
+                                    setOpenThreadMenu(null);
+                                    onDelete(thread.threadId);
+                                  }
                                 }}
-                                disabled={regenerateDisabled}
-                                className={sessionMenuGenerateItemClassName}
                               >
-                                <span className="block w-full text-center">
-                                  {isRegenerating ? '生成中…' : '生成标题'}
-                                </span>
-                              </button>
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setOpenThreadMenu(null);
-                                  onDelete(thread.threadId);
-                                }}
-                                className={sessionThreadMenuDangerItemClassName}
-                              >
-                                <span className="block w-full text-center">删除任务</span>
-                              </button>
+                                <ListBox.Item
+                                  id="regenerate-title"
+                                  textValue={isRegenerating ? '生成中' : '生成标题'}
+                                  className={sessionMenuGenerateItemClassName}
+                                >
+                                  <span className="block w-full text-center">
+                                    {isRegenerating ? '生成中…' : '生成标题'}
+                                  </span>
+                                </ListBox.Item>
+                                <ListBox.Item
+                                  id="delete-thread"
+                                  textValue="删除任务"
+                                  className={sessionThreadMenuDangerItemClassName}
+                                >
+                                  <span className="block w-full text-center">删除任务</span>
+                                </ListBox.Item>
+                              </ListBox>
                             </Popover.Dialog>
                           </Popover.Content>
                         </Popover>

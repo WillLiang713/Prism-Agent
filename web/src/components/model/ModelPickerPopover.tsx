@@ -201,19 +201,21 @@ export function ModelPickerPopover({
               spellCheck={false}
               className={cn(defaultInputClassName, inputClassName)}
             />
-            <button
+            <Button
               type="button"
-              onClick={() => onRefresh()}
-              disabled={loading}
-              title="获取模型列表"
+              variant="ghost"
+              size="sm"
+              isIconOnly
+              onPress={() => onRefresh()}
+              isDisabled={loading}
               aria-label="获取模型列表"
-              className="flex shrink-0 items-center justify-center rounded-md p-1.5 text-mutedForeground/80 transition-colors hover:bg-card hover:text-foreground focus-visible:ring-1 focus-visible:ring-foreground/20 disabled:opacity-50"
+              className="h-8 min-h-8 w-8 min-w-8 shrink-0 rounded-md bg-transparent p-0 text-mutedForeground/80 shadow-none transition-colors hover:bg-card hover:text-foreground focus-visible:ring-1 focus-visible:ring-foreground/20 disabled:opacity-50"
             >
               <RefreshCw
                 className={cn('h-3.5 w-3.5', loading && 'animate-spin')}
                 aria-hidden="true"
               />
-            </button>
+            </Button>
           </div>
           <ScrollShadow className="mt-1 max-h-72 overflow-y-auto" size={16}>
             {visibleGroups.length === 0 ? (

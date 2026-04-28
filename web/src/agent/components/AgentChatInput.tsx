@@ -1,4 +1,4 @@
-import { ArrowUp, ChevronDown, FolderOpen, Paperclip, Play, X } from 'lucide-react';
+import { ArrowUp, Check, ChevronDown, FolderOpen, Paperclip, Play, X } from 'lucide-react';
 import { Button } from '@heroui/react/button';
 import { ListBox } from '@heroui/react/list-box';
 import { Popover } from '@heroui/react/popover';
@@ -205,7 +205,7 @@ export function AgentChatInput({
         rows={1}
         disabled={inputDisabled || isStreaming}
         placeholder="把问题发给我，我来处理…"
-        className="min-h-[48px] resize-none border-0 bg-transparent px-3 py-1.5 text-[13px] leading-[22px] shadow-none focus-visible:ring-0"
+        className="min-h-[48px] resize-none border-0 bg-transparent px-3 py-1.5 text-[13px] leading-[22px] shadow-none placeholder:text-[12px] focus-visible:ring-0"
       />
 
       <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
@@ -256,27 +256,47 @@ export function AgentChatInput({
                     暂无可切换目录
                   </div>
                 ) : (
-                  pinnedDirectories.map((path) => {
-                    const name = path.split(/[\\/]/).filter(Boolean).pop() || path;
-                    return (
-                      <button
-                        key={path}
-                        type="button"
-                        onClick={() => {
-                          onSelectWorkspace(path);
-                          setWorkspaceOpen(false);
-                        }}
-                        title={path}
-                        className={cn(
-                          'flex w-full cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-[13px] leading-5 text-foreground outline-none',
-                          composerMenuItemStateClassName,
-                        )}
-                      >
-                        <FolderOpen className="h-3.5 w-3.5 shrink-0 text-mutedForeground" aria-hidden="true" />
-                        <span className="min-w-0 flex-1 truncate text-left">{name}</span>
-                      </button>
-                    );
-                  })
+                  <ListBox
+                    aria-label="工作区"
+                    className="!p-0"
+                    selectedKeys={workspaceRoot ? [workspaceRoot] : []}
+                    selectionMode="single"
+                    onAction={(key) => {
+                      const nextPath = String(key);
+                      if (nextPath !== workspaceRoot) {
+                        onSelectWorkspace(nextPath);
+                      }
+                      setWorkspaceOpen(false);
+                    }}
+                  >
+                    {pinnedDirectories.map((path) => {
+                      const name = path.split(/[\\/]/).filter(Boolean).pop() || path;
+                      const isCurrentWorkspace = path === workspaceRoot;
+                      return (
+                        <ListBox.Item
+                          key={path}
+                          id={path}
+                          textValue={name}
+                          aria-current={isCurrentWorkspace ? 'true' : undefined}
+                          className={cn(
+                            'flex w-full cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-[13px] leading-5 text-foreground outline-none',
+                            composerMenuItemStateClassName,
+                            isCurrentWorkspace && 'bg-foreground/[0.08]',
+                          )}
+                        >
+                          <FolderOpen className="h-3.5 w-3.5 shrink-0 text-mutedForeground" aria-hidden="true" />
+                          <span className="min-w-0 flex-1 truncate text-left" title={path}>{name}</span>
+                          <Check
+                            className={cn(
+                              'h-3.5 w-3.5 shrink-0 text-foreground transition-opacity',
+                              isCurrentWorkspace ? 'opacity-100' : 'opacity-0',
+                            )}
+                            aria-hidden="true"
+                          />
+                        </ListBox.Item>
+                      );
+                    })}
+                  </ListBox>
                 )}
               </Popover.Dialog>
             </Popover.Content>

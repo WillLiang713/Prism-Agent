@@ -1,4 +1,6 @@
 import { ChevronDown } from 'lucide-react';
+import { Button } from '@heroui/react/button';
+import { Disclosure } from '@heroui/react/disclosure';
 import { type ReactNode, useEffect, useMemo, useState } from 'react';
 
 import { cn } from '../../lib/utils';
@@ -18,9 +20,11 @@ type ToolHeaderParts = {
 const PLAIN_TEXT_OUTPUT_TOOLS = new Set(['bash', 'edit', 'find', 'grep', 'ls', 'read', 'write']);
 const READ_OUTPUT_PREVIEW_LINES = 10;
 const NUMBER_FORMATTER = new Intl.NumberFormat('zh-CN');
-const TOOL_OUTPUT_PANEL_CLASS = 'overflow-hidden rounded-sm border border-border/55 bg-background/35';
-const TOOL_OUTPUT_PANEL_HEADER_CLASS =
-  'flex min-w-0 items-center justify-between gap-2 border-b border-border/45 bg-muted/14 px-2 py-1';
+const TOOL_OUTPUT_CARD_CLASS = 'max-w-[min(100%,820px)] overflow-hidden rounded-sm border border-border/70 bg-card/85';
+const TOOL_OUTPUT_SECTION_CLASS = 'min-w-0 border-t border-border/55 first:border-t-0';
+const TOOL_OUTPUT_SECTION_PADDING_CLASS = 'px-2 py-1.5';
+const TOOL_OUTPUT_HEADER_CLASS =
+  'flex h-9 min-w-0 items-center justify-between gap-2 border-b border-border/55 bg-muted/34 px-2';
 const TOOL_OUTPUT_PRE_CLASS =
   'overflow-auto whitespace-pre-wrap break-words px-2 py-1.5 font-mono text-xs leading-5';
 
@@ -327,7 +331,7 @@ function ToolDiffStats({ overview }: { overview: DiffOverview }) {
   );
 }
 
-function ToolOutputPanel({
+function ToolOutputCard({
   children,
   className,
 }: {
@@ -335,7 +339,23 @@ function ToolOutputPanel({
   className?: string;
 }) {
   return (
-    <div className={cn(TOOL_OUTPUT_PANEL_CLASS, className)}>
+    <div className={cn(TOOL_OUTPUT_CARD_CLASS, className)}>
+      {children}
+    </div>
+  );
+}
+
+function ToolOutputSection({
+  children,
+  className,
+  padded = true,
+}: {
+  children: ReactNode;
+  className?: string;
+  padded?: boolean;
+}) {
+  return (
+    <div className={cn(TOOL_OUTPUT_SECTION_CLASS, padded && TOOL_OUTPUT_SECTION_PADDING_CLASS, className)}>
       {children}
     </div>
   );
@@ -351,14 +371,14 @@ function InlineOutputBlock({
   status: AgentToolEvent['status'];
 }) {
   return (
-    <ToolOutputPanel className="px-2 py-1.5">
+    <ToolOutputSection>
       <div className={cn('min-w-0 text-xs leading-5', getInlineResultTone(status))}>
         {label ? (
           <span className="mr-1 text-mutedForeground/65">{label}</span>
         ) : null}
         <span className="break-words">{output}</span>
       </div>
-    </ToolOutputPanel>
+    </ToolOutputSection>
   );
 }
 
@@ -370,14 +390,14 @@ function PlainTextOutputBlock({
   tone?: string;
 }) {
   return (
-    <ToolOutputPanel>
+    <ToolOutputSection padded={false}>
       <pre
         className={cn(TOOL_OUTPUT_PRE_CLASS, 'max-h-[min(48vh,460px)]', tone)}
         translate="no"
       >
         {text}
       </pre>
-    </ToolOutputPanel>
+    </ToolOutputSection>
   );
 }
 
@@ -396,12 +416,12 @@ function ReadOutputPreview({
   const canExpand = summary.hiddenLineCount > 0;
 
   return (
-    <ToolOutputPanel>
-      <div className={TOOL_OUTPUT_PANEL_HEADER_CLASS}>
-        <span className="min-w-0 truncate font-mono text-[11px] leading-5 text-foreground/84" title={title} translate="no">
+    <ToolOutputSection padded={false}>
+      <div className={TOOL_OUTPUT_HEADER_CLASS}>
+        <span className="min-w-0 truncate font-mono text-[11.5px] font-[650] leading-4 text-foreground/84" title={title} translate="no">
           {label || '读取内容'}
         </span>
-        <span className="shrink-0 text-[11px] leading-5 text-mutedForeground/68">
+        <span className="shrink-0 text-[10.5px] leading-4 text-mutedForeground/68">
           {NUMBER_FORMATTER.format(summary.lineCount)} 行
           <span className="mx-1 text-mutedForeground/38">/</span>
           {NUMBER_FORMATTER.format(summary.characterCount)} 字符
@@ -416,12 +436,14 @@ function ReadOutputPreview({
         </pre>
       ) : null}
       {canExpand ? (
-        <div className="border-t border-border/45 px-2 py-1">
-          <button
+        <div className="border-t border-border/55 px-2 py-1">
+          <Button
             type="button"
+            variant="ghost"
+            size="sm"
             aria-expanded={isFullOpen}
-            onClick={() => setIsFullOpen((current) => !current)}
-            className="inline-flex max-w-full touch-manipulation items-center gap-1.5 rounded-sm text-xs leading-5 text-mutedForeground/72 transition-colors hover:text-foreground focus-visible:outline-none focus-visible:text-foreground focus-visible:ring-1 focus-visible:ring-foreground/20"
+            onPress={() => setIsFullOpen((current) => !current)}
+            className="h-auto min-h-0 max-w-full touch-manipulation items-center gap-1.5 rounded-sm bg-transparent p-0 text-xs leading-5 text-mutedForeground/72 shadow-none transition-colors hover:bg-transparent hover:text-foreground focus-visible:outline-none focus-visible:text-foreground focus-visible:ring-1 focus-visible:ring-foreground/20"
           >
             <span>
               {isFullOpen
@@ -432,18 +454,18 @@ function ReadOutputPreview({
               aria-hidden="true"
               className={`h-3.5 w-3.5 shrink-0 transition-transform duration-200 ${isFullOpen ? 'rotate-180' : ''}`}
             />
-          </button>
+          </Button>
         </div>
       ) : null}
       {isFullOpen ? (
         <pre
-          className="max-h-[min(56vh,520px)] overflow-auto border-t border-border/45 bg-background/28 px-2 py-1.5 font-mono text-xs leading-5 text-foreground/90"
+          className="max-h-[min(56vh,520px)] overflow-auto border-t border-border/55 bg-transparent px-2 py-1.5 font-mono text-xs leading-5 text-foreground/90"
           translate="no"
         >
           {summary.normalizedOutput}
         </pre>
       ) : null}
-    </ToolOutputPanel>
+    </ToolOutputSection>
   );
 }
 
@@ -511,105 +533,112 @@ export function ToolCallCard({
   }, [event.ok, event.status, hasExpandableContent]);
 
   return (
-    <details
+    <Disclosure
+      isExpanded={isOpen}
+      onExpandedChange={(nextOpen) => setIsOpen(hasExpandableContent ? nextOpen : false)}
       className="group min-w-0 text-sm text-mutedForeground"
-      open={isOpen}
-      onToggle={(event) => setIsOpen((event.currentTarget as HTMLDetailsElement).open)}
     >
-      <summary
-        className="flex w-fit max-w-full list-none items-center gap-1.5 rounded-sm text-mutedForeground/80 hover:text-foreground focus-visible:outline-none focus-visible:text-foreground focus-visible:ring-1 focus-visible:ring-foreground/20"
-        aria-label={isRunning ? `正在调用工具 ${compactTitle}` : compactTitle}
-        onClick={(summaryEvent) => {
-          if (!hasExpandableContent) {
-            summaryEvent.preventDefault();
-            return;
-          }
-        }}
-      >
-        <span
-          className={`min-w-0 truncate ${hasExpandableContent ? 'cursor-pointer' : 'cursor-default'} ${
-            isCommandLike ? 'font-mono text-[13px] leading-5' : 'text-sm'
-          }`}
+      <Disclosure.Heading className="contents">
+        <Disclosure.Trigger
+          isDisabled={!hasExpandableContent}
+          className="flex w-fit max-w-full items-center gap-1.5 rounded-sm bg-transparent p-0 text-mutedForeground/80 hover:text-foreground focus-visible:outline-none focus-visible:text-foreground focus-visible:ring-1 focus-visible:ring-foreground/20 disabled:opacity-100 data-[disabled=true]:opacity-100"
+          aria-label={isRunning ? `正在调用工具 ${compactTitle}` : compactTitle}
         >
-          {isRunning ? (
-            <span
-              role="status"
-              aria-live="polite"
-              className="thinking-title-shimmer mr-1.5 shrink-0 text-[11px] leading-5 text-mutedForeground/62"
-              data-shimmer-text="正在调用"
+          <span
+            className={`min-w-0 truncate ${hasExpandableContent ? 'cursor-pointer' : 'cursor-default'} ${
+              isCommandLike ? 'font-mono text-[13px] leading-5' : 'text-sm'
+            }`}
+          >
+            {isRunning ? (
+              <span
+                role="status"
+                aria-live="polite"
+                className="thinking-title-shimmer mr-1.5 shrink-0 text-[11px] leading-5 text-mutedForeground/62"
+                data-shimmer-text="正在调用"
+              >
+                正在调用
+              </span>
+            ) : null}
+            <span className="shrink-0">{header.title}</span>
+            {displayDetail ? (
+              <span className="ml-1.5 min-w-0 truncate text-mutedForeground/70" title={displayDetailTitle}>
+                {displayDetail}
+              </span>
+            ) : null}
+            {diffOverview ? <ToolDiffStats overview={diffOverview} /> : null}
+          </span>
+          {hasExpandableContent ? (
+            <Disclosure.Indicator
+              aria-hidden="true"
+              className="h-3.5 w-3.5 shrink-0 text-mutedForeground/70 opacity-0 transition-[opacity,transform] duration-200 group-hover:opacity-85 group-focus-within:opacity-85 data-[expanded=true]:rotate-180 data-[expanded=true]:opacity-100"
             >
-              正在调用
-            </span>
+              <ChevronDown />
+            </Disclosure.Indicator>
           ) : null}
-          <span className="shrink-0">{header.title}</span>
-          {displayDetail ? (
-            <span className="ml-1.5 min-w-0 truncate text-mutedForeground/70" title={displayDetailTitle}>
-              {displayDetail}
-            </span>
-          ) : null}
-          {diffOverview ? <ToolDiffStats overview={diffOverview} /> : null}
-        </span>
-        {hasExpandableContent ? (
-          <ChevronDown
-            aria-hidden="true"
-            className="h-3.5 w-3.5 shrink-0 text-mutedForeground/70 opacity-0 transition-[opacity,transform] duration-200 group-hover:opacity-85 group-focus-within:opacity-85 group-open:rotate-180 group-open:opacity-100"
-          />
-        ) : null}
-      </summary>
+        </Disclosure.Trigger>
+      </Disclosure.Heading>
       {isOpen ? (
-        <div className="mt-1.5 min-w-0 space-y-2 pl-0.5">
-          {shouldRenderSummaryBody ? (
-            <ToolOutputPanel className="px-2 py-1.5">
-              <div className="break-words text-xs leading-5 text-foreground/90">
-              {event.summary}
-              </div>
-            </ToolOutputPanel>
-          ) : null}
-          {inlineOutput ? (
-            <InlineOutputBlock
-              output={inlineOutput}
-              label={inlineResultLabel}
-              status={event.status}
-            />
-          ) : null}
-          {!isCommandLike ? (
-            <PlainTextOutputBlock text={renderArgs(event.args)} tone="text-mutedForeground" />
-          ) : null}
-          {event.diff ? (
-            <div className="min-w-0 space-y-1.5">
-              <CodeDiffView diff={event.diff} fileLabel={displayDetailTitle ?? displayDetail ?? undefined} />
-              {shouldRenderPlainOutputWithDiff ? (
-                <pre className="overflow-x-auto whitespace-pre-wrap break-all rounded-sm border border-border/60 bg-background/32 px-3 py-2 text-xs leading-6 text-foreground/88 font-mono">
-                  {formattedOutput}
-                </pre>
-              ) : null}
-            </div>
-          ) : null}
-          {shouldRenderOutput && !shouldRenderPlainOutputWithDiff ? (
-            shouldRenderReadOutputPreview ? (
-              <ReadOutputPreview
-                output={formattedOutput}
-                label={displayDetail}
-                fullLabel={displayDetailTitle}
+        <Disclosure.Content className="mt-1.5 min-w-0 p-0 pl-0.5">
+          <ToolOutputCard>
+            {shouldRenderSummaryBody ? (
+              <ToolOutputSection>
+                <div className="break-words text-xs leading-5 text-foreground/90">
+                  {event.summary}
+                </div>
+              </ToolOutputSection>
+            ) : null}
+            {inlineOutput ? (
+              <InlineOutputBlock
+                output={inlineOutput}
+                label={inlineResultLabel}
+                status={event.status}
               />
-            ) : isPlainTextOutput ? (
-              <PlainTextOutputBlock text={formattedOutput} />
-            ) : (
-              <ToolOutputPanel className="px-2 py-1.5">
-                <MarkdownContent
-                  text={formattedOutput}
-                  className="min-w-0 text-sm leading-6 [&_pre]:rounded-sm [&_pre]:border-border/60 [&_pre]:bg-background/50 [&_pre]:px-2 [&_pre]:py-1.5 [&_pre]:text-xs"
+            ) : null}
+            {!isCommandLike ? (
+              <PlainTextOutputBlock text={renderArgs(event.args)} tone="text-mutedForeground" />
+            ) : null}
+            {event.diff ? (
+              <ToolOutputSection padded={false}>
+                <CodeDiffView
+                  diff={event.diff}
+                  fileLabel={displayDetailTitle ?? displayDetail ?? undefined}
+                  className="max-w-full rounded-none border-0 bg-transparent"
                 />
-              </ToolOutputPanel>
-            )
-          ) : null}
-          {typeof event.exitCode === 'number' ? (
-            <div className="text-xs font-mono text-mutedForeground">
-              exit code: {event.exitCode}
-            </div>
-          ) : null}
-        </div>
+                {shouldRenderPlainOutputWithDiff ? (
+                  <pre className="overflow-x-auto whitespace-pre-wrap break-all border-t border-border/55 bg-transparent px-2 py-1.5 font-mono text-xs leading-5 text-foreground/88">
+                    {formattedOutput}
+                  </pre>
+                ) : null}
+              </ToolOutputSection>
+            ) : null}
+            {shouldRenderOutput && !shouldRenderPlainOutputWithDiff ? (
+              shouldRenderReadOutputPreview ? (
+                <ReadOutputPreview
+                  output={formattedOutput}
+                  label={displayDetail}
+                  fullLabel={displayDetailTitle}
+                />
+              ) : isPlainTextOutput ? (
+                <PlainTextOutputBlock text={formattedOutput} />
+              ) : (
+                <ToolOutputSection>
+                  <MarkdownContent
+                    text={formattedOutput}
+                    className="min-w-0 text-sm leading-6 [&_pre]:rounded-sm [&_pre]:border-border/60 [&_pre]:bg-background/50 [&_pre]:px-2 [&_pre]:py-1.5 [&_pre]:text-xs"
+                  />
+                </ToolOutputSection>
+              )
+            ) : null}
+            {typeof event.exitCode === 'number' ? (
+              <ToolOutputSection>
+                <div className="font-mono text-xs text-mutedForeground">
+                  exit code: {event.exitCode}
+                </div>
+              </ToolOutputSection>
+            ) : null}
+          </ToolOutputCard>
+        </Disclosure.Content>
       ) : null}
-    </details>
+    </Disclosure>
   );
 }

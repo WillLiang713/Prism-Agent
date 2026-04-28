@@ -1,4 +1,5 @@
 import { memo, useDeferredValue, useEffect, useEffectEvent, useRef, useState } from 'react';
+import { Button } from '@heroui/react/button';
 import { Check, Copy } from 'lucide-react';
 
 import { MarkdownContent } from './MarkdownContent';
@@ -358,14 +359,17 @@ function CopyMessageButton({ text }: { text: string }) {
   };
 
   return (
-    <button
+    <Button
       type="button"
-      onClick={handleCopy}
+      variant="ghost"
+      size="sm"
+      isIconOnly
+      onPress={handleCopy}
       aria-label={copied ? '已复制' : '复制'}
-      className="inline-flex h-6 w-6 items-center justify-center rounded-md text-mutedForeground/70 opacity-0 transition hover:bg-accent hover:text-foreground focus:opacity-100 focus:outline-none group-hover/user:opacity-100"
+      className="h-6 min-h-6 w-6 min-w-6 rounded-md bg-transparent p-0 text-mutedForeground/70 opacity-0 shadow-none transition hover:bg-accent hover:text-foreground focus:opacity-100 focus:outline-none group-hover/user:opacity-100"
     >
       {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-    </button>
+    </Button>
   );
 }
 

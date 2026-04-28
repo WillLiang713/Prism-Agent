@@ -1,5 +1,6 @@
 import { ChevronDown } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
+import { Disclosure } from '@heroui/react/disclosure';
 
 import { cn } from '../../lib/utils';
 import { MarkdownContent } from './MarkdownContent';
@@ -50,39 +51,46 @@ export function ThinkingBlock({
   }, [durationSec, elapsedSec, status]);
 
   return (
-    <details
+    <Disclosure
+      isExpanded={isOpen}
+      onExpandedChange={setIsOpen}
       className="group text-left text-xs text-mutedForeground"
-      onToggle={(event) => setIsOpen((event.currentTarget as HTMLDetailsElement).open)}
     >
-      <summary className="flex w-fit max-w-full cursor-pointer list-none items-center gap-1.5 rounded-sm leading-5 text-mutedForeground/80 hover:text-foreground focus-visible:outline-none focus-visible:text-foreground focus-visible:ring-1 focus-visible:ring-foreground/20">
-        <span
-          className={cn(status === 'streaming' && 'thinking-title-shimmer')}
-          data-shimmer-text={status === 'streaming' ? label : undefined}
-        >
-          {label}
-        </span>
-        <ChevronDown
-          aria-hidden="true"
-          className="h-3.5 w-3.5 shrink-0 text-mutedForeground/70 opacity-0 transition-[opacity,transform] duration-200 group-hover:opacity-85 group-focus-within:opacity-85 group-open:rotate-180 group-open:opacity-100"
-        />
-      </summary>
+      <Disclosure.Heading className="contents">
+        <Disclosure.Trigger className="flex w-fit max-w-full cursor-pointer items-center gap-1.5 rounded-sm bg-transparent p-0 leading-5 text-mutedForeground/80 hover:text-foreground focus-visible:outline-none focus-visible:text-foreground focus-visible:ring-1 focus-visible:ring-foreground/20">
+          <span
+            className={cn(status === 'streaming' && 'thinking-title-shimmer')}
+            data-shimmer-text={status === 'streaming' ? label : undefined}
+          >
+            {label}
+          </span>
+          <Disclosure.Indicator
+            aria-hidden="true"
+            className="h-3.5 w-3.5 shrink-0 text-mutedForeground/70 opacity-0 transition-[opacity,transform] duration-200 group-hover:opacity-85 group-focus-within:opacity-85 data-[expanded=true]:rotate-180 data-[expanded=true]:opacity-100"
+          >
+            <ChevronDown />
+          </Disclosure.Indicator>
+        </Disclosure.Trigger>
+      </Disclosure.Heading>
       {isOpen ? (
-        text.trim() ? (
-          status === 'streaming' ? (
-            <div className={cn(THINKING_PANEL_CLASS, 'whitespace-pre-wrap break-words text-[13px] leading-[22px] text-mutedForeground/95')}>
-              {text}
-            </div>
+        <Disclosure.Content className="min-w-0 p-0">
+          {text.trim() ? (
+            status === 'streaming' ? (
+              <div className={cn(THINKING_PANEL_CLASS, 'whitespace-pre-wrap break-words text-[13px] leading-[22px] text-mutedForeground/95')}>
+                {text}
+              </div>
+            ) : (
+              <MarkdownContent
+                text={text}
+                className={THINKING_MARKDOWN_CLASS}
+              />
+            )
           ) : (
-            <MarkdownContent
-              text={text}
-              className={THINKING_MARKDOWN_CLASS}
-            />
-          )
-        ) : (
-          <div className="mt-1.5" />
-        )
+            <div className="mt-1.5" />
+          )}
+        </Disclosure.Content>
       ) : null}
-    </details>
+    </Disclosure>
   );
 }
 

@@ -1,5 +1,6 @@
 import { Button } from '@heroui/react/button';
 import { Input } from '@heroui/react/input';
+import { Label } from '@heroui/react/label';
 import { ListBox } from '@heroui/react/list-box';
 import { ScrollShadow } from '@heroui/react/scroll-shadow';
 import { Select } from '@heroui/react/select';
@@ -108,35 +109,39 @@ export function ServiceManager() {
           <div className="space-y-0.5">
             {services.map((service) => (
               <div key={service.id} className="group relative min-w-0">
-                <button
+                <Button
                   type="button"
-                  onClick={() => setServiceManagerSelectedId(service.id)}
-                  className={`flex w-full touch-manipulation flex-col items-start gap-1 rounded-lg px-3 py-2.5 pr-10 text-left transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-foreground/20 ${
+                  onPress={() => setServiceManagerSelectedId(service.id)}
+                  variant="ghost"
+                  fullWidth
+                  className={cn(
+                    '!h-auto !min-h-0 w-full touch-manipulation justify-start rounded-lg bg-transparent px-3 py-2.5 pr-10 text-left shadow-none transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-foreground/20',
                     service.id === selectedService.id
                       ? 'bg-foreground/[0.08]'
-                      : 'hover:bg-foreground/[0.05]'
-                  }`}
+                      : 'hover:bg-foreground/[0.05]',
+                  )}
                 >
-                  <span className="w-full truncate text-sm font-medium text-foreground">
-                    {service.name || '未命名服务'}
+                  <span className="flex min-w-0 flex-col items-start gap-1">
+                    <span className="w-full truncate text-sm font-medium text-foreground">
+                      {service.name || '未命名服务'}
+                    </span>
+                    <span className="w-full truncate text-[11px] text-mutedForeground/70">
+                      {providerLabels[service.model.providerSelection]}
+                    </span>
                   </span>
-                  <span className="w-full truncate text-[11px] text-mutedForeground/70">
-                    {providerLabels[service.model.providerSelection]}
-                  </span>
-                </button>
+                </Button>
                 {services.length > 1 && (
-                  <button
+                  <Button
                     type="button"
                     aria-label={`删除服务 ${service.name || '未命名服务'}`}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      removeService(service.id);
-                    }}
-                    className="absolute right-2 top-1/2 flex -translate-y-1/2 items-center justify-center rounded-md p-1.5 text-mutedForeground opacity-0 transition-opacity hover:bg-danger/10 hover:text-danger group-hover:opacity-100 focus-visible:opacity-100"
-                    title="删除服务"
+                    variant="ghost"
+                    size="sm"
+                    isIconOnly
+                    onPress={() => removeService(service.id)}
+                    className="absolute right-2 top-1/2 z-10 h-7 min-h-7 w-7 min-w-7 -translate-y-1/2 rounded-md bg-transparent p-0 text-mutedForeground opacity-0 shadow-none transition-opacity hover:bg-danger/10 hover:text-danger group-hover:opacity-100 focus-visible:opacity-100"
                   >
                     <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
-                  </button>
+                  </Button>
                 )}
               </div>
             ))}
@@ -146,7 +151,7 @@ export function ServiceManager() {
 
       <div className="min-w-0 space-y-5 border-t border-border/50 pt-6 md:border-l md:border-t-0 md:pl-6 md:pt-0">
         <div className="grid min-w-0 gap-2 text-xs">
-          <label htmlFor="service-name" className="px-4 text-mutedForeground">名称</label>
+          <Label htmlFor="service-name" className="px-4 text-mutedForeground">名称</Label>
           <Input
             id="service-name"
             name="service-name"
@@ -165,7 +170,7 @@ export function ServiceManager() {
         </div>
         <div className="grid min-w-0 gap-4 md:grid-cols-2">
           <div className="grid min-w-0 gap-2 text-xs">
-            <label id="service-provider-label" className="px-4 text-mutedForeground">类型</label>
+            <Label id="service-provider-label" className="px-4 text-mutedForeground">类型</Label>
             <Select
               aria-labelledby="service-provider-label"
               fullWidth
@@ -204,7 +209,7 @@ export function ServiceManager() {
             </Select>
           </div>
           <div className="grid min-w-0 gap-2 text-xs">
-            <label htmlFor="service-api-url" className="px-4 text-mutedForeground">地址</label>
+            <Label htmlFor="service-api-url" className="px-4 text-mutedForeground">地址</Label>
             <Input
               id="service-api-url"
               name="service-api-url"
@@ -217,7 +222,7 @@ export function ServiceManager() {
             />
           </div>
           <div className="grid min-w-0 gap-2 text-xs">
-            <label htmlFor="service-api-key" className="px-4 text-mutedForeground">Key</label>
+            <Label htmlFor="service-api-key" className="px-4 text-mutedForeground">Key</Label>
             <div className="relative min-w-0">
               <Input
                 id="service-api-key"
@@ -232,19 +237,21 @@ export function ServiceManager() {
                 value={selectedService.model.apiKey}
                 onChange={(event) => handleServiceChange('apiKey', event.currentTarget.value)}
               />
-              <button
+              <Button
                 type="button"
                 aria-label={showApiKey ? '隐藏密钥' : '显示密钥'}
-                onClick={() => setShowApiKey((v) => !v)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md text-mutedForeground/60 transition-colors hover:text-foreground focus-visible:ring-1 focus-visible:ring-foreground/20"
-                title={showApiKey ? '隐藏密钥' : '显示密钥'}
+                variant="ghost"
+                size="sm"
+                isIconOnly
+                onPress={() => setShowApiKey((v) => !v)}
+                className="absolute right-3 top-1/2 h-7 min-h-7 w-7 min-w-7 -translate-y-1/2 rounded-md bg-transparent p-0 text-mutedForeground/60 shadow-none transition-colors hover:bg-muted/60 hover:text-foreground focus-visible:ring-1 focus-visible:ring-foreground/20"
               >
                 {showApiKey ? (
                   <EyeOff className="h-4 w-4" aria-hidden="true" />
                 ) : (
                   <Eye className="h-4 w-4" aria-hidden="true" />
                 )}
-              </button>
+              </Button>
             </div>
           </div>
         </div>

@@ -5,6 +5,14 @@ import { parseRenderedDiffLines, type ParsedRenderedDiffLine } from './codeDiff'
 
 const DiffsCodeDiffView = lazy(() => import('./DiffsCodeDiffView'));
 
+const DIFF_LOADING_ROWS = [
+  { tone: 'bg-[hsl(var(--diff-remove-bg)/0.38)]', width: 'w-[74%]' },
+  { tone: 'bg-muted/45', width: 'w-[82%]' },
+  { tone: 'bg-[hsl(var(--diff-add-bg)/0.38)]', width: 'w-[68%]' },
+  { tone: 'bg-muted/38', width: 'w-[88%]' },
+  { tone: 'bg-[hsl(var(--diff-add-bg)/0.34)]', width: 'w-[58%]' },
+] as const;
+
 class DiffRenderErrorBoundary extends Component<
   { children: ReactNode; fallback: ReactNode; resetKey: string },
   { hasError: boolean }
@@ -50,6 +58,53 @@ function PlainDiffFallback({
     >
       {diff}
     </pre>
+  );
+}
+
+function CodeDiffLoadingFallback({ className }: { className?: string }) {
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      aria-label="Loading diff"
+      className={cn(
+        'max-h-[min(46vh,360px)] max-w-[min(100%,820px)] overflow-hidden rounded-sm border border-border/70 bg-card/85',
+        className,
+      )}
+    >
+      <div className="flex h-9 min-w-0 items-center gap-2 border-b border-border/55 bg-muted/34 px-2">
+        <span
+          aria-hidden="true"
+          className="h-3 w-3 shrink-0 animate-pulse rounded-[3px] bg-mutedForeground/20 motion-reduce:animate-none"
+        />
+        <span
+          aria-hidden="true"
+          className="h-2.5 w-36 max-w-[42%] animate-pulse rounded-sm bg-mutedForeground/18 motion-reduce:animate-none"
+        />
+        <span
+          aria-hidden="true"
+          className="ml-auto h-2.5 w-14 shrink-0 animate-pulse rounded-sm bg-mutedForeground/14 motion-reduce:animate-none"
+        />
+      </div>
+      <div className="space-y-px p-1.5">
+        {DIFF_LOADING_ROWS.map((row, index) => (
+          <div
+            key={`${row.width}-${index}`}
+            aria-hidden="true"
+            className="grid grid-cols-[2.75rem_minmax(0,1fr)] items-center gap-2 rounded-[2px] px-1.5 py-1"
+          >
+            <span className="h-2.5 w-8 rounded-sm bg-mutedForeground/12" />
+            <span
+              className={cn(
+                'h-2.5 animate-pulse rounded-sm motion-reduce:animate-none',
+                row.tone,
+                row.width,
+              )}
+            />
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -157,10 +212,11 @@ export const CodeDiffView = memo(function CodeDiffView({
 }) {
   const rendererDiff = getRendererDiff(diff, fileLabel);
   const fallback = <PlainDiffFallback diff={diff} className={className} />;
+  const loadingFallback = <CodeDiffLoadingFallback className={className} />;
 
   return (
     <DiffRenderErrorBoundary fallback={fallback} resetKey={rendererDiff}>
-      <Suspense fallback={fallback}>
+      <Suspense fallback={loadingFallback}>
         <DiffsCodeDiffView diff={rendererDiff} className={className} fallback={fallback} />
       </Suspense>
     </DiffRenderErrorBoundary>

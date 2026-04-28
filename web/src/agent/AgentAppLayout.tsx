@@ -7,6 +7,7 @@ import { useUIStore } from '../store/uiStore';
 import { AgentChatPanel } from './AgentChatPanel';
 import { AgentSessionList } from './components/AgentSessionList';
 import { useAgentChat } from './useAgentChat';
+import { resolveWorkspaceSelection } from './workspaceSelection';
 import { WindowControls } from '../components/layout/WindowControls';
 import { isDesktopRuntime } from '../lib/runtime';
 
@@ -38,6 +39,19 @@ export function AgentAppLayout() {
   const selectedWorkspaceRoot = activeSession?.workspaceRoot || '';
   const headerIconButtonClass =
     'h-8 w-8 rounded-full border border-transparent text-foreground hover:bg-muted hover:text-foreground';
+  const handleSelectWorkspace = (cwd: string) => {
+    if (!cwd || cwd === selectedWorkspaceRoot) {
+      return;
+    }
+
+    const selection = resolveWorkspaceSelection(cwd, threadList);
+    if (selection.mode === 'resume') {
+      void resumeThread(selection.threadId, selection.cwd);
+      return;
+    }
+
+    void startNewSession(selection.cwd);
+  };
 
   return (
     <>
@@ -106,9 +120,7 @@ export function AgentAppLayout() {
               agentRuntimeStatus={agentRuntimeStatus}
               agentConfigValidating={agentConfigValidating}
               onApprovalModeChange={setApprovalMode}
-              onSelectWorkspace={(cwd) => {
-                void startNewSession(cwd);
-              }}
+              onSelectWorkspace={handleSelectWorkspace}
               onSendMessage={(payload) => {
                 void sendMessage(payload);
               }}

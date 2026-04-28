@@ -1,5 +1,6 @@
 import { Minus, Square, X, Copy } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { Button } from '@heroui/react/button';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { isDesktopRuntime } from '../../lib/runtime';
 
@@ -28,27 +29,39 @@ export function WindowControls() {
 
   return (
     <div className="flex items-center h-full no-drag">
-      <button
-        onClick={() => appWindow.minimize()}
-        className="inline-flex items-center justify-center h-10 w-10 hover:bg-muted text-mutedForeground hover:text-foreground transition-colors"
-        title="最小化"
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        isIconOnly
+        onPress={() => void appWindow.minimize()}
+        aria-label="最小化"
+        className="h-10 min-h-10 w-10 min-w-10 rounded-none bg-transparent p-0 text-mutedForeground shadow-none transition-colors hover:bg-muted hover:text-foreground"
       >
         <Minus className="h-4 w-4" />
-      </button>
-      <button
-        onClick={() => appWindow.toggleMaximize()}
-        className="inline-flex items-center justify-center h-10 w-10 hover:bg-muted text-mutedForeground hover:text-foreground transition-colors"
-        title={isMaximized ? '还原' : '最大化'}
+      </Button>
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        isIconOnly
+        onPress={() => void appWindow.toggleMaximize()}
+        aria-label={isMaximized ? '还原' : '最大化'}
+        className="h-10 min-h-10 w-10 min-w-10 rounded-none bg-transparent p-0 text-mutedForeground shadow-none transition-colors hover:bg-muted hover:text-foreground"
       >
         {isMaximized ? <Copy className="h-3.5 w-3.5" /> : <Square className="h-3.5 w-3.5" />}
-      </button>
-      <button
-        onClick={() => appWindow.close()}
-        className="inline-flex items-center justify-center h-10 w-10 hover:bg-red-500/10 hover:text-red-500 text-mutedForeground transition-colors"
-        title="关闭"
+      </Button>
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        isIconOnly
+        onPress={() => void appWindow.close()}
+        aria-label="关闭"
+        className="h-10 min-h-10 w-10 min-w-10 rounded-none bg-transparent p-0 text-mutedForeground shadow-none transition-colors hover:bg-red-500/10 hover:text-red-500"
       >
         <X className="h-4 w-4" />
-      </button>
+      </Button>
     </div>
   );
 }
