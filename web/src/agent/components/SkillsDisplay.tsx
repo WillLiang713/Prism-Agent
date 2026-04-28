@@ -1,18 +1,31 @@
-import { AgentSkillsSnapshot } from '../sessionStore';
+import type { AgentSkillsSnapshot } from '../sessionStore';
 import { useMemo } from 'react';
 import { ScrollShadow } from '@heroui/react/scroll-shadow';
 import { Tooltip } from '@heroui/react/tooltip';
 
+import { cn } from '../../lib/utils';
+
+const skillChipClassName =
+  'inline-flex h-6 max-w-[150px] shrink-0 cursor-default select-none items-center rounded-full border px-2 text-[11px] font-medium leading-none transition-[border-color,background-color,color]';
+
+const skillTooltipClassName =
+  'z-50 flex max-w-[min(22rem,calc(100vw-2rem))] flex-col gap-1 rounded-xl border border-border/60 bg-muted px-3 py-2 text-xs text-foreground shadow-[0_18px_40px_rgba(0,0,0,0.20)]';
+
+function diagnosticMentionsSkill(diagnostic: string, skillName: string) {
+  return (
+    diagnostic.includes(`"${skillName}"`) ||
+    diagnostic.includes(`'${skillName}'`) ||
+    diagnostic.toLowerCase().includes(skillName.toLowerCase())
+  );
+}
+
 export function SkillsDisplay({ skills }: { skills: AgentSkillsSnapshot }) {
-  // 建立技能与诊断的相关性
   const skillsWithMetadata = useMemo(() => {
     return skills.items.map((skill) => {
       const relatedDiagnostics = skills.diagnostics.filter(
-        (d) =>
-          d.includes(`"${skill.name}"`) ||
-          d.includes(`'${skill.name}'`) ||
-          d.toLowerCase().includes(skill.name.toLowerCase()),
+        (diagnostic) => diagnosticMentionsSkill(diagnostic, skill.name),
       );
+
       return {
         ...skill,
         relatedDiagnostics,
@@ -25,94 +38,77 @@ export function SkillsDisplay({ skills }: { skills: AgentSkillsSnapshot }) {
     return null;
   }
 
-  // 计算未关联到特定技能的通用诊断
-  const orphanDiagnostics = skills.diagnostics.filter(
-    (d) =>
-      !skills.items.some(
-        (skill) =>
-          d.includes(`"${skill.name}"`) ||
-          d.includes(`'${skill.name}'`) ||
-          d.toLowerCase().includes(skill.name.toLowerCase()),
-      ),
-  );
-
   return (
-    <div className="flex flex-col gap-2">
-      <div className="flex items-center gap-2 text-[12px] text-mutedForeground/80 select-none px-1">
-        <div className="flex items-center gap-2">
-          <span className="font-medium">已加载 {skills.items.length} 个技能</span>
-          {skills.diagnostics.length > 0 && (
-            <span className="flex items-center gap-1.5 text-warm">
-              <span className="h-1 w-1 rounded-full bg-warm" />
-              {skills.diagnostics.length} 条诊断
-            </span>
-          )}
-        </div>
-      </div>
+    <div className="min-w-0">
+      <div className="flex min-h-8 items-center gap-2 rounded-xl border border-border/40 bg-card/55 px-2 py-1">
+        <span className="inline-flex h-6 shrink-0 select-none items-center rounded-full bg-muted/45 px-2 text-[11px] font-medium leading-none text-mutedForeground">
+          技能 {skills.items.length}
+        </span>
 
-      <div className="flex flex-col gap-2">
-        {/* 技能标签区域 - 水平滚动 */}
-        <div 
-          className="relative"
-          style={{ 
-            maskImage: 'linear-gradient(to right, black calc(100% - 24px), transparent)',
-            WebkitMaskImage: 'linear-gradient(to right, black calc(100% - 24px), transparent)'
-          }}
-        >
+        {skills.diagnostics.length > 0 ? (
+          <Tooltip delay={400} closeDelay={100} trigger="hover">
+            <Tooltip.Trigger className="inline-flex h-6 shrink-0 cursor-default select-none items-center gap-1.5 rounded-full border border-warm/45 bg-warm/5 px-2 text-[11px] font-medium leading-none text-warm">
+              <span className="h-1.5 w-1.5 rounded-full bg-warm" aria-hidden="true" />
+              诊断 {skills.diagnostics.length}
+            </Tooltip.Trigger>
+            <Tooltip.Content
+              placement="top start"
+              offset={6}
+              className={cn(skillTooltipClassName, 'max-h-[16rem] overflow-y-auto')}
+            >
+              <div className="text-[12px] font-semibold text-foreground">技能诊断</div>
+              {skills.diagnostics.map((diagnostic, index) => (
+                <div key={`${diagnostic}-${index}`} className="text-[11px] leading-relaxed text-warm/95">
+                  {diagnostic}
+                </div>
+              ))}
+            </Tooltip.Content>
+          </Tooltip>
+        ) : null}
+
+        {skillsWithMetadata.length > 0 ? (
           <ScrollShadow
             orientation="horizontal"
-            className="w-full overflow-x-auto whitespace-nowrap"
-            size={24}
+            className="min-w-0 flex-1 overflow-x-auto whitespace-nowrap"
+            size={18}
           >
-            <div className="flex w-max gap-2 pb-2 px-1">
+            <div className="flex w-max items-center gap-1.5 pr-1">
               {skillsWithMetadata.map((skill) => (
-                <Tooltip key={skill.id}>
+                <Tooltip key={skill.id} delay={400} closeDelay={100} trigger="hover">
                   <Tooltip.Trigger
-                    className={`cursor-default select-none rounded-md border px-2.5 py-0.5 text-[11px] font-medium transition-[border-color,background-color,color] ${
+                    className={cn(
+                      skillChipClassName,
                       skill.hasIssue
                         ? 'border-warm/50 bg-warm/5 text-warm'
-                        : 'border-border/40 bg-muted/20 text-mutedForeground hover:border-border/60 hover:text-mutedForeground/90'
-                    }`}
+                        : 'border-border/45 bg-muted/25 text-mutedForeground hover:border-border/70 hover:text-foreground',
+                    )}
                   >
-                    <span className="block max-w-[180px] truncate">{skill.name}</span>
+                    <span className="min-w-0 truncate" translate="no">{skill.name}</span>
                   </Tooltip.Trigger>
-                  <Tooltip.Content
-                    placement="top"
-                    className="z-50 flex max-w-xs flex-col gap-1 rounded-md border border-border/60 bg-card p-2 text-xs text-cardForeground shadow-lg"
-                  >
-                    <div className="text-[12px] font-semibold text-foreground/90">{skill.name}</div>
-                    <div className="text-[11px] text-mutedForeground/80">{skill.description}</div>
-                    <div className="text-[10px] text-mutedForeground/50 font-mono mt-1 opacity-80">
+                  <Tooltip.Content placement="top" offset={6} className={skillTooltipClassName}>
+                    <div className="text-[12px] font-semibold text-foreground" translate="no">{skill.name}</div>
+                    <div className="text-[11px] leading-relaxed text-mutedForeground">{skill.description}</div>
+                    <div className="mt-1 font-mono text-[10px] leading-snug text-mutedForeground/60" translate="no">
                       {skill.source}
                     </div>
-                    {skill.relatedDiagnostics.length > 0 && (
-                      <div className="mt-1.5 border-t border-border/40 pt-1.5 flex flex-col gap-1">
-                        {skill.relatedDiagnostics.map((d, i) => (
-                          <div key={i} className="text-[10px] text-warm/90 leading-relaxed italic">
-                            {d}
+                    {skill.relatedDiagnostics.length > 0 ? (
+                      <div className="mt-1.5 flex flex-col gap-1 border-t border-border/40 pt-1.5">
+                        {skill.relatedDiagnostics.map((diagnostic, index) => (
+                          <div
+                            key={`${diagnostic}-${index}`}
+                            className="text-[10px] leading-relaxed text-warm/95"
+                          >
+                            {diagnostic}
                           </div>
                         ))}
                       </div>
-                    )}
+                    ) : null}
                   </Tooltip.Content>
                 </Tooltip>
               ))}
             </div>
           </ScrollShadow>
-        </div>
-
-        {/* 通用诊断区域 - 垂直滚动限高 */}
-        {orphanDiagnostics.length > 0 && (
-          <ScrollShadow className="max-h-[100px] w-full overflow-y-auto rounded-md border border-border/30 bg-muted/5 mx-1" size={18}>
-            <div className="flex flex-col gap-1 p-2 text-[11px] leading-relaxed text-mutedForeground/70">
-              {orphanDiagnostics.map((diag, idx) => (
-                <div key={idx} className="flex gap-2">
-                  <span>{diag}</span>
-                </div>
-              ))}
-            </div>
-          </ScrollShadow>
-        )}
+        ) : null}
       </div>
     </div>
   );

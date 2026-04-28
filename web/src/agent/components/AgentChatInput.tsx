@@ -53,6 +53,9 @@ const composerPopoverDialogClassName = '!p-0 outline-none';
 
 const composerSelectListBoxClassName = '!p-0';
 
+const composerTextareaClassName =
+  'min-h-[48px] w-full cursor-text resize-none border-0 bg-transparent px-3 py-1.5 !text-[13px] !leading-[18px] shadow-none placeholder:!text-[13px] placeholder:!leading-[18px] focus-visible:ring-0';
+
 export function AgentChatInput({
   inputDisabled,
   submitDisabled,
@@ -203,9 +206,10 @@ export function AgentChatInput({
         onChange={(event) => setText(event.currentTarget.value)}
         onKeyDown={handleTextareaKeyDown}
         rows={1}
+        fullWidth
         disabled={inputDisabled || isStreaming}
         placeholder="把问题发给我，我来处理…"
-        className="min-h-[48px] resize-none border-0 bg-transparent px-3 py-1.5 text-[13px] leading-[22px] shadow-none placeholder:text-[12px] focus-visible:ring-0"
+        className={composerTextareaClassName}
       />
 
       <div className="mt-3 flex flex-wrap items-center justify-between gap-3">

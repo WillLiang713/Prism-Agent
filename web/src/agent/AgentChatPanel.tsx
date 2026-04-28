@@ -1,5 +1,6 @@
-import { AlertCircle } from 'lucide-react';
-import { useEffect, useEffectEvent, useMemo, useRef } from 'react';
+import { AlertCircle, ArrowDown } from 'lucide-react';
+import { useCallback, useEffect, useEffectEvent, useMemo, useRef, useState } from 'react';
+import { Button } from '@heroui/react/button';
 import { ScrollShadow } from '@heroui/react/scroll-shadow';
 
 import { ApprovalPrompt } from './components/ApprovalPrompt';
@@ -12,11 +13,24 @@ import type { AgentSession } from './sessionStore';
 const CHAT_SIDE_PADDING = 'calc(1.5rem + 10px)';
 const CHAT_PANEL_MAX_WIDTH = '900px';
 const BOTTOM_STICK_THRESHOLD_PX = 160;
+const SCROLL_BUTTON_THRESHOLD_PX = 48;
 const SUPPRESSED_RUNTIME_REASON = '未指定主模型，请在设置中选择或输入模型名称。';
 const AUTO_SCROLL_MAX_FRAMES = 4;
 
 function getScrollViewport(root: HTMLDivElement | null) {
   return root;
+}
+
+function getDistanceToBottom(viewport: HTMLDivElement) {
+  return viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight;
+}
+
+function isPinnedToBottom(viewport: HTMLDivElement) {
+  return getDistanceToBottom(viewport) <= BOTTOM_STICK_THRESHOLD_PX;
+}
+
+function shouldShowScrollToBottom(viewport: HTMLDivElement) {
+  return getDistanceToBottom(viewport) > SCROLL_BUTTON_THRESHOLD_PX;
 }
 
 export function AgentChatPanel({
@@ -55,6 +69,8 @@ export function AgentChatPanel({
   const stickToBottomRef = useRef(true);
   const scrollFrameRef = useRef<number | null>(null);
   const scrollFrameBudgetRef = useRef(0);
+  const showScrollToBottomRef = useRef(false);
+  const [showScrollToBottom, setShowScrollToBottom] = useState(false);
   const activeApproval = useMemo(() => activeSession?.approvals[0] || null, [activeSession]);
   const inputDisabled = !backendReady;
   const submitDisabled = inputDisabled || !agentRuntimeStatus.ready;
@@ -67,12 +83,33 @@ export function AgentChatPanel({
       ? ''
       : agentRuntimeStatus.reason;
 
-  const cancelScheduledScroll = useEffectEvent(() => {
+  const setScrollToBottomButtonVisible = useCallback((visible: boolean) => {
+    if (showScrollToBottomRef.current === visible) {
+      return;
+    }
+
+    showScrollToBottomRef.current = visible;
+    setShowScrollToBottom(visible);
+  }, []);
+
+  const syncScrollState = useCallback(
+    (viewport: HTMLDivElement) => {
+      stickToBottomRef.current = isPinnedToBottom(viewport);
+      setScrollToBottomButtonVisible(shouldShowScrollToBottom(viewport));
+    },
+    [setScrollToBottomButtonVisible],
+  );
+
+  const cancelScrollFrame = useCallback(() => {
     if (scrollFrameRef.current !== null) {
       cancelAnimationFrame(scrollFrameRef.current);
       scrollFrameRef.current = null;
     }
     scrollFrameBudgetRef.current = 0;
+  }, []);
+
+  const cancelScheduledScroll = useEffectEvent(() => {
+    cancelScrollFrame();
   });
 
   const scheduleScrollToBottom = useEffectEvent(() => {
@@ -90,9 +127,10 @@ export function AgentChatPanel({
       }
 
       viewport.scrollTop = viewport.scrollHeight;
+      setScrollToBottomButtonVisible(false);
       scrollFrameBudgetRef.current -= 1;
 
-      const distanceToBottom = viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight;
+      const distanceToBottom = getDistanceToBottom(viewport);
       if (distanceToBottom > 1 && scrollFrameBudgetRef.current > 0) {
         scrollFrameRef.current = requestAnimationFrame(runScrollFrame);
       }
@@ -104,13 +142,12 @@ export function AgentChatPanel({
   useEffect(() => {
     const viewport = getScrollViewport(scrollRef.current);
     if (!viewport) {
+      setScrollToBottomButtonVisible(false);
       return;
     }
 
     const syncStickState = () => {
-      stickToBottomRef.current =
-        viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight <=
-        BOTTOM_STICK_THRESHOLD_PX;
+      syncScrollState(viewport);
     };
 
     syncStickState();
@@ -119,7 +156,7 @@ export function AgentChatPanel({
       viewport.removeEventListener('scroll', syncStickState);
       cancelScheduledScroll();
     };
-  }, [activeSession?.sessionId]);
+  }, [activeSession?.sessionId, isWelcomeState, setScrollToBottomButtonVisible, syncScrollState]);
 
   useEffect(() => {
     const viewport = getScrollViewport(scrollRef.current);
@@ -129,12 +166,20 @@ export function AgentChatPanel({
     }
 
     const resizeObserver = new ResizeObserver(() => {
-      scheduleScrollToBottom();
+      if (stickToBottomRef.current) {
+        scheduleScrollToBottom();
+      } else {
+        syncScrollState(viewport);
+      }
     });
     resizeObserver.observe(content);
 
     const mutationObserver = new MutationObserver(() => {
-      scheduleScrollToBottom();
+      if (stickToBottomRef.current) {
+        scheduleScrollToBottom();
+      } else {
+        syncScrollState(viewport);
+      }
     });
     mutationObserver.observe(content, {
       childList: true,
@@ -148,18 +193,20 @@ export function AgentChatPanel({
       resizeObserver.disconnect();
       mutationObserver.disconnect();
     };
-  }, [activeSession?.sessionId]);
+  }, [activeSession?.sessionId, isWelcomeState, syncScrollState]);
 
   useEffect(() => {
     const viewport = getScrollViewport(scrollRef.current);
     if (!viewport) {
+      setScrollToBottomButtonVisible(false);
       return;
     }
 
     cancelScheduledScroll();
     viewport.scrollTop = viewport.scrollHeight;
     stickToBottomRef.current = true;
-  }, [activeSession?.sessionId]);
+    setScrollToBottomButtonVisible(false);
+  }, [activeSession?.sessionId, isWelcomeState, setScrollToBottomButtonVisible]);
 
   useEffect(() => {
     if (!activeSession?.sessionId) {
@@ -170,6 +217,26 @@ export function AgentChatPanel({
   }, [activeSession?.isStreaming, activeSession?.messages, activeSession?.sessionId]);
 
   useEffect(() => () => cancelScheduledScroll(), []);
+
+  const handleScrollToBottom = useCallback(() => {
+    const viewport = getScrollViewport(scrollRef.current);
+    if (!(viewport instanceof HTMLDivElement)) {
+      return;
+    }
+
+    cancelScrollFrame();
+    stickToBottomRef.current = true;
+    setScrollToBottomButtonVisible(false);
+
+    const prefersReducedMotion =
+      typeof window !== 'undefined' &&
+      window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+
+    viewport.scrollTo({
+      top: viewport.scrollHeight,
+      behavior: prefersReducedMotion ? 'auto' : 'smooth',
+    });
+  }, [cancelScrollFrame, setScrollToBottomButtonVisible]);
 
   return (
     <div className="flex h-full min-h-0 flex-1 overflow-hidden">
@@ -230,16 +297,40 @@ export function AgentChatPanel({
               </div>
             </div>
           ) : (
-            <ScrollShadow ref={scrollRef} className="h-full overflow-y-auto" size={32}>
-              <div className="flex min-h-full py-8" style={{ paddingInline: CHAT_SIDE_PADDING }}>
-                <div className="mx-auto flex min-h-full w-full" style={{ maxWidth: CHAT_PANEL_MAX_WIDTH }}>
-                  <AgentMessageList
-                    messages={activeSession?.messages || []}
-                    isStreaming={activeSession?.isStreaming || false}
-                  />
+            <div className="relative h-full">
+              <ScrollShadow ref={scrollRef} className="h-full overflow-y-auto" size={32}>
+                <div className="flex min-h-full py-8" style={{ paddingInline: CHAT_SIDE_PADDING }}>
+                  <div className="mx-auto flex min-h-full w-full" style={{ maxWidth: CHAT_PANEL_MAX_WIDTH }}>
+                    <AgentMessageList
+                      messages={activeSession?.messages || []}
+                      isStreaming={activeSession?.isStreaming || false}
+                    />
+                  </div>
                 </div>
-              </div>
-            </ScrollShadow>
+              </ScrollShadow>
+              {showScrollToBottom ? (
+                <div
+                  className="pointer-events-none absolute inset-x-0 bottom-4 z-20"
+                  style={{ paddingInline: CHAT_SIDE_PADDING }}
+                >
+                  <div className="mx-auto flex w-full justify-center" style={{ maxWidth: CHAT_PANEL_MAX_WIDTH }}>
+                    <span className="pointer-events-auto inline-flex">
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        isIconOnly
+                        aria-label="滚动到底部"
+                        onPress={handleScrollToBottom}
+                        className="h-9 min-h-9 w-9 min-w-9 touch-manipulation rounded-full border border-border/70 bg-background/95 p-0 text-mutedForeground shadow-[0_12px_28px_rgba(0,0,0,0.18)] backdrop-blur-md transition-[background-color,border-color,color,box-shadow,transform] hover:border-foreground/25 hover:bg-muted hover:text-foreground focus-visible:ring-1 focus-visible:ring-foreground/25 data-[pressed=true]:scale-95"
+                      >
+                        <ArrowDown className="h-4 w-4" aria-hidden="true" />
+                      </Button>
+                    </span>
+                  </div>
+                </div>
+              ) : null}
+            </div>
           )}
         </div>
 
