@@ -242,7 +242,7 @@ export function AgentChatPanel({
     <div className="flex h-full min-h-0 flex-1 overflow-hidden">
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden bg-background">
         {!backendReady && backendError ? (
-          <div className="flex items-center gap-2 bg-danger/5 px-6 py-3 text-sm text-danger">
+          <div className="flex items-center gap-2 bg-danger/5 px-6 py-3 text-[15px] text-danger">
             <AlertCircle className="h-4 w-4" />
             <span>后端服务异常: {backendError}</span>
           </div>
@@ -253,7 +253,7 @@ export function AgentChatPanel({
             <div
               role="status"
               aria-live="polite"
-              className="flex h-full flex-col items-center justify-center p-8 text-center text-sm leading-6 text-mutedForeground"
+              className="flex h-full flex-col items-center justify-center p-8 text-center text-[15px] leading-6 text-mutedForeground"
             >
               <span className="thinking-title-shimmer" data-shimmer-text="正在连接后端">
                 正在连接后端
@@ -266,7 +266,7 @@ export function AgentChatPanel({
                   <h1 className="text-2xl font-medium text-foreground">
                     准备好开始了吗？
                   </h1>
-                  <p className="max-w-[34rem] text-sm leading-6 text-mutedForeground">
+                  <p className="max-w-[34rem] text-[15px] leading-6 text-mutedForeground">
                     把你想做的事告诉我，我们一起把它理清楚
                   </p>
                 </div>

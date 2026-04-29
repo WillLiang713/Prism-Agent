@@ -23,7 +23,7 @@ import { composerControlIcons } from './composerControlIcons';
 import { HeaderModelPicker } from './HeaderModelPicker';
 
 const composerControlBaseClassName =
-  '!h-8 !min-h-8 !max-h-8 shrink-0 rounded-full border border-border bg-card !py-0 !text-[12px] font-medium leading-none text-foreground shadow-none transition-[background-color,border-color,color,box-shadow] hover:bg-muted focus-visible:ring-1 focus-visible:ring-foreground/20';
+  '!h-8 !min-h-8 !max-h-8 shrink-0 rounded-full border border-border bg-card !py-0 !text-[13px] font-medium leading-none text-foreground shadow-none transition-[background-color,border-color,color,box-shadow] hover:bg-muted focus-visible:ring-1 focus-visible:ring-foreground/20';
 
 const composerIconButtonClassName = cn(
   composerControlBaseClassName,
@@ -53,7 +53,7 @@ const composerMenuItemStateClassName =
   'transition-colors hover:!bg-foreground/[0.06] focus-visible:!bg-foreground/[0.06] data-[hovered=true]:!bg-foreground/[0.06] data-[focused]:!bg-foreground/[0.06] data-[focus-visible=true]:!bg-foreground/[0.06] data-[selected=true]:!bg-foreground/[0.08] aria-[selected=true]:!bg-foreground/[0.08]';
 
 const composerMenuItemClassName = cn(
-  'flex w-full cursor-pointer select-none items-center justify-center rounded-lg px-3 py-2 text-center text-[13px] leading-5 text-foreground outline-none',
+  'flex w-full cursor-pointer select-none items-center justify-center rounded-lg px-3 py-2 text-center text-[14px] leading-5 text-foreground outline-none',
   composerMenuItemStateClassName,
 );
 
@@ -65,7 +65,7 @@ const composerPopoverDialogClassName = '!p-0 outline-none';
 const composerSelectListBoxClassName = '!p-0';
 
 const composerTextareaClassName =
-  'min-h-[48px] w-full cursor-text resize-none border-0 bg-transparent px-3 py-1.5 !text-[13px] !leading-[18px] shadow-none placeholder:!text-[13px] placeholder:!leading-[18px] placeholder:!text-mutedForeground/58 focus-visible:ring-0';
+  'min-h-[48px] w-full cursor-text resize-none border-0 bg-transparent px-3 py-1.5 !text-[14px] !leading-[20px] shadow-none placeholder:!text-[14px] placeholder:!leading-[20px] placeholder:!text-mutedForeground/58 focus-visible:ring-0';
 
 export function AgentChatInput({
   inputDisabled,
@@ -257,7 +257,7 @@ export function AgentChatInput({
               className={cn(composerTextControlClassName, 'min-w-[112px] max-w-[180px]')}
             >
               <FolderOpen className={composerControlIconClassName} aria-hidden="true" />
-              <span className="min-w-0 truncate text-center !text-[12px] font-medium leading-none">{workspaceName}</span>
+              <span className="min-w-0 truncate text-center !text-[13px] font-medium leading-none">{workspaceName}</span>
               <ChevronDown className={composerControlChevronClassName} aria-hidden="true" />
             </Button>
             <Popover.Content
@@ -267,7 +267,7 @@ export function AgentChatInput({
             >
               <Popover.Dialog className={composerPopoverDialogClassName}>
                 {pinnedDirectories.length === 0 ? (
-                  <div className="px-3 py-2 text-[11px] text-mutedForeground">
+                  <div className="px-3 py-2 text-[12px] text-mutedForeground">
                     暂无可切换目录
                   </div>
                 ) : (
@@ -294,7 +294,7 @@ export function AgentChatInput({
                           textValue={name}
                           aria-current={isCurrentWorkspace ? 'true' : undefined}
                           className={cn(
-                            'flex w-full cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-[13px] leading-5 text-foreground outline-none',
+                            'flex w-full cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-[14px] leading-5 text-foreground outline-none',
                             composerMenuItemStateClassName,
                             isCurrentWorkspace && 'bg-foreground/[0.08]',
                           )}
@@ -331,7 +331,7 @@ export function AgentChatInput({
               className={cn(composerTextControlClassName, 'w-[108px] cursor-pointer')}
             >
               <Play aria-hidden="true" className={composerControlIconClassName} />
-              <Select.Value className="min-w-0 truncate whitespace-nowrap text-center !text-[12px] font-medium leading-none" />
+              <Select.Value className="min-w-0 truncate whitespace-nowrap text-center !text-[13px] font-medium leading-none" />
               <Select.Indicator className={composerControlIndicatorClassName}>
                 <ChevronDown aria-hidden="true" />
               </Select.Indicator>
@@ -377,7 +377,7 @@ export function AgentChatInput({
               className={cn(composerTextControlClassName, 'w-[108px] cursor-pointer')}
             >
               <ReasoningIcon aria-hidden="true" className={composerControlIconClassName} />
-              <Select.Value className="min-w-0 truncate whitespace-nowrap text-center !text-[12px] font-medium leading-none" />
+              <Select.Value className="min-w-0 truncate whitespace-nowrap text-center !text-[13px] font-medium leading-none" />
               <Select.Indicator className={composerControlIndicatorClassName}>
                 <ChevronDown aria-hidden="true" />
               </Select.Indicator>

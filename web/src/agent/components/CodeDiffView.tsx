@@ -52,7 +52,7 @@ function PlainDiffFallback({
   return (
     <pre
       className={cn(
-        'overflow-x-auto whitespace-pre-wrap break-all rounded-sm border border-border/60 bg-background/35 px-1.5 py-1.5 font-mono text-xs leading-5 text-foreground',
+        'overflow-x-auto whitespace-pre-wrap break-all rounded-sm border border-border/60 bg-background/35 px-1.5 py-1.5 font-mono text-[13px] leading-5 text-foreground',
         className,
       )}
     >

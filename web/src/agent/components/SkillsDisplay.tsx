@@ -6,10 +6,10 @@ import { Tooltip } from '@heroui/react/tooltip';
 import { cn } from '../../lib/utils';
 
 const skillChipClassName =
-  'inline-flex h-6 max-w-[150px] shrink-0 cursor-default select-none items-center rounded-full border px-2 text-[11px] font-medium leading-none transition-[border-color,background-color,color]';
+  'inline-flex h-6 max-w-[150px] shrink-0 cursor-default select-none items-center rounded-full border px-2 text-[12px] font-medium leading-none transition-[border-color,background-color,color]';
 
 const skillTooltipClassName =
-  'z-50 flex max-w-[min(22rem,calc(100vw-2rem))] flex-col gap-1 rounded-xl border border-border/60 bg-muted px-3 py-2 text-xs text-foreground shadow-[0_18px_40px_rgba(0,0,0,0.20)]';
+  'z-50 flex max-w-[min(22rem,calc(100vw-2rem))] flex-col gap-1 rounded-xl border border-border/60 bg-muted px-3 py-2 text-[13px] text-foreground shadow-[0_18px_40px_rgba(0,0,0,0.20)]';
 
 function diagnosticMentionsSkill(diagnostic: string, skillName: string) {
   return (
@@ -41,13 +41,13 @@ export function SkillsDisplay({ skills }: { skills: AgentSkillsSnapshot }) {
   return (
     <div className="min-w-0">
       <div className="flex min-h-8 items-center gap-2 rounded-xl border border-border/40 bg-card/55 px-2 py-1">
-        <span className="inline-flex h-6 shrink-0 select-none items-center rounded-full bg-muted/45 px-2 text-[11px] font-medium leading-none text-mutedForeground">
+        <span className="inline-flex h-6 shrink-0 select-none items-center rounded-full bg-muted/45 px-2 text-[12px] font-medium leading-none text-mutedForeground">
           技能 {skills.items.length}
         </span>
 
         {skills.diagnostics.length > 0 ? (
           <Tooltip delay={400} closeDelay={100} trigger="hover">
-            <Tooltip.Trigger className="inline-flex h-6 shrink-0 cursor-default select-none items-center gap-1.5 rounded-full border border-warm/45 bg-warm/5 px-2 text-[11px] font-medium leading-none text-warm">
+            <Tooltip.Trigger className="inline-flex h-6 shrink-0 cursor-default select-none items-center gap-1.5 rounded-full border border-warm/45 bg-warm/5 px-2 text-[12px] font-medium leading-none text-warm">
               <span className="h-1.5 w-1.5 rounded-full bg-warm" aria-hidden="true" />
               诊断 {skills.diagnostics.length}
             </Tooltip.Trigger>
@@ -56,9 +56,9 @@ export function SkillsDisplay({ skills }: { skills: AgentSkillsSnapshot }) {
               offset={6}
               className={cn(skillTooltipClassName, 'max-h-[16rem] overflow-y-auto')}
             >
-              <div className="text-[12px] font-semibold text-foreground">技能诊断</div>
+              <div className="text-[13px] font-semibold text-foreground">技能诊断</div>
               {skills.diagnostics.map((diagnostic, index) => (
-                <div key={`${diagnostic}-${index}`} className="text-[11px] leading-relaxed text-warm/95">
+                <div key={`${diagnostic}-${index}`} className="text-[12px] leading-relaxed text-warm/95">
                   {diagnostic}
                 </div>
               ))}
@@ -86,9 +86,9 @@ export function SkillsDisplay({ skills }: { skills: AgentSkillsSnapshot }) {
                     <span className="min-w-0 truncate" translate="no">{skill.name}</span>
                   </Tooltip.Trigger>
                   <Tooltip.Content placement="top" offset={6} className={skillTooltipClassName}>
-                    <div className="text-[12px] font-semibold text-foreground" translate="no">{skill.name}</div>
-                    <div className="text-[11px] leading-relaxed text-mutedForeground">{skill.description}</div>
-                    <div className="mt-1 font-mono text-[10px] leading-snug text-mutedForeground/60" translate="no">
+                    <div className="text-[13px] font-semibold text-foreground" translate="no">{skill.name}</div>
+                    <div className="text-[12px] leading-relaxed text-mutedForeground">{skill.description}</div>
+                    <div className="mt-1 font-mono text-[11px] leading-snug text-mutedForeground/60" translate="no">
                       {skill.source}
                     </div>
                     {skill.relatedDiagnostics.length > 0 ? (
@@ -96,7 +96,7 @@ export function SkillsDisplay({ skills }: { skills: AgentSkillsSnapshot }) {
                         {skill.relatedDiagnostics.map((diagnostic, index) => (
                           <div
                             key={`${diagnostic}-${index}`}
-                            className="text-[10px] leading-relaxed text-warm/95"
+                            className="text-[11px] leading-relaxed text-warm/95"
                           >
                             {diagnostic}
                           </div>

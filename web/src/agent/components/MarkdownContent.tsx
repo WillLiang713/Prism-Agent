@@ -38,7 +38,7 @@ const markdownComponents: Components = {
     <div className="my-4 overflow-x-auto rounded-xl border border-border/70 bg-background/35">
       <table
         {...props}
-        className={cn('min-w-full border-collapse text-left text-[13px] leading-[22px]', className)}
+        className={cn('min-w-full border-collapse text-left text-[14px] leading-[23px]', className)}
       >
         {children}
       </table>
@@ -51,7 +51,7 @@ const markdownComponents: Components = {
     <th
       {...props}
       className={cn(
-        'border-b border-border/70 px-3 py-2 font-medium tracking-[-0.01em]',
+        'border-b border-border/70 px-3 py-2 font-medium tracking-normal',
         className,
       )}
     />

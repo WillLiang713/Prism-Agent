@@ -16,16 +16,16 @@ export function ApprovalPrompt({
       className="rounded-[18px] bg-muted/70 px-4 py-3.5 shadow-[inset_0_1px_0_hsl(var(--foreground)/0.03)]"
     >
       <div className="min-w-0">
-        <h2 className="text-xs font-medium tracking-[0.02em] text-mutedForeground">
+        <h2 className="text-[13px] font-medium tracking-[0.02em] text-mutedForeground">
           待确认操作
         </h2>
       </div>
 
       <div className="mt-3 min-w-0">
-        <p className="text-[11px] leading-4 text-mutedForeground">目标文件</p>
+        <p className="text-[12px] leading-4 text-mutedForeground">目标文件</p>
         <pre
           translate="no"
-          className="mt-1.5 max-h-24 overflow-y-auto whitespace-pre-wrap break-words font-mono text-[14px] font-medium leading-6 text-foreground"
+          className="mt-1.5 max-h-24 overflow-y-auto whitespace-pre-wrap break-words font-mono text-[15px] font-medium leading-6 text-foreground"
         >
           {approval.command}
         </pre>

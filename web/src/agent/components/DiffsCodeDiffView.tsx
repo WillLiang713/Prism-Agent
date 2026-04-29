@@ -30,12 +30,12 @@ const DIFFS_UNSAFE_CSS = `
 
 [data-header-content] [data-title],
 [data-header-content] [data-prev-name] {
-  font-size: 11.5px;
+  font-size: 12.5px;
   font-weight: 650;
 }
 
 [data-diffs-header='default'] [data-metadata] {
-  font-size: 10.5px;
+  font-size: 11.5px;
   gap: 0.55ch;
 }
 
@@ -79,8 +79,8 @@ const DIFFS_HOST_STYLE: DiffsHostStyle = {
   '--diffs-dark': 'hsl(var(--foreground))',
   '--diffs-font-family': 'var(--font-mono)',
   '--diffs-header-font-family': 'var(--font-body)',
-  '--diffs-font-size': '11.5px',
-  '--diffs-line-height': '18px',
+  '--diffs-font-size': '12.5px',
+  '--diffs-line-height': '19px',
   '--diffs-font-features': '"tnum" 1, "liga" 0, "calt" 0',
   '--diffs-gap-inline': '6px',
   '--diffs-gap-block': '5px',

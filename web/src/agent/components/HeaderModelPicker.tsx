@@ -6,7 +6,7 @@ import { resolveSelectedService, useConfigStore } from '../../store/configStore'
 import { composerControlIcons } from './composerControlIcons';
 
 const modelPickerTriggerClassName =
-  'no-drag grid !h-8 !min-h-8 !max-h-8 min-w-[120px] max-w-[240px] shrink-0 cursor-pointer grid-cols-[1rem_minmax(0,1fr)_1rem] items-center gap-2 overflow-hidden rounded-full border border-border bg-card px-3 !py-0 !text-[12px] font-medium leading-none text-foreground shadow-none transition-[background-color,border-color,color,box-shadow] hover:bg-muted focus-visible:ring-1 focus-visible:ring-foreground/20';
+  'no-drag grid !h-8 !min-h-8 !max-h-8 min-w-[120px] max-w-[240px] shrink-0 cursor-pointer grid-cols-[1rem_minmax(0,1fr)_1rem] items-center gap-2 overflow-hidden rounded-full border border-border bg-card px-3 !py-0 !text-[13px] font-medium leading-none text-foreground shadow-none transition-[background-color,border-color,color,box-shadow] hover:bg-muted focus-visible:ring-1 focus-visible:ring-foreground/20';
 
 const modelPickerIconClassName =
   'h-4 w-4 shrink-0 justify-self-center text-mutedForeground';
@@ -113,9 +113,9 @@ export function HeaderModelPicker({ currentModel }: { currentModel: string }) {
       triggerClassName={modelPickerTriggerClassName}
       triggerIconClassName={modelPickerIconClassName}
       triggerChevronClassName={modelPickerChevronClassName}
-      triggerValueClassName="!text-[12px] leading-none"
-      inputClassName="text-[13px] leading-5"
-      itemClassName="text-[13px] leading-5"
+      triggerValueClassName="!text-[13px] leading-none"
+      inputClassName="text-[14px] leading-5"
+      itemClassName="text-[14px] leading-5"
       contentClassName="w-[248px]"
     />
   );

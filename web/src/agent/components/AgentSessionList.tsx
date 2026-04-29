@@ -20,7 +20,7 @@ const sessionMenuItemStateClassName =
   'transition-colors hover:!bg-foreground/[0.06] focus-visible:!bg-foreground/[0.06] data-[hovered=true]:!bg-foreground/[0.06] data-[focused]:!bg-foreground/[0.06] data-[focus-visible=true]:!bg-foreground/[0.06] data-[selected=true]:!bg-foreground/[0.08] aria-[selected=true]:!bg-foreground/[0.08] disabled:hover:!bg-transparent disabled:focus-visible:!bg-transparent';
 
 const sessionMenuItemClassName = cn(
-  'flex h-8 w-full cursor-pointer select-none items-center justify-start gap-2 whitespace-nowrap rounded-lg px-2.5 text-sm text-foreground outline-none disabled:cursor-not-allowed disabled:text-mutedForeground/45',
+  'flex h-8 w-full cursor-pointer select-none items-center justify-start gap-2 whitespace-nowrap rounded-lg px-2.5 text-[15px] text-foreground outline-none disabled:cursor-not-allowed disabled:text-mutedForeground/45',
   sessionMenuItemStateClassName,
 );
 
@@ -117,14 +117,14 @@ export function AgentSessionList({
           <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-lg bg-card/45 text-mutedForeground transition-[background-color,color] group-hover:bg-card group-hover:text-foreground">
             <PencilLine className="h-3.5 w-3.5" aria-hidden="true" />
           </span>
-          <span className="min-w-0 truncate text-[13px] font-medium leading-none">新会话</span>
+          <span className="min-w-0 truncate text-[14px] font-medium leading-none">新会话</span>
         </Button>
       </div>
       <ScrollShadow className="flex-1 overflow-y-auto px-2" size={24}>
         <div className="space-y-3 pb-4">
           {groupedThreads.map((group) => (
             <div key={group.cwd} className="rounded-2xl border border-border/45 bg-card/45 p-1">
-              <div className="group/dir flex h-8 items-center justify-between rounded-xl px-2.5 text-[12px] font-semibold text-mutedForeground/75">
+              <div className="group/dir flex h-8 items-center justify-between rounded-xl px-2.5 text-[13px] font-semibold text-mutedForeground/75">
                 <div className="flex items-center gap-2 min-w-0">
                   <Folder className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
                   <span className="truncate" title={group.cwd}>
@@ -222,7 +222,7 @@ export function AgentSessionList({
                         <span className="flex min-w-0 flex-col gap-0.5">
                           <Tooltip delay={900} closeDelay={100} trigger="hover">
                             <Tooltip.Trigger
-                              className={`block w-fit max-w-full truncate text-sm font-medium leading-tight ${
+                              className={`block w-fit max-w-full truncate text-[15px] font-medium leading-tight ${
                                 isRegenerating ? 'thinking-title-shimmer' : ''
                               }`}
                               data-shimmer-text={isRegenerating ? label : undefined}
@@ -232,7 +232,7 @@ export function AgentSessionList({
                             <Tooltip.Content
                               placement="bottom start"
                               offset={6}
-                              className="z-50 max-w-[min(28rem,calc(100vw-2rem))] rounded-xl border border-border/60 bg-muted px-3 py-2 text-sm font-medium leading-snug text-foreground shadow-[0_18px_40px_rgba(0,0,0,0.20)]"
+                              className="z-50 max-w-[min(28rem,calc(100vw-2rem))] rounded-xl border border-border/60 bg-muted px-3 py-2 text-[15px] font-medium leading-snug text-foreground shadow-[0_18px_40px_rgba(0,0,0,0.20)]"
                             >
                               <span className="block whitespace-normal break-words">{label}</span>
                             </Tooltip.Content>
@@ -304,7 +304,7 @@ export function AgentSessionList({
                   );
                 })}
                 {group.threads.length === 0 && (
-                  <div className="px-8 py-2 text-[12px] text-mutedForeground/50">
+                  <div className="px-8 py-2 text-[13px] text-mutedForeground/50">
                     无任务
                   </div>
                 )}
@@ -312,7 +312,7 @@ export function AgentSessionList({
             </div>
           ))}
           {groupedThreads.length === 0 ? (
-            <div className="px-5 py-8 text-center text-xs text-mutedForeground/50">
+            <div className="px-5 py-8 text-center text-[13px] text-mutedForeground/50">
               暂无会话，点击上方「新建」开始
             </div>
           ) : null}

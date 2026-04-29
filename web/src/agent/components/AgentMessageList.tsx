@@ -85,7 +85,7 @@ const AgentMessageItem = memo(function AgentMessageItem({
 function UserMessageItem({ text }: { text: string }) {
   return (
     <article className="group/user flex flex-col items-end gap-1">
-      <div className="w-fit max-w-[90%] rounded-[10px] bg-accent px-3 py-1.5 text-[13px] leading-[22px] text-accentForeground">
+      <div className="w-fit max-w-[90%] rounded-[10px] bg-accent px-3 py-1.5 text-[14px] leading-[23px] text-accentForeground">
         <div className="whitespace-pre-wrap break-words">{text}</div>
       </div>
       <CopyMessageButton text={text} />
@@ -145,7 +145,7 @@ function AssistantMessageItem({
       ) : null}
       {showIdleStatus ? <GenerationIdleStatus /> : null}
       {message.error ? (
-        <div className="rounded-xl border border-border bg-card px-4 py-3 text-[13px] leading-[22px] text-mutedForeground">
+        <div className="rounded-xl border border-border bg-card px-4 py-3 text-[14px] leading-[23px] text-mutedForeground">
           {message.error}
         </div>
       ) : null}
@@ -218,7 +218,7 @@ function PendingAssistantStatus({ startedAt }: { startedAt: number }) {
     <div
       role="status"
       aria-live="polite"
-      className="flex w-fit max-w-full items-center gap-2 text-xs leading-5 text-mutedForeground/80"
+      className="flex w-fit max-w-full items-center gap-2 text-[13px] leading-5 text-mutedForeground/80"
     >
       <span
         className={cn('min-w-0 truncate', phase.id !== 'sent' && 'thinking-title-shimmer')}
@@ -235,7 +235,7 @@ function GenerationIdleStatus() {
     <div
       role="status"
       aria-live="polite"
-      className="flex w-fit max-w-full items-center gap-2 text-xs leading-5 text-mutedForeground/72"
+      className="flex w-fit max-w-full items-center gap-2 text-[13px] leading-5 text-mutedForeground/72"
     >
       <span className="thinking-title-shimmer" data-shimmer-text="继续处理">
         继续处理

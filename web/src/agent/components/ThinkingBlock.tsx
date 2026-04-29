@@ -8,7 +8,7 @@ import { MarkdownContent } from './MarkdownContent';
 const THINKING_PANEL_CLASS =
   'mt-1.5 min-w-0 break-words text-left';
 const THINKING_MARKDOWN_CLASS =
-  `${THINKING_PANEL_CLASS} text-[13px] leading-[22px] text-mutedForeground/95 [&_blockquote]:my-2 [&_h1]:mb-1.5 [&_h1]:mt-2 [&_h1]:text-[13px] [&_h1]:leading-[22px] [&_h2]:mb-1.5 [&_h2]:mt-2 [&_h2]:text-[13px] [&_h2]:leading-[22px] [&_h3]:mb-1.5 [&_h3]:mt-2 [&_h3]:text-[13px] [&_h3]:leading-[22px] [&_h4]:mb-1.5 [&_h4]:mt-2 [&_h4]:text-[13px] [&_h4]:leading-[22px] [&_ol]:my-2 [&_p]:my-2 [&_p]:leading-[22px] [&_pre]:my-2 [&_pre]:text-xs [&_pre]:text-foreground [&_ul]:my-2`;
+  `${THINKING_PANEL_CLASS} text-[14px] leading-[23px] text-mutedForeground/95 [&_blockquote]:my-2 [&_h1]:mb-1.5 [&_h1]:mt-2 [&_h1]:text-[14px] [&_h1]:leading-[23px] [&_h2]:mb-1.5 [&_h2]:mt-2 [&_h2]:text-[14px] [&_h2]:leading-[23px] [&_h3]:mb-1.5 [&_h3]:mt-2 [&_h3]:text-[14px] [&_h3]:leading-[23px] [&_h4]:mb-1.5 [&_h4]:mt-2 [&_h4]:text-[14px] [&_h4]:leading-[23px] [&_ol]:my-2 [&_p]:my-2 [&_p]:leading-[23px] [&_pre]:my-2 [&_pre]:text-[13px] [&_pre]:text-foreground [&_ul]:my-2`;
 
 export function ThinkingBlock({
   text,
@@ -54,7 +54,7 @@ export function ThinkingBlock({
     <Disclosure
       isExpanded={isOpen}
       onExpandedChange={setIsOpen}
-      className="group text-left text-xs text-mutedForeground"
+      className="group text-left text-[13px] text-mutedForeground"
     >
       <Disclosure.Heading className="contents">
         <Disclosure.Trigger className="flex w-fit max-w-full cursor-pointer items-center gap-1.5 rounded-sm bg-transparent p-0 leading-5 text-mutedForeground/80 hover:text-foreground focus-visible:outline-none focus-visible:text-foreground focus-visible:ring-1 focus-visible:ring-foreground/20">
@@ -76,7 +76,7 @@ export function ThinkingBlock({
         <Disclosure.Content className="min-w-0 p-0">
           {text.trim() ? (
             status === 'streaming' ? (
-              <div className={cn(THINKING_PANEL_CLASS, 'whitespace-pre-wrap break-words text-[13px] leading-[22px] text-mutedForeground/95')}>
+              <div className={cn(THINKING_PANEL_CLASS, 'whitespace-pre-wrap break-words text-[14px] leading-[23px] text-mutedForeground/95')}>
                 {text}
               </div>
             ) : (

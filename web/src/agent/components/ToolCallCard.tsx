@@ -26,7 +26,7 @@ const TOOL_OUTPUT_SECTION_PADDING_CLASS = 'px-2 py-1.5';
 const TOOL_OUTPUT_HEADER_CLASS =
   'flex h-9 min-w-0 items-center justify-between gap-2 border-b border-border/55 bg-muted/34 px-2';
 const TOOL_OUTPUT_PRE_CLASS =
-  'overflow-auto whitespace-pre-wrap break-words px-2 py-1.5 font-mono text-xs leading-5';
+  'overflow-auto whitespace-pre-wrap break-words px-2 py-1.5 font-mono text-[13px] leading-5';
 
 type ReadOutputSummary = {
   normalizedOutput: string;
@@ -320,7 +320,7 @@ function ToolDiffStats({ overview }: { overview: DiffOverview }) {
   }
 
   return (
-    <span className="ml-0.5 inline-flex shrink-0 items-center gap-0.5 font-mono text-[11px] leading-5">
+    <span className="ml-0.5 inline-flex shrink-0 items-center gap-0.5 font-mono text-[12px] leading-5">
       {overview.additions > 0 ? (
         <span className="text-[hsl(var(--diff-add-fg)/0.9)]">+{overview.additions}</span>
       ) : null}
@@ -372,7 +372,7 @@ function InlineOutputBlock({
 }) {
   return (
     <ToolOutputSection>
-      <div className={cn('min-w-0 text-xs leading-5', getInlineResultTone(status))}>
+      <div className={cn('min-w-0 text-[13px] leading-5', getInlineResultTone(status))}>
         {label ? (
           <span className="mr-1 text-mutedForeground/65">{label}</span>
         ) : null}
@@ -418,10 +418,10 @@ function ReadOutputPreview({
   return (
     <ToolOutputSection padded={false}>
       <div className={TOOL_OUTPUT_HEADER_CLASS}>
-        <span className="min-w-0 truncate font-mono text-[11.5px] font-[650] leading-4 text-foreground/84" title={title} translate="no">
+        <span className="min-w-0 truncate font-mono text-[12.5px] font-[650] leading-4 text-foreground/84" title={title} translate="no">
           {label || '读取内容'}
         </span>
-        <span className="shrink-0 text-[10.5px] leading-4 text-mutedForeground/68">
+        <span className="shrink-0 text-[11.5px] leading-4 text-mutedForeground/68">
           {NUMBER_FORMATTER.format(summary.lineCount)} 行
           <span className="mx-1 text-mutedForeground/38">/</span>
           {NUMBER_FORMATTER.format(summary.characterCount)} 字符
@@ -443,7 +443,7 @@ function ReadOutputPreview({
             size="sm"
             aria-expanded={isFullOpen}
             onPress={() => setIsFullOpen((current) => !current)}
-            className="h-auto min-h-0 max-w-full touch-manipulation items-center gap-1.5 rounded-sm bg-transparent p-0 text-xs leading-5 text-mutedForeground/72 shadow-none transition-colors hover:bg-transparent hover:text-foreground focus-visible:outline-none focus-visible:text-foreground focus-visible:ring-1 focus-visible:ring-foreground/20"
+            className="h-auto min-h-0 max-w-full touch-manipulation items-center gap-1.5 rounded-sm bg-transparent p-0 text-[13px] leading-5 text-mutedForeground/72 shadow-none transition-colors hover:bg-transparent hover:text-foreground focus-visible:outline-none focus-visible:text-foreground focus-visible:ring-1 focus-visible:ring-foreground/20"
           >
             <span>
               {isFullOpen
@@ -459,7 +459,7 @@ function ReadOutputPreview({
       ) : null}
       {isFullOpen ? (
         <pre
-          className="max-h-[min(56vh,520px)] overflow-auto border-t border-border/55 bg-transparent px-2 py-1.5 font-mono text-xs leading-5 text-foreground/90"
+          className="max-h-[min(56vh,520px)] overflow-auto border-t border-border/55 bg-transparent px-2 py-1.5 font-mono text-[13px] leading-5 text-foreground/90"
           translate="no"
         >
           {summary.normalizedOutput}
@@ -536,7 +536,7 @@ export function ToolCallCard({
     <Disclosure
       isExpanded={isOpen}
       onExpandedChange={(nextOpen) => setIsOpen(hasExpandableContent ? nextOpen : false)}
-      className="group min-w-0 text-sm text-mutedForeground"
+      className="group min-w-0 text-[15px] text-mutedForeground"
     >
       <Disclosure.Heading className="contents">
         <Disclosure.Trigger
@@ -546,14 +546,14 @@ export function ToolCallCard({
         >
           <span
             className={`min-w-0 truncate ${hasExpandableContent ? 'cursor-pointer' : 'cursor-default'} ${
-              isCommandLike ? 'font-mono text-[13px] leading-5' : 'text-sm'
+              isCommandLike ? 'font-mono text-[14px] leading-5' : 'text-[15px]'
             }`}
           >
             {isRunning ? (
               <span
                 role="status"
                 aria-live="polite"
-                className="thinking-title-shimmer mr-1.5 shrink-0 text-[11px] leading-5 text-mutedForeground/62"
+                className="thinking-title-shimmer mr-1.5 shrink-0 text-[12px] leading-5 text-mutedForeground/62"
                 data-shimmer-text="正在调用"
               >
                 正在调用
@@ -582,7 +582,7 @@ export function ToolCallCard({
           <ToolOutputCard>
             {shouldRenderSummaryBody ? (
               <ToolOutputSection>
-                <div className="break-words text-xs leading-5 text-foreground/90">
+                <div className="break-words text-[13px] leading-5 text-foreground/90">
                   {event.summary}
                 </div>
               </ToolOutputSection>
@@ -605,7 +605,7 @@ export function ToolCallCard({
                   className="max-w-full rounded-none border-0 bg-transparent"
                 />
                 {shouldRenderPlainOutputWithDiff ? (
-                  <pre className="overflow-x-auto whitespace-pre-wrap break-all border-t border-border/55 bg-transparent px-2 py-1.5 font-mono text-xs leading-5 text-foreground/88">
+                  <pre className="overflow-x-auto whitespace-pre-wrap break-all border-t border-border/55 bg-transparent px-2 py-1.5 font-mono text-[13px] leading-5 text-foreground/88">
                     {formattedOutput}
                   </pre>
                 ) : null}
@@ -624,14 +624,14 @@ export function ToolCallCard({
                 <ToolOutputSection>
                   <MarkdownContent
                     text={formattedOutput}
-                    className="min-w-0 text-sm leading-6 [&_pre]:rounded-sm [&_pre]:border-border/60 [&_pre]:bg-background/50 [&_pre]:px-2 [&_pre]:py-1.5 [&_pre]:text-xs"
+                    className="min-w-0 text-[15px] leading-6 [&_pre]:rounded-sm [&_pre]:border-border/60 [&_pre]:bg-background/50 [&_pre]:px-2 [&_pre]:py-1.5 [&_pre]:text-[13px]"
                   />
                 </ToolOutputSection>
               )
             ) : null}
             {typeof event.exitCode === 'number' ? (
               <ToolOutputSection>
-                <div className="font-mono text-xs text-mutedForeground">
+                <div className="font-mono text-[13px] text-mutedForeground">
                   exit code: {event.exitCode}
                 </div>
               </ToolOutputSection>
